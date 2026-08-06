@@ -1,10 +1,13 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://serene-dust-5pp8g2r.shipstatic.com/login/
+https://dark-fader-1lo91kn.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/89c6aa90b43622c924d96341d47b481e22bfdd40c6df5ae657bd4b9ec0e0064e
+https://my.shipstatic.com/claim/0c4db43f901565c677a3a36063409da9e1ac86d2f6ee5f79eedf18d8e46f68d0
 
-Previous previews (may be older builds):
+Previous verified build (workflows E2E):
+https://serene-dust-5pp8g2r.shipstatic.com/login/
+
+Older previews:
 https://charged-void-j26ylbk.shipstatic.com/login/
 https://blazing-veil-8o025gy.shipstatic.com/login/
 
