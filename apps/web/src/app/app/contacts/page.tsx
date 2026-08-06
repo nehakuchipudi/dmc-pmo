@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { contacts } from "@/lib/data";
+import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { Avatar, FilterChips, PageHeader, SideRail, StatusPill, statusTone } from "@/components/ui";
+import { exportCsv } from "@/lib/pdf";
+import { useAppStore } from "@/lib/store";
 
 const FILTERS = [
   "All Active Contacts",
   "Recently Created",
-  "Recent Interaction",
-  "Managed By Me",
-  "Classic Lists",
+  "Portal Enabled",
+  "Not Invited",
 ];
 
 export default function ContactsPage() {
+  const contacts = useAppStore((s) => s.contacts);
   const [filter, setFilter] = useState(FILTERS[0]);
+  const [createKind, setCreateKind] = useState<CreateKind>(null);
+
+  const rows = useMemo(() => {
+    if (filter === "Portal Enabled") return contacts.filter((c) => c.portal === "Enabled");
+    if (filter === "Not Invited") return contacts.filter((c) => c.portal === "Not Invited");
+    if (filter === "Recently Created") return [...contacts];
+    return contacts;
+  }, [filter, contacts]);
 
   return (
     <div className="fade-in">
@@ -22,9 +32,29 @@ export default function ContactsPage() {
         title="Contacts"
         subtitle="Everyone you work with, across every client company."
         actions={
-          <button type="button" className="btn btn-primary">
-            <Plus size={16} /> New Contact
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                exportCsv(
+                  "contacts.csv",
+                  rows.map((c) => ({
+                    name: c.name,
+                    company: c.companyName,
+                    title: c.title,
+                    email: c.email,
+                    portal: c.portal,
+                  })),
+                )
+              }
+            >
+              Export CSV
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("contact")}>
+              <Plus size={16} /> New Contact
+            </button>
+          </>
         }
       />
       <FilterChips items={FILTERS} active={filter} onChange={setFilter} />
@@ -42,7 +72,7 @@ export default function ContactsPage() {
               </tr>
             </thead>
             <tbody>
-              {contacts.map((c) => (
+              {rows.map((c) => (
                 <tr key={c.id}>
                   <td className="flex items-center gap-3 font-medium">
                     <Avatar initials={c.initials} />
@@ -62,7 +92,7 @@ export default function ContactsPage() {
         </div>
         <div className="space-y-4">
           <SideRail title="Recently Viewed">
-            {contacts.slice(0, 2).map((c) => (
+            {contacts.slice(0, 3).map((c) => (
               <div key={c.id} className="mb-2 flex items-center gap-2 text-sm">
                 <Avatar initials={c.initials} />
                 {c.name}
@@ -71,13 +101,21 @@ export default function ContactsPage() {
           </SideRail>
           <SideRail title="Shortcuts">
             <ul className="space-y-2 text-sm">
-              {["My Inbox", "Stream", "Reports"].map((s) => (
-                <li key={s}>{s}</li>
-              ))}
+              <li>
+                <button type="button" className="hover:underline" onClick={() => setFilter("Portal Enabled")}>
+                  Portal enabled
+                </button>
+              </li>
+              <li>
+                <button type="button" className="hover:underline" onClick={() => setCreateKind("contact")}>
+                  Invite contact
+                </button>
+              </li>
             </ul>
           </SideRail>
         </div>
       </div>
+      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
     </div>
   );
 }

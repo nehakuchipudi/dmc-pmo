@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { companies } from "@/lib/data";
+import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import {
   Avatar,
   FilterChips,
@@ -12,24 +12,28 @@ import {
   StatusPill,
   statusTone,
 } from "@/components/ui";
+import { exportCsv } from "@/lib/pdf";
+import { useAppStore } from "@/lib/store";
 
 const FILTERS = [
   "All Active Companies",
   "Recently Created",
   "Managed By Me",
-  "Classic Lists",
+  "Prospects",
 ];
 
 export default function CompaniesPage() {
+  const companies = useAppStore((s) => s.companies);
+  const recentlyViewed = useAppStore((s) => s.recentlyViewed);
   const [filter, setFilter] = useState(FILTERS[0]);
+  const [createKind, setCreateKind] = useState<CreateKind>(null);
+
   const rows = useMemo(() => {
-    if (filter === "Managed By Me") {
-      return companies.filter((c) => c.accountManager === "M. Doyle");
-    }
-    if (filter === "Recently Created") return [...companies].reverse();
-    return companies.filter((c) => c.status !== "Prospect" || filter !== "All Active Companies")
-      .filter((c) => (filter === "All Active Companies" ? c.status === "Active" || c.status === "Overdue Inv." : true));
-  }, [filter]);
+    if (filter === "Managed By Me") return companies.filter((c) => c.accountManager === "M. Doyle");
+    if (filter === "Recently Created") return [...companies];
+    if (filter === "Prospects") return companies.filter((c) => c.status === "Prospect");
+    return companies.filter((c) => c.status === "Active" || c.status === "Overdue Inv.");
+  }, [filter, companies]);
 
   return (
     <div className="fade-in">
@@ -37,17 +41,41 @@ export default function CompaniesPage() {
         title="Companies"
         subtitle="Manage every client account in one place."
         actions={
-          <button type="button" className="btn btn-primary">
-            <Plus size={16} /> New Company
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                exportCsv(
+                  "companies.csv",
+                  rows.map((c) => ({
+                    name: c.name,
+                    status: c.status,
+                    manager: c.accountManager,
+                    projects: c.openProjects,
+                    tickets: c.openTickets,
+                  })),
+                )
+              }
+            >
+              Export CSV
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("company")}>
+              <Plus size={16} /> New Company
+            </button>
+          </>
         }
       />
       <div className="mb-3 flex gap-4 text-sm">
-        {["Companies", "Contacts", "Assets", "Quick Links"].map((tab, i) => (
+        {["Companies", "Contacts"].map((tab, i) => (
           <Link
             key={tab}
             href={tab === "Contacts" ? "/app/contacts" : "/app/companies"}
-            className={i === 0 ? "font-semibold text-[var(--color-navy)] border-b-2 border-[var(--color-navy)] pb-1" : "text-[var(--color-muted)]"}
+            className={
+              i === 0
+                ? "border-b-2 border-[var(--color-navy)] pb-1 font-semibold text-[var(--color-navy)]"
+                : "text-[var(--color-muted)]"
+            }
           >
             {tab}
           </Link>
@@ -71,7 +99,10 @@ export default function CompaniesPage() {
               {rows.map((c) => (
                 <tr key={c.id}>
                   <td>
-                    <Link href={`/app/companies/${c.id}`} className="flex items-center gap-3 font-medium text-[var(--color-navy)]">
+                    <Link
+                      href={`/app/companies/view/?id=${c.id}`}
+                      className="flex items-center gap-3 font-medium text-[var(--color-navy)]"
+                    >
                       <Avatar initials={c.initials} />
                       {c.name}
                     </Link>
@@ -91,32 +122,50 @@ export default function CompaniesPage() {
         <div className="space-y-4">
           <SideRail title="Recently Viewed">
             <div className="space-y-3">
-              {companies.slice(0, 3).map((c) => (
-                <Link key={c.id} href={`/app/companies/${c.id}`} className="flex items-center gap-2 text-sm">
-                  <Avatar initials={c.initials} />
-                  <span>{c.name}</span>
-                </Link>
-              ))}
+              {recentlyViewed
+                .filter((r) => r.type === "company")
+                .map((r) => {
+                  const c = companies.find((x) => x.id === r.id);
+                  return (
+                    <Link
+                      key={r.id}
+                      href={`/app/companies/view/?id=${r.id}`}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <Avatar initials={c?.initials ?? "?"} />
+                      <span>{r.label}</span>
+                    </Link>
+                  );
+                })}
             </div>
           </SideRail>
           <SideRail title="Shortcuts">
             <ul className="space-y-2 text-sm text-[var(--color-navy)]">
-              {[
-                "Company Invoice",
-                "Stream",
-                "Companies Dashboard",
-                "Reports",
-                "Company Timesheet Overview",
-                "Invoice Statements",
-              ].map((s) => (
-                <li key={s}>
-                  <button type="button" className="hover:underline">{s}</button>
-                </li>
-              ))}
+              <li>
+                <Link href="/app/billing" className="hover:underline">
+                  Company invoices
+                </Link>
+              </li>
+              <li>
+                <Link href="/app/reports" className="hover:underline">
+                  Companies dashboard
+                </Link>
+              </li>
+              <li>
+                <Link href="/app/timesheets" className="hover:underline">
+                  Company timesheet overview
+                </Link>
+              </li>
+              <li>
+                <button type="button" className="hover:underline" onClick={() => setFilter("Managed By Me")}>
+                  Managed by me
+                </button>
+              </li>
             </ul>
           </SideRail>
         </div>
       </div>
+      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
     </div>
   );
 }
