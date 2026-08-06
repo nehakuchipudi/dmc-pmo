@@ -1,12 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://drifting-fog-167awwq.shipstatic.com/login/
+https://auric-index-bu3410i.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/51d187fa67bac552251a13f031d0f6c3fb79654e96133b18b604ccc0c4b3ec8f
+https://my.shipstatic.com/claim/75d162adbb3744b6feaf8f2e1321e038c9249d3f02f0fc25793ee2e62b6ebcd2
 
-Previous builds:
-https://dark-fader-1lo91kn.shipstatic.com/login/
-https://serene-dust-5pp8g2r.shipstatic.com/login/
+Previous (Projects redesign):
+https://drifting-fog-167awwq.shipstatic.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/
