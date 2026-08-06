@@ -1,0 +1,31 @@
+{
+  "name": "dmc-pmo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dillon Morgan Consulting PMO platform monorepo",
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @dmc/shared build",
+    "build": "pnpm --filter @dmc/shared build && pnpm --filter @dmc/api build && pnpm --filter @dmc/web build",
+    "dev:api": "pnpm --filter @dmc/api start:dev",
+    "dev:web": "pnpm --filter @dmc/web dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:migrate": "pnpm --filter @dmc/api prisma:migrate:deploy",
+    "db:generate": "pnpm --filter @dmc/api prisma:generate",
+    "db:seed": "pnpm --filter @dmc/api db:seed"
+  }
+}
