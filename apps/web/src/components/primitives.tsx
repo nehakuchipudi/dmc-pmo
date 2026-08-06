@@ -17,10 +17,10 @@ export function StatusPill({
 
 export function statusTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {
   const s = status.toLowerCase();
-  if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent"].includes(s)) {
+  if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent", "completed", "opened", "invoiced"].includes(s)) {
     return "success";
   }
-  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate"].includes(s)) {
+  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned"].includes(s)) {
     return "warning";
   }
   if (["overdue", "overdue inv.", "urgent", "rejected", "failed"].includes(s)) {

@@ -15,6 +15,7 @@ import {
   seedOpportunities,
   seedProjects,
   seedRetainers,
+  seedRetainerPeriods,
   seedTasks,
   seedTicketMessages,
   seedTickets,
@@ -33,8 +34,13 @@ import type {
   NotificationItem,
   Opportunity,
   Project,
+  ProjectFile,
+  ProjectNote,
   Retainer,
+  RetainerPeriod,
+  RetainerType,
   Task,
+  TaskPriority,
   TaskStatus,
   Ticket,
   TicketMessage,
@@ -70,7 +76,10 @@ type CreateTaskInput = {
   projectId: string;
   assignee: string;
   due: string;
+  start?: string;
   status?: TaskStatus;
+  milestoneId?: string;
+  priority?: TaskPriority;
 };
 
 type CreateTimeInput = {
@@ -98,6 +107,7 @@ type AppState = {
   notifications: NotificationItem[];
   activities: ActivityItem[];
   retainers: Retainer[];
+  retainerPeriods: RetainerPeriod[];
   automations: AutomationRule[];
   emailOutbox: EmailOutboxItem[];
   expenses: Expense[];
@@ -115,9 +125,15 @@ type AppState = {
   createCompany: (input: CreateCompanyInput) => string;
   createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
   createProject: (input: CreateProjectInput) => string;
+  updateProject: (id: string, patch: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
   createTicket: (input: CreateTicketInput) => string;
   createTask: (input: CreateTaskInput) => string;
+  updateTask: (id: string, patch: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
   createMilestone: (projectId: string, name: string, due: string) => string;
+  updateMilestone: (id: string, patch: Partial<Milestone>) => void;
+  deleteMilestone: (id: string) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
   createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
@@ -130,7 +146,26 @@ type AppState = {
   approveTimeEntry: (id: string) => void;
   rejectTimeEntry: (id: string) => void;
   allocateRetainerHours: (id: string, hours: number) => void;
-  createInvoiceDraft: (companyId: string) => string;
+  createRetainer: (input: {
+    name: string;
+    companyId: string;
+    type: RetainerType;
+    manager: string;
+    contactId?: string;
+    budgetHours: number;
+    expires: string;
+  }) => string;
+  updateRetainer: (id: string, patch: Partial<Retainer>) => void;
+  deleteRetainer: (id: string) => void;
+  addRetainerPeriod: (retainerId: string, start: string, end: string, budgetHours: number) => string;
+  createInvoiceDraft: (companyId: string, opts?: { projectId?: string; retainerId?: string; amount?: number; description?: string }) => string;
+  generateProjectInvoice: (projectId: string) => string;
+  generatePeriodInvoice: (periodId: string) => string;
+  addProjectFile: (projectId: string, file: Omit<ProjectFile, "id">) => void;
+  addProjectNote: (projectId: string, note: Omit<ProjectNote, "id" | "createdAt">) => void;
+  addRetainerFile: (retainerId: string, file: Omit<ProjectFile, "id">) => void;
+  addRetainerNote: (retainerId: string, note: Omit<ProjectNote, "id" | "createdAt">) => void;
+  addMaterial: (projectId: string, title: string, salePrice: number) => void;
   sendInvoice: (id: string) => void;
   payInvoice: (id: string) => void;
   requestSignoff: (projectId: string, milestoneName: string) => void;
@@ -166,6 +201,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: seedNotifications,
   activities: seedActivities,
   retainers: seedRetainers,
+  retainerPeriods: seedRetainerPeriods,
   automations: seedAutomations,
   emailOutbox: seedEmailOutbox,
   expenses: seedExpenses,
@@ -268,7 +304,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyName: company.name,
       manager: input.manager,
       progress: 0,
-      status: "On Track",
+      status: "Planned",
       due: input.due,
       start: todayIso(),
       budgetHours: input.budgetHours,
@@ -276,6 +312,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       marginPct: 35,
       portalShared: true,
       portalContacts: company.portalContacts,
+      projectType: "Client Work",
+      description: "",
+      budgetAmount: input.budgetHours * 180,
+      materials: [],
+      files: [],
+      notes: [],
     };
     set((s) => ({
       projects: [project, ...s.projects],
@@ -285,6 +327,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast(`Project ${project.name} created`);
     return id;
+  },
+
+  updateProject: (id, patch) => {
+    set((s) => ({
+      projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    }));
+    get().pushToast("Project updated");
+  },
+
+  deleteProject: (id) => {
+    const project = get().projects.find((p) => p.id === id);
+    set((s) => ({
+      projects: s.projects.filter((p) => p.id !== id),
+      tasks: s.tasks.filter((t) => t.projectId !== id),
+      milestones: s.milestones.filter((m) => m.projectId !== id),
+      companies: project
+        ? s.companies.map((c) =>
+            c.id === project.companyId ? { ...c, openProjects: Math.max(0, c.openProjects - 1) } : c,
+          )
+        : s.companies,
+    }));
+    get().pushToast("Project deleted", "danger");
   },
 
   createTicket: (input) => {
@@ -335,17 +399,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       name: input.name,
       projectId: project.id,
       projectName: project.name,
+      milestoneId: input.milestoneId,
       assignee: input.assignee,
       assigneeInitials: initialsFromName(input.assignee),
       status: input.status ?? "Not Started",
+      priority: input.priority ?? "Med",
+      progress: input.status === "Done" ? 100 : 0,
       due: input.due,
-      start: todayIso(),
+      start: input.start ?? todayIso(),
       clientEditable: false,
       estimateHours: 4,
     };
     set((s) => ({ tasks: [task, ...s.tasks] }));
     get().pushToast(`Task created on ${project.name}`);
     return id;
+  },
+
+  updateTask: (id, patch) => {
+    set((s) => {
+      const tasks = s.tasks.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...patch };
+        if (patch.status === "Done") next.progress = 100;
+        if (patch.assignee) next.assigneeInitials = initialsFromName(patch.assignee);
+        return next;
+      });
+      const task = tasks.find((t) => t.id === id);
+      if (!task) return { tasks };
+      const projectTasks = tasks.filter((t) => t.projectId === task.projectId);
+      const progress = projectTasks.length
+        ? Math.round(projectTasks.reduce((sum, t) => sum + t.progress, 0) / projectTasks.length)
+        : 0;
+      return {
+        tasks,
+        projects: s.projects.map((p) => (p.id === task.projectId ? { ...p, progress } : p)),
+      };
+    });
+  },
+
+  deleteTask: (id) => {
+    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    get().pushToast("Task deleted", "danger");
   },
 
   createMilestone: (projectId, name, due) => {
@@ -358,6 +452,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast("Milestone added");
     return id;
+  },
+
+  updateMilestone: (id, patch) => {
+    set((s) => ({
+      milestones: s.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    }));
+  },
+
+  deleteMilestone: (id) => {
+    set((s) => ({
+      milestones: s.milestones.filter((m) => m.id !== id),
+      tasks: s.tasks.map((t) => (t.milestoneId === id ? { ...t, milestoneId: undefined } : t)),
+    }));
+    get().pushToast("Milestone deleted", "danger");
   },
 
   createTimeEntry: (input) => {
@@ -542,35 +650,225 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   allocateRetainerHours: (id, hours) => {
-    set((s) => ({
-      retainers: s.retainers.map((r) =>
-        r.id === id
-          ? { ...r, usedHours: Math.min(r.budgetHours, Math.max(0, r.usedHours + hours)) }
-          : r,
-      ),
-    }));
+    set((s) => {
+      const retainers = s.retainers.map((r) =>
+        r.id === id ? { ...r, usedHours: Math.max(0, r.usedHours + hours) } : r,
+      );
+      const open = s.retainerPeriods.find((p) => p.retainerId === id && p.status === "Opened");
+      const retainerPeriods = open
+        ? s.retainerPeriods.map((p) =>
+            p.id === open.id ? { ...p, usedHours: Math.max(0, p.usedHours + hours) } : p,
+          )
+        : s.retainerPeriods;
+      return { retainers, retainerPeriods };
+    });
     get().pushToast(hours >= 0 ? `Allocated ${hours}h to retainer` : `Removed ${Math.abs(hours)}h from retainer`);
   },
 
-  createInvoiceDraft: (companyId) => {
+  createInvoiceDraft: (companyId, opts) => {
     const company = get().companies.find((c) => c.id === companyId);
     if (!company) return "";
     const id = uid("inv");
+    const amount = opts?.amount ?? 2500;
     const number = `INV-${2302 + get().invoices.length}`;
     const invoice: Invoice = {
       id,
       number,
       companyId: company.id,
       companyName: company.name,
-      amount: 2500,
+      amount,
       terms: company.billingTerms,
       due: todayIso(),
       status: "Draft",
-      lineItems: [{ description: "Professional services", amount: 2500 }],
+      lineItems: [{ description: opts?.description ?? "Professional services", amount }],
+      projectId: opts?.projectId,
+      retainerId: opts?.retainerId,
     };
     set((s) => ({ invoices: [invoice, ...s.invoices] }));
     get().pushToast(`${number} draft created`);
     return id;
+  },
+
+  generateProjectInvoice: (projectId) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project) return "";
+    const materials = project.materials.reduce((s, m) => s + m.salePrice * m.qty, 0);
+    const services = Math.max(project.budgetAmount - materials, project.loggedHours * 180);
+    const amount = services + materials;
+    return get().createInvoiceDraft(project.companyId, {
+      projectId,
+      amount,
+      description: `${project.name} progress billing`,
+    });
+  },
+
+  generatePeriodInvoice: (periodId) => {
+    const period = get().retainerPeriods.find((p) => p.id === periodId);
+    const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
+    if (!period || !retainer) return "";
+    const amount = Math.round(period.usedHours * 175);
+    const invId = get().createInvoiceDraft(retainer.companyId, {
+      retainerId: retainer.id,
+      amount,
+      description: `${retainer.name} (${period.start} to ${period.end})`,
+    });
+    set((s) => ({
+      retainerPeriods: s.retainerPeriods.map((p) =>
+        p.id === periodId ? { ...p, status: "Invoiced", invoiceId: invId } : p,
+      ),
+    }));
+    return invId;
+  },
+
+  createRetainer: (input) => {
+    const company = get().companies.find((c) => c.id === input.companyId);
+    if (!company) return "";
+    const contact = input.contactId ? get().contacts.find((c) => c.id === input.contactId) : undefined;
+    const id = uid("r");
+    const retainer: Retainer = {
+      id,
+      companyId: company.id,
+      companyName: company.name,
+      name: input.name,
+      type: input.type,
+      manager: input.manager,
+      contactId: contact?.id,
+      contactName: contact?.name,
+      periodLabel: `Current period to ${input.expires}`,
+      usedHours: 0,
+      budgetHours: input.budgetHours,
+      status: "Active",
+      autoRenew: true,
+      expires: input.expires,
+      openPeriods: 1,
+      files: [],
+      notes: [],
+    };
+    const period: RetainerPeriod = {
+      id: uid("rp"),
+      retainerId: id,
+      start: todayIso(),
+      end: input.expires,
+      status: "Opened",
+      usedHours: 0,
+      budgetHours: input.budgetHours,
+    };
+    set((s) => ({
+      retainers: [retainer, ...s.retainers],
+      retainerPeriods: [period, ...s.retainerPeriods],
+    }));
+    get().pushToast(`Retainer ${retainer.name} created`);
+    return id;
+  },
+
+  updateRetainer: (id, patch) => {
+    set((s) => ({
+      retainers: s.retainers.map((r) => {
+        if (r.id !== id) return r;
+        const next = { ...r, ...patch };
+        if (patch.contactId) {
+          const contact = get().contacts.find((c) => c.id === patch.contactId);
+          next.contactName = contact?.name;
+        }
+        return next;
+      }),
+    }));
+    get().pushToast("Retainer updated");
+  },
+
+  deleteRetainer: (id) => {
+    set((s) => ({
+      retainers: s.retainers.filter((r) => r.id !== id),
+      retainerPeriods: s.retainerPeriods.filter((p) => p.retainerId !== id),
+    }));
+    get().pushToast("Retainer deleted", "danger");
+  },
+
+  addRetainerPeriod: (retainerId, start, end, budgetHours) => {
+    const id = uid("rp");
+    set((s) => ({
+      retainerPeriods: [
+        { id, retainerId, start, end, status: "Opened", usedHours: 0, budgetHours },
+        ...s.retainerPeriods,
+      ],
+      retainers: s.retainers.map((r) =>
+        r.id === retainerId
+          ? { ...r, openPeriods: r.openPeriods + 1, periodLabel: `${start} to ${end}`, budgetHours, expires: end }
+          : r,
+      ),
+    }));
+    get().pushToast("Period added");
+    return id;
+  },
+
+  addProjectFile: (projectId, file) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, files: [{ id: uid("f"), ...file }, ...p.files] } : p,
+      ),
+    }));
+    get().pushToast("File uploaded");
+  },
+
+  addProjectNote: (projectId, note) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              notes: [{ id: uid("pn"), createdAt: formatDisplayDate(todayIso()), ...note }, ...p.notes],
+            }
+          : p,
+      ),
+    }));
+    get().pushToast("Note added");
+  },
+
+  addRetainerFile: (retainerId, file) => {
+    set((s) => ({
+      retainers: s.retainers.map((r) =>
+        r.id === retainerId ? { ...r, files: [{ id: uid("f"), ...file }, ...r.files] } : r,
+      ),
+    }));
+    get().pushToast("File uploaded");
+  },
+
+  addRetainerNote: (retainerId, note) => {
+    set((s) => ({
+      retainers: s.retainers.map((r) =>
+        r.id === retainerId
+          ? {
+              ...r,
+              notes: [{ id: uid("rn"), createdAt: formatDisplayDate(todayIso()), ...note }, ...r.notes],
+            }
+          : r,
+      ),
+    }));
+    get().pushToast("Note added");
+  },
+
+  addMaterial: (projectId, title, salePrice) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              materials: [
+                {
+                  id: uid("mat"),
+                  item: `MAT-${p.materials.length + 1}`,
+                  title,
+                  qty: 1,
+                  purchasePrice: Math.round(salePrice * 0.7),
+                  salePrice,
+                },
+                ...p.materials,
+              ],
+            }
+          : p,
+      ),
+    }));
+    get().pushToast("Material added");
   },
 
   sendInvoice: (id) => {

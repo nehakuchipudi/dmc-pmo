@@ -1,40 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useState } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
-import { GanttView } from "@/components/Gantt";
+import { FilesNotesPanel } from "@/components/FilesNotesPanel";
+import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
 import {
-  Avatar,
   PageHeader,
   SideRail,
   StatusPill,
   Tabs,
   statusTone,
 } from "@/components/ui";
-import { formatDisplayDate } from "@/lib/seed";
+import { useAuth } from "@/lib/auth";
+import { formatDisplayDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 
+const TABS = ["Overview", "Schedule", "Files & Notes", "Billing", "Tickets", "Signoffs"];
+
 export function ProjectDetail({ id }: { id: string }) {
-  const projects = useAppStore((s) => s.projects);
+  const router = useRouter();
+  const { user } = useAuth();
+  const project = useAppStore((s) => s.projects.find((p) => p.id === id));
   const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
   const tickets = useAppStore((s) => s.tickets);
-  const timeEntries = useAppStore((s) => s.timeEntries);
+  const createMilestone = useAppStore((s) => s.createMilestone);
+  const createTask = useAppStore((s) => s.createTask);
+  const updateTask = useAppStore((s) => s.updateTask);
+  const updateMilestone = useAppStore((s) => s.updateMilestone);
+  const deleteTask = useAppStore((s) => s.deleteTask);
   const requestSignoff = useAppStore((s) => s.requestSignoff);
   const approveSignoff = useAppStore((s) => s.approveSignoff);
-  const updateTaskStatus = useAppStore((s) => s.updateTaskStatus);
   const trackView = useAppStore((s) => s.trackView);
+  const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
+  const queueEmail = useAppStore((s) => s.queueEmail);
+  const pushToast = useAppStore((s) => s.pushToast);
+  const addProjectFile = useAppStore((s) => s.addProjectFile);
+  const addProjectNote = useAppStore((s) => s.addProjectNote);
+  const addMaterial = useAppStore((s) => s.addMaterial);
+  const updateProject = useAppStore((s) => s.updateProject);
+  const deleteProject = useAppStore((s) => s.deleteProject);
   const [tab, setTab] = useState("Overview");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
+  const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
 
-  const project = projects.find((p) => p.id === id);
   const ms = milestones.filter((m) => m.projectId === project?.id);
   const projectTasks = tasks.filter((t) => t.projectId === project?.id);
   const projectTickets = tickets.filter((t) => t.projectId === project?.id);
-  const projectTime = timeEntries.filter((t) => t.projectId === project?.id);
   const remaining = project ? project.budgetHours - project.loggedHours : 0;
+  const materialsTotal = project?.materials.reduce((s, m) => s + m.salePrice * m.qty, 0) ?? 0;
 
   useEffect(() => {
     if (!project) return;
@@ -45,7 +62,6 @@ export function ProjectDetail({ id }: { id: string }) {
     return (
       <div className="fade-in panel p-6">
         <p className="font-semibold text-[var(--color-navy)]">Project not found</p>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">This record is not in the current session.</p>
         <Link href="/app/projects" className="btn btn-primary mt-4">
           Back to projects
         </Link>
@@ -60,14 +76,44 @@ export function ProjectDetail({ id }: { id: string }) {
       </div>
       <PageHeader
         title={project.name}
-        subtitle={`${project.companyName} · Manager: ${project.manager} · Due ${formatDisplayDate(project.due)}`}
+        subtitle={`${project.companyName} · ${project.manager} · Due ${formatDisplayDate(project.due)}`}
         actions={
           <>
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--color-navy)] text-sm font-bold text-white">
-              {project.progress}%
-            </div>
-            <button type="button" className="btn btn-ghost" onClick={() => setCreateKind("milestone")}>+ Milestone</button>
-            <button type="button" className="btn btn-ghost" onClick={() => setCreateKind("task")}>+ Task</button>
+            <StatusPill tone={statusTone(project.status)}>{project.status}</StatusPill>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setCreateDefaults({ projectId: project.id, companyId: project.companyId });
+                setCreateKind("time");
+              }}
+            >
+              Log time
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                const inv = generateProjectInvoice(project.id);
+                if (inv) router.push(`/app/billing/view/?id=${inv}`);
+              }}
+            >
+              Generate invoice
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                queueEmail(
+                  "dana@cascadeventures.com",
+                  `Update on ${project.name}`,
+                  `Progress is ${project.progress}%. Next milestone updates are in the portal.`,
+                );
+                pushToast("Email queued to outbox");
+              }}
+            >
+              Send email
+            </button>
             <button
               type="button"
               className="btn btn-ghost"
@@ -77,91 +123,278 @@ export function ProjectDetail({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              className="btn btn-gold"
-              onClick={() => requestSignoff(project.id, ms.find((m) => m.status !== "Approved")?.name ?? "Current milestone")}
+              className="btn btn-primary"
+              onClick={() => startTransition(() => setTab("Schedule"))}
             >
-              Request Signoff
+              Open schedule
             </button>
           </>
         }
       />
+
       <Tabs
-        tabs={["Overview", "Plan", "Milestones", "Tasks", "Tickets", "Time & Budget", "Files", "Signoffs", "Client Notes"]}
+        tabs={TABS}
         active={tab}
-        onChange={setTab}
+        onChange={(t) => startTransition(() => setTab(t))}
       />
 
-      {tab === "Overview" && (
+      {tab === "Overview" ? (
         <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
           <div className="space-y-4">
             <div className="panel p-4">
-              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Milestones</h2>
+              <h2 className="mb-2 font-semibold text-[var(--color-navy)]">Summary</h2>
+              <p className="text-sm text-[var(--color-muted)]">{project.description || "No description yet."}</p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Metric label="Budget hrs" value={`${project.budgetHours}h`} />
+                <Metric label="Logged" value={`${project.loggedHours}h`} />
+                <Metric label="Remaining" value={`${remaining}h`} />
+                <Metric label="Margin" value={`${project.marginPct}%`} accent />
+              </div>
+            </div>
+            <div className="panel p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-semibold text-[var(--color-navy)]">Next milestones</h2>
+                <button type="button" className="btn btn-ghost text-sm" onClick={() => setTab("Schedule")}>
+                  Edit in schedule
+                </button>
+              </div>
               <table className="table">
-                <thead><tr><th>Milestone</th><th>Due</th><th>Status</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Milestone</th>
+                    <th>Due</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {ms.map((m) => (
+                  {ms.slice(0, 4).map((m) => (
                     <tr key={m.id}>
                       <td>{m.name}</td>
                       <td>{formatDisplayDate(m.due)}</td>
-                      <td><StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill></td>
+                      <td>
+                        <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="panel p-4">
-              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Budget vs Actual</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Metric label="Budget" value={`${project.budgetHours} hrs`} />
-                <Metric label="Logged" value={`${project.loggedHours} hrs`} />
-                <Metric label="Remaining" value={`${remaining} hrs`} />
-                <Metric label="Margin" value={`${project.marginPct}%`} accent />
-              </div>
-            </div>
           </div>
           <div className="space-y-4">
-            <SideRail title="Client Portal Visibility">
-              <p className="text-sm text-[var(--color-muted)]">
-                This project is <strong>shared</strong> with {project.portalContacts} client contacts, who can view milestones/tasks and comment on progress.
-              </p>
-            </SideRail>
-            <SideRail title="Team">
-              <div className="space-y-2 text-sm">
-                {[
-                  { i: "MD", n: "M. Doyle", r: "PM" },
-                  { i: "JK", n: "J. Kim", r: "Consultant" },
-                  { i: "SA", n: "S. Ahmed", r: "Consultant" },
-                ].map((m) => (
-                  <div key={m.n} className="flex items-center gap-2">
-                    <Avatar initials={m.i} />
-                    <span>{m.n} <span className="text-[var(--color-muted)]">({m.r})</span></span>
-                  </div>
-                ))}
+            <SideRail title="Quick actions">
+              <div className="space-y-2">
+                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Schedule")}>
+                  + Milestone / task
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost w-full justify-start"
+                  onClick={() =>
+                    updateProject(project.id, {
+                      status: project.status === "On Track" ? "At Risk" : "On Track",
+                    })
+                  }
+                >
+                  Toggle at-risk
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost w-full justify-start text-[var(--color-danger)]"
+                  onClick={() => {
+                    deleteProject(project.id);
+                    router.push("/app/projects");
+                  }}
+                >
+                  Delete project
+                </button>
               </div>
+            </SideRail>
+            <SideRail title="Budget">
+              <div className="text-2xl font-semibold tabular-nums text-[var(--color-navy)]">
+                {money(project.budgetAmount)}
+              </div>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">Services + materials sale value</p>
             </SideRail>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {tab === "Plan" && <GanttView project={project} milestones={ms} tasks={projectTasks} />}
+      {tab === "Schedule" ? (
+        <ProjectSchedule
+          milestones={ms}
+          tasks={projectTasks}
+          onAddMilestone={() => createMilestone(project.id, "New milestone", project.due)}
+          onAddTask={(milestoneId) =>
+            createTask({
+              name: "New task",
+              projectId: project.id,
+              assignee: "J. Kim",
+              due: project.due,
+              milestoneId,
+            })
+          }
+          onUpdateTask={updateTask}
+          onUpdateMilestone={updateMilestone}
+          onDeleteTask={deleteTask}
+        />
+      ) : null}
 
-      {tab === "Milestones" && (
-        <div className="panel overflow-hidden">
-          <div className="flex justify-end p-3">
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("milestone")}>Add milestone</button>
+      {tab === "Files & Notes" ? (
+        <FilesNotesPanel
+          files={project.files}
+          notes={project.notes}
+          author={user?.name ?? "Staff"}
+          onUpload={(file) => addProjectFile(project.id, file)}
+          onAddNote={(body, visibility) =>
+            addProjectNote(project.id, { author: user?.name ?? "Staff", body, visibility })
+          }
+        />
+      ) : null}
+
+      {tab === "Billing" ? (
+        <div className="space-y-4">
+          <div className="panel p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold text-[var(--color-navy)]">2. Materials</h2>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => addMaterial(project.id, "New material", 500)}
+              >
+                + Add materials
+              </button>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Title</th>
+                  <th>Qty</th>
+                  <th>Purchase</th>
+                  <th>Sale</th>
+                  <th>Margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.materials.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.item}</td>
+                    <td>{m.title}</td>
+                    <td>{m.qty}</td>
+                    <td className="tabular-nums">{money(m.purchasePrice)}</td>
+                    <td className="tabular-nums">{money(m.salePrice)}</td>
+                    <td className="tabular-nums">
+                      {money(m.salePrice - m.purchasePrice)}
+                    </td>
+                  </tr>
+                ))}
+                {!project.materials.length ? (
+                  <tr>
+                    <td colSpan={6} className="text-[var(--color-muted)]">
+                      No materials yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
+          <div className="panel p-4">
+            <h2 className="mb-3 font-semibold text-[var(--color-navy)]">3. Totals</h2>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt>Service items</dt>
+                <dd className="tabular-nums font-semibold">{money(project.budgetAmount - materialsTotal)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Materials</dt>
+                <dd className="tabular-nums font-semibold">{money(materialsTotal)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-[var(--color-border)] pt-2 text-base">
+                <dt>Total</dt>
+                <dd className="tabular-nums font-bold text-[var(--color-navy)]">{money(project.budgetAmount)}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              className="btn btn-primary mt-4"
+              onClick={() => {
+                const inv = generateProjectInvoice(project.id);
+                if (inv) router.push(`/app/billing/view/?id=${inv}`);
+              }}
+            >
+              Generate invoice
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === "Tickets" ? (
+        <div className="panel overflow-hidden">
           <table className="table">
-            <thead><tr><th>Milestone</th><th>Start</th><th>Due</th><th>Status</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                <th>Priority</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projectTickets.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <Link href={`/app/tickets/view/?id=${t.id}`} className="font-medium text-[var(--color-navy)]">
+                      #{t.number} {t.subject}
+                    </Link>
+                  </td>
+                  <td>
+                    <StatusPill tone={statusTone(t.priority)}>{t.priority}</StatusPill>
+                  </td>
+                  <td>
+                    <StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill>
+                  </td>
+                </tr>
+              ))}
+              {!projectTickets.length ? (
+                <tr>
+                  <td colSpan={3} className="text-[var(--color-muted)]">
+                    No tickets linked. Use Create (+) Ticket with this company.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {tab === "Signoffs" ? (
+        <div className="panel overflow-hidden">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Deliverable</th>
+                <th>Due</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
             <tbody>
               {ms.map((m) => (
                 <tr key={m.id}>
                   <td>{m.name}</td>
-                  <td>{formatDisplayDate(m.start)}</td>
                   <td>{formatDisplayDate(m.due)}</td>
-                  <td><StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill></td>
                   <td>
+                    <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
+                  </td>
+                  <td className="space-x-2 text-right">
+                    <button
+                      type="button"
+                      className="btn btn-ghost text-sm"
+                      onClick={() => requestSignoff(project.id, m.name)}
+                    >
+                      Request
+                    </button>
                     {m.status !== "Approved" ? (
-                      <button type="button" className="btn btn-ghost text-sm" onClick={() => approveSignoff(m.id)}>
+                      <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>
                         Approve
                       </button>
                     ) : null}
@@ -171,125 +404,14 @@ export function ProjectDetail({ id }: { id: string }) {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
-      {tab === "Tasks" && (
-        <div className="panel overflow-hidden">
-          <div className="flex justify-end p-3">
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("task")}>Add task</button>
-          </div>
-          <table className="table">
-            <thead><tr><th>Task</th><th>Assignee</th><th>Due</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {projectTasks.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.assignee}</td>
-                  <td>{formatDisplayDate(t.due)}</td>
-                  <td><StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill></td>
-                  <td>
-                    <select
-                      className="field-input"
-                      value={t.status}
-                      onChange={(e) => updateTaskStatus(t.id, e.target.value as typeof t.status)}
-                    >
-                      {["Not Started", "In Progress", "Review", "Done"].map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "Tickets" && (
-        <div className="panel overflow-hidden">
-          <table className="table">
-            <thead><tr><th>Ticket</th><th>Priority</th><th>Status</th></tr></thead>
-            <tbody>
-              {projectTickets.map((t) => (
-                <tr key={t.id}>
-                  <td><Link href={`/app/tickets/view/?id=${t.id}`} className="font-medium text-[var(--color-navy)]">#{t.number} {t.subject}</Link></td>
-                  <td><StatusPill tone={statusTone(t.priority)}>{t.priority}</StatusPill></td>
-                  <td><StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill></td>
-                </tr>
-              ))}
-              {!projectTickets.length ? <tr><td colSpan={3} className="text-[var(--color-muted)]">No tickets linked.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "Time & Budget" && (
-        <div className="space-y-4">
-          <div className="panel p-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="Budget" value={`${project.budgetHours} hrs`} />
-            <Metric label="Logged" value={`${project.loggedHours} hrs`} />
-            <Metric label="Remaining" value={`${remaining} hrs`} />
-            <Metric label="Margin" value={`${project.marginPct}%`} accent />
-          </div>
-          <div className="panel overflow-hidden">
-            <div className="flex justify-end p-3">
-              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("time")}>Log time</button>
-            </div>
-            <table className="table">
-              <thead><tr><th>Date</th><th>Person</th><th>Task</th><th>Hours</th><th>Status</th></tr></thead>
-              <tbody>
-                {projectTime.map((t) => (
-                  <tr key={t.id}>
-                    <td>{formatDisplayDate(t.date)}</td>
-                    <td>{t.userName}</td>
-                    <td>{t.taskName ?? "General"}</td>
-                    <td>{t.hours}</td>
-                    <td><StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === "Files" && (
-        <div className="panel p-6 text-sm text-[var(--color-muted)]">
-          Project files (SOW, designs, signoff packs) will sync to secure storage in the API phase.
-        </div>
-      )}
-
-      {tab === "Signoffs" && (
-        <div className="panel overflow-hidden">
-          <table className="table">
-            <thead><tr><th>Deliverable</th><th>Due</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {ms.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.name}</td>
-                  <td>{formatDisplayDate(m.due)}</td>
-                  <td><StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill></td>
-                  <td className="space-x-2">
-                    <button type="button" className="btn btn-ghost text-sm" onClick={() => requestSignoff(project.id, m.name)}>Request</button>
-                    {m.status !== "Approved" ? (
-                      <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>Approve</button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "Client Notes" && (
-        <div className="panel p-4 text-sm">
-          <p className="text-[var(--color-muted)] mb-3">Client-visible notes only. Internal discussion stays off this tab.</p>
-          <p>Homepage review scheduled for Aug 9. Client asked for denser product photography on hero.</p>
-        </div>
-      )}
-
-      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} defaults={{ projectId: project.id, companyId: project.companyId }} />
+      <CreateForms
+        key={createKind ?? "closed"}
+        kind={createKind}
+        defaults={createDefaults}
+        onClose={() => setCreateKind(null)}
+      />
     </div>
   );
 }

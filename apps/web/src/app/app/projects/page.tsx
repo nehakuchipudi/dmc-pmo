@@ -1,41 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { startTransition, useMemo, useState } from "react";
+import { MoreVertical, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
-import { FilterChips, PageHeader, ProgressBar, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
-import { formatDisplayDate } from "@/lib/seed";
+import { Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
+import type { ProjectStatus } from "@/lib/types";
 
-const FILTERS = [
-  "All Open Projects",
-  "Recently Created",
-  "Managed By Me",
-  "Projects Overdue",
-];
+const FILTERS = ["All open projects", "My projects", "At risk", "Recently created"];
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const projects = useAppStore((s) => s.projects);
-  const milestones = useAppStore((s) => s.milestones);
+  const companies = useAppStore((s) => s.companies);
+  const deleteProject = useAppStore((s) => s.deleteProject);
+  const updateProject = useAppStore((s) => s.updateProject);
+  const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
+  const queueEmail = useAppStore((s) => s.queueEmail);
+  const pushToast = useAppStore((s) => s.pushToast);
   const [filter, setFilter] = useState(FILTERS[0]);
-  const [tab, setTab] = useState("Projects");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const rows = useMemo(() => {
-    if (filter === "Projects Overdue") return projects.filter((p) => p.status === "Overdue");
-    if (filter === "Managed By Me") return projects.filter((p) => p.manager === "M. Doyle");
-    return projects;
+    if (filter === "My projects") return projects.filter((p) => p.manager === "M. Doyle");
+    if (filter === "At risk") return projects.filter((p) => p.status === "At Risk" || p.status === "Overdue");
+    if (filter === "Recently created") return [...projects];
+    return projects.filter((p) => p.status !== "Completed");
   }, [filter, projects]);
 
-  const pendingSignoffs = milestones.filter((m) => m.status === "Awaiting Signoff" || m.status === "In Progress");
+  const editing = projects.find((p) => p.id === editId);
 
   return (
     <div className="fade-in">
       <PageHeader
         title="Projects"
-        subtitle="Every active and completed engagement."
+        subtitle="Plan delivery, edit schedules, bill clients, and keep files in one place."
         actions={
           <>
             <button
@@ -51,157 +56,178 @@ export default function ProjectsPage() {
                     status: p.status,
                     progress: p.progress,
                     due: p.due,
+                    budget: p.budgetAmount,
                   })),
                 )
               }
             >
-              Export CSV
+              Export
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
-              <Plus size={16} /> New Project
+              <Plus size={16} /> New project
             </button>
           </>
         }
       />
-      <Tabs tabs={["Projects", "Milestones", "Signoffs"]} active={tab} onChange={setTab} />
-      {tab === "Projects" ? (
-        <>
-          <FilterChips items={FILTERS} active={filter} onChange={setFilter} />
-          <div className="grid gap-4 lg:grid-cols-[1fr_250px]">
-            <div className="panel overflow-hidden">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Project</th>
-                    <th>Company</th>
-                    <th>Manager</th>
-                    <th>Progress</th>
-                    <th>Status</th>
-                    <th>Due</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <Link href={`/app/projects/view/?id=${p.id}`} className="font-medium text-[var(--color-navy)]">
-                          {p.name}
-                        </Link>
-                      </td>
-                      <td>{p.companyName}</td>
-                      <td>{p.manager}</td>
-                      <td>
-                        <ProgressBar value={p.progress} />
-                      </td>
-                      <td>
-                        <StatusPill tone={statusTone(p.status)}>{p.status}</StatusPill>
-                      </td>
-                      <td>{formatDisplayDate(p.due)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <SideRail title="Shortcuts">
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/app/reports" className="hover:underline">
-                    Projects dashboard
+      <FilterChips
+        items={FILTERS}
+        active={filter}
+        onChange={(v) => startTransition(() => setFilter(v))}
+      />
+      <div className="panel overflow-hidden">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Company</th>
+              <th>Manager</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th>Due</th>
+              <th>Budget</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <Link
+                    href={`/app/projects/view/?id=${p.id}`}
+                    className="font-semibold text-[var(--color-navy)] hover:underline"
+                    onMouseEnter={() => router.prefetch(`/app/projects/view/?id=${p.id}`)}
+                  >
+                    {p.name}
                   </Link>
-                </li>
-                <li>
-                  <Link href="/app/timesheets" className="hover:underline">
-                    Project timesheet overview
+                  <div className="text-xs text-[var(--color-muted)]">{p.projectType}</div>
+                </td>
+                <td>
+                  <Link href={`/app/companies/view/?id=${p.companyId}`} className="hover:underline">
+                    {p.companyName}
                   </Link>
-                </li>
-                <li>
-                  <button type="button" className="hover:underline" onClick={() => setTab("Signoffs")}>
-                    Project signoffs ({pendingSignoffs.length})
+                </td>
+                <td>{p.manager}</td>
+                <td className="min-w-[140px]">
+                  <ProgressBar value={p.progress} />
+                </td>
+                <td>
+                  <StatusPill tone={statusTone(p.status)}>{p.status}</StatusPill>
+                </td>
+                <td>{formatDisplayDate(p.due)}</td>
+                <td className="tabular-nums">{money(p.budgetAmount)}</td>
+                <td className="row-actions text-right">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    aria-label="Actions"
+                    onClick={() => setMenuId(menuId === p.id ? null : p.id)}
+                  >
+                    <MoreVertical size={16} />
                   </button>
-                </li>
-                <li>
-                  <button type="button" className="hover:underline" onClick={() => setFilter("Managed By Me")}>
-                    Managed by me
-                  </button>
-                </li>
-              </ul>
-            </SideRail>
-          </div>
-        </>
-      ) : null}
-      {tab === "Milestones" ? (
-        <div className="panel overflow-hidden">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Milestone</th>
-                <th>Project</th>
-                <th>Due</th>
-                <th>Status</th>
+                  {menuId === p.id ? (
+                    <div className="row-menu">
+                      <button type="button" onClick={() => { setEditId(p.id); setMenuId(null); }}>
+                        Edit project
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const id = generateProjectInvoice(p.id);
+                          setMenuId(null);
+                          if (id) router.push(`/app/billing/view/?id=${id}`);
+                        }}
+                      >
+                        Generate invoice
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          queueEmail(
+                            "ops@dillonmorgan.com",
+                            `Project update: ${p.name}`,
+                            `Status ${p.status}, progress ${p.progress}%.`,
+                          );
+                          pushToast("Email queued");
+                          setMenuId(null);
+                        }}
+                      >
+                        Email update
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          deleteProject(p.id);
+                          setMenuId(null);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {milestones.map((m) => {
-                const project = projects.find((p) => p.id === m.projectId);
-                return (
-                  <tr key={m.id}>
-                    <td className="font-medium">{m.name}</td>
-                    <td>{project?.name ?? "-"}</td>
-                    <td>{formatDisplayDate(m.due)}</td>
-                    <td>
-                      <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div className="p-4">
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("milestone")}>
-              New milestone
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {tab === "Signoffs" ? (
-        <div className="panel overflow-hidden">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Project</th>
-                <th>Due</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {pendingSignoffs.map((m) => {
-                const project = projects.find((p) => p.id === m.projectId);
-                return (
-                  <tr key={m.id}>
-                    <td className="font-medium">{m.name}</td>
-                    <td>{project?.name ?? "-"}</td>
-                    <td>{formatDisplayDate(m.due)}</td>
-                    <td>
-                      <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
-                    </td>
-                    <td className="text-right">
-                      <Link href={`/app/projects/view/?id=${m.projectId}`} className="btn btn-ghost text-sm">
-                        Open
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {!pendingSignoffs.length ? (
-            <p className="p-6 text-sm text-[var(--color-muted)]">No pending signoffs.</p>
-          ) : null}
-        </div>
-      ) : null}
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
+
+      <Modal open={!!editing} title="Edit project" onClose={() => setEditId(null)}>
+        {editing ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              updateProject(editing.id, {
+                name: String(fd.get("name") || editing.name),
+                manager: String(fd.get("manager") || editing.manager),
+                status: String(fd.get("status") || editing.status) as ProjectStatus,
+                due: String(fd.get("due") || editing.due),
+                description: String(fd.get("description") || ""),
+                companyId: String(fd.get("companyId") || editing.companyId),
+                companyName:
+                  companies.find((c) => c.id === String(fd.get("companyId")))?.name ?? editing.companyName,
+              });
+              setEditId(null);
+            }}
+          >
+            <Field label="Name">
+              <TextInput name="name" defaultValue={editing.name} />
+            </Field>
+            <Field label="Company">
+              <TextSelect name="companyId" defaultValue={editing.companyId}>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label="Manager">
+              <TextInput name="manager" defaultValue={editing.manager} />
+            </Field>
+            <Field label="Status">
+              <TextSelect name="status" defaultValue={editing.status}>
+                {["Planned", "On Track", "At Risk", "Overdue", "Completed"].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label="Due">
+              <TextInput type="date" name="due" defaultValue={editing.due} />
+            </Field>
+            <Field label="Description">
+              <TextInput name="description" defaultValue={editing.description} />
+            </Field>
+            <button type="submit" className="btn btn-primary">
+              Save changes
+            </button>
+          </form>
+        ) : null}
+      </Modal>
     </div>
   );
 }

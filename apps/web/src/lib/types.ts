@@ -7,13 +7,17 @@ export type Role =
   | "client";
 
 export type CompanyStatus = "Active" | "Prospect" | "Overdue Inv.";
-export type ProjectStatus = "On Track" | "At Risk" | "Overdue";
+export type ProjectStatus = "On Track" | "At Risk" | "Overdue" | "Planned" | "Completed";
 export type TicketPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TicketStatus = "Open" | "In Progress" | "Resolved";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue";
 export type TaskStatus = "Not Started" | "In Progress" | "Review" | "Done";
+export type TaskPriority = "Critical" | "High" | "Med" | "Low";
 export type MilestoneStatus = "Approved" | "Awaiting Signoff" | "In Progress" | "Not Started";
 export type TimeEntryStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
+export type RetainerType = "Monthly T&M" | "Pre-paid" | "Fixed";
+export type RetainerStatus = "Active" | "Expired" | "Cancelled";
+export type PeriodStatus = "Opened" | "Closed" | "Invoiced";
 
 export interface User {
   id: string;
@@ -50,6 +54,31 @@ export interface Contact {
   lastInteraction: string;
 }
 
+export interface MaterialLine {
+  id: string;
+  item: string;
+  title: string;
+  qty: number;
+  purchasePrice: number;
+  salePrice: number;
+}
+
+export interface ProjectFile {
+  id: string;
+  folder: string;
+  name: string;
+  kind: "pdf" | "docx" | "pptx" | "img" | "other";
+  sizeKb: number;
+}
+
+export interface ProjectNote {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
+  visibility: "internal" | "client";
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -65,6 +94,12 @@ export interface Project {
   marginPct: number;
   portalShared: boolean;
   portalContacts: number;
+  projectType: string;
+  description: string;
+  budgetAmount: number;
+  materials: MaterialLine[];
+  files: ProjectFile[];
+  notes: ProjectNote[];
 }
 
 export interface Milestone {
@@ -104,14 +139,18 @@ export interface Task {
   name: string;
   projectId: string;
   projectName: string;
+  milestoneId?: string;
   assignee: string;
   assigneeInitials: string;
   status: TaskStatus;
+  priority: TaskPriority;
+  progress: number;
   due: string;
   start: string;
   dueLabel?: string;
   clientEditable: boolean;
   estimateHours: number;
+  dependsOn?: string;
 }
 
 export interface Invoice {
@@ -124,6 +163,8 @@ export interface Invoice {
   due: string;
   status: InvoiceStatus;
   lineItems: { description: string; amount: number }[];
+  projectId?: string;
+  retainerId?: string;
 }
 
 export interface TimeEntry {
@@ -157,15 +198,35 @@ export interface ActivityItem {
   text: string;
 }
 
+export interface RetainerPeriod {
+  id: string;
+  retainerId: string;
+  start: string;
+  end: string;
+  status: PeriodStatus;
+  usedHours: number;
+  budgetHours: number;
+  invoiceId?: string;
+}
+
 export interface Retainer {
   id: string;
   companyId: string;
   companyName: string;
   name: string;
+  type: RetainerType;
+  manager: string;
+  contactId?: string;
+  contactName?: string;
   periodLabel: string;
   usedHours: number;
   budgetHours: number;
-  status: "Active" | "Closed";
+  status: RetainerStatus;
+  autoRenew: boolean;
+  expires: string;
+  openPeriods: number;
+  files: ProjectFile[];
+  notes: ProjectNote[];
 }
 
 export interface AutomationRule {
