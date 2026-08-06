@@ -1,0 +1,21 @@
+{
+  "name": "DMC PMO",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "description": "NestJS API (watch mode) on port 4000, backed by local PostgreSQL.",
+      "command": "DATABASE_URL=\"postgresql://dmc:dmc@127.0.0.1:5432/dmc_pmo?schema=public\" API_PORT=4000 pnpm --filter @dmc/api start:dev"
+    },
+    {
+      "name": "web",
+      "description": "Next.js web app (dev mode) on port 3000, talking to the API on port 4000.",
+      "command": "API_URL=\"http://127.0.0.1:4000\" PORT=3000 pnpm --filter @dmc/web dev"
+    }
+  ],
+  "ports": [
+    { "name": "web", "port": 3000 },
+    { "name": "api", "port": 4000 }
+  ]
+}

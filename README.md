@@ -5,7 +5,13 @@ Designed as an Accelo replacement with boutique supersets, a client portal, mobi
 
 ## Status
 
-**Phase: Product planning complete.** Implementation has not started.
+**Phase: Product planning complete. Phase 0 scaffold in progress.**
+
+The TypeScript monorepo scaffold from the master plan (section 14) is now in place:
+a NestJS API, a Next.js web app, and a shared package, backed by PostgreSQL. The
+first vertical slice (Companies) works end to end: create a company in the web UI,
+it is validated (including the no em dash rule), persisted through the API into
+PostgreSQL, and rendered back in the branded companies grid.
 
 Planning artifacts live in [`docs/`](./docs/).
 
@@ -36,6 +42,43 @@ Planning artifacts live in [`docs/`](./docs/).
 - Gold: `#B08D57`  
 - Semantic status: green / amber / red  
 
+## Monorepo layout
+
+```
+apps/
+  api/          NestJS API (Prisma + PostgreSQL): /health, /companies
+  web/          Next.js 15 App Router internal shell (branded companies module)
+packages/
+  shared/       Shared TypeScript types, role enums, and zod schemas
+docs/           Product and architecture planning
+.cursor/        Cloud Agent environment (install.sh, start.sh, environment.json)
+```
+
+## Local development
+
+Prerequisites: Node 20+ and pnpm 10. PostgreSQL 16 is provisioned automatically by
+the Cloud Agent environment; for a manual setup point `DATABASE_URL` at any local
+PostgreSQL instance.
+
+```bash
+pnpm install
+cp .env.example .env                     # adjust DATABASE_URL if needed
+pnpm --filter @dmc/shared build
+pnpm --filter @dmc/api prisma:generate
+pnpm --filter @dmc/api prisma:migrate:deploy
+pnpm --filter @dmc/api db:seed           # seeds demo companies (Cascade Ventures, ...)
+
+# run the two services (separate terminals)
+pnpm dev:api                             # http://127.0.0.1:4000
+pnpm dev:web                             # http://127.0.0.1:3000  -> /app/companies
+```
+
+In Cloud Agents this is fully automated: `.cursor/install.sh` prepares the database
+and dependencies, `.cursor/start.sh` reconciles schema and seed data on boot, and the
+`api` and `web` terminals run the dev servers.
+
 ## Next
 
-Approve open decisions in the master plan (API stack, Azure region, portal payments), then scaffold the monorepo and Phase 0 Azure environments.
+Approve the remaining open decisions in the master plan (Azure region, portal
+payments), then extend Phase 0 with Contacts CRUD, Entra auth, RBAC, and PostgreSQL
+row level security, followed by the Phase 0 Azure environments.
