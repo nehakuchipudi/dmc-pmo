@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import {
   Field,
@@ -26,10 +26,10 @@ const TABS = ["Overview", "Periods", "Billing", "Tickets", "Files & Notes"];
 export function RetainerDetail({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const retainer = useAppStore((s) => s.retainers.find((r) => r.id === id));
-  const periods = useAppStore((s) => s.retainerPeriods.filter((p) => p.retainerId === id));
-  const tickets = useAppStore((s) => s.tickets.filter((t) => t.companyId === retainer?.companyId));
-  const contacts = useAppStore((s) => s.contacts.filter((c) => c.companyId === retainer?.companyId));
+  const retainers = useAppStore((s) => s.retainers);
+  const retainerPeriods = useAppStore((s) => s.retainerPeriods);
+  const allTickets = useAppStore((s) => s.tickets);
+  const allContacts = useAppStore((s) => s.contacts);
   const updateRetainer = useAppStore((s) => s.updateRetainer);
   const allocate = useAppStore((s) => s.allocateRetainerHours);
   const addPeriod = useAppStore((s) => s.addRetainerPeriod);
@@ -42,6 +42,20 @@ export function RetainerDetail({ id }: { id: string }) {
   const [tab, setTab] = useState("Overview");
   const [editOpen, setEditOpen] = useState(false);
   const [hours, setHours] = useState("1");
+
+  const retainer = useMemo(() => retainers.find((r) => r.id === id), [retainers, id]);
+  const periods = useMemo(
+    () => retainerPeriods.filter((p) => p.retainerId === id),
+    [retainerPeriods, id],
+  );
+  const tickets = useMemo(
+    () => allTickets.filter((t) => t.companyId === retainer?.companyId),
+    [allTickets, retainer?.companyId],
+  );
+  const contacts = useMemo(
+    () => allContacts.filter((c) => c.companyId === retainer?.companyId),
+    [allContacts, retainer?.companyId],
+  );
 
   useEffect(() => {
     if (!retainer) return;

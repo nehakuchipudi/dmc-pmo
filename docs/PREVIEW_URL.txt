@@ -1,18 +1,12 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://dark-fader-1lo91kn.shipstatic.com/login/
+https://drifting-fog-167awwq.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/0c4db43f901565c677a3a36063409da9e1ac86d2f6ee5f79eedf18d8e46f68d0
+https://my.shipstatic.com/claim/51d187fa67bac552251a13f031d0f6c3fb79654e96133b18b604ccc0c4b3ec8f
 
-Previous verified build (workflows E2E):
+Previous builds:
+https://dark-fader-1lo91kn.shipstatic.com/login/
 https://serene-dust-5pp8g2r.shipstatic.com/login/
-
-Older previews:
-https://charged-void-j26ylbk.shipstatic.com/login/
-https://blazing-veil-8o025gy.shipstatic.com/login/
-
-Backup (1FreeHosting; may be older build):
-https://chirpy-lantern-467.1freehosting.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/
