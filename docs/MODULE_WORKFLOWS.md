@@ -147,8 +147,9 @@
 
 | Date | Method | Result |
 | --- | --- | --- |
-| 2026-08-06 | Code audit + browser smoke | Gaps found (timer hours, signoff status, expense/note, counters); fixes applied in same branch |
-| 2026-08-06 | Post-fix browser E2E | See latest agent run / PREVIEW_URL |
+| 2026-08-06 | Code audit | Gaps: timer hours, signoff status, expense/note, counters, draft pay gate |
+| 2026-08-06 | Fixes landed | Store + UI hardened for UC-01..06 process paths |
+| 2026-08-06 | Browser E2E on serene-dust preview | PASS: time submit/approve, signoff request→portal approve, tickets, expense+note, draft pay gate, sales→project, retainers, note modal. Work board status updates via Tasks dropdown; drag improved with dataTransfer |
 
 ---
 

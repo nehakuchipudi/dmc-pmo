@@ -72,11 +72,16 @@ export default function WorkPage() {
           <div
             key={col.key}
             className="kanban-col"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => {
-              if (!dragId || board !== "Status Board") return;
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const id = e.dataTransfer.getData("text/task-id") || dragId;
+              if (!id || board !== "Status Board") return;
               if (STATUS_COLS.includes(col.key as TaskStatus)) {
-                updateTaskStatus(dragId, col.key as TaskStatus);
+                updateTaskStatus(id, col.key as TaskStatus);
               }
               setDragId(null);
             }}
@@ -90,7 +95,12 @@ export default function WorkPage() {
                 key={task.id}
                 className="kanban-card"
                 draggable={board === "Status Board"}
-                onDragStart={() => setDragId(task.id)}
+                onDragStart={(e) => {
+                  setDragId(task.id);
+                  e.dataTransfer.setData("text/task-id", task.id);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragEnd={() => setDragId(null)}
               >
                 <div className="font-medium">{task.name}</div>
                 <div className="mt-1 text-xs text-[var(--color-muted)]">{task.projectName}</div>
