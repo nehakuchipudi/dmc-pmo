@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilterChips, PageHeader, SideRail, StatusPill, statusTone } from "@/components/ui";
+import { useAuth } from "@/lib/auth";
 import { formatDisplayDate } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 
@@ -13,20 +14,23 @@ const FILTERS = [
   "Recently Created",
   "Assigned To Me",
   "Unassigned",
-  "Classic Lists",
 ];
 
 export default function TicketsPage() {
+  const { user } = useAuth();
   const tickets = useAppStore((s) => s.tickets);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const rows = useMemo(() => {
     if (filter === "Unassigned") return tickets.filter((t) => t.assignee === "Unassigned");
-    if (filter === "Assigned To Me") return tickets.filter((t) => t.assignee === "J. Kim");
+    if (filter === "Assigned To Me") {
+      const me = user?.name ?? "";
+      return tickets.filter((t) => t.assignee === me || (user?.role === "staff" && t.assignee === "J. Kim"));
+    }
     if (filter === "Recently Created") return [...tickets].sort((a, b) => b.submitted.localeCompare(a.submitted));
     if (filter === "All Open Tickets") return tickets.filter((t) => t.status !== "Resolved");
     return tickets;
-  }, [filter, tickets]);
+  }, [filter, tickets, user]);
 
   return (
     <div className="fade-in">

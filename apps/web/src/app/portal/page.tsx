@@ -21,7 +21,7 @@ export default function PortalHomePage() {
   const openTickets = tickets.filter((t) => t.companyId === user?.companyId && t.status !== "Resolved");
   const recentInvoices = invoices.filter((i) => i.companyId === user?.companyId).slice(0, 3);
   const pending = milestones.filter(
-    (m) => companyProjects.some((p) => p.id === m.projectId) && m.status !== "Approved",
+    (m) => companyProjects.some((p) => p.id === m.projectId) && m.status === "Awaiting Signoff",
   );
 
   return (
@@ -50,7 +50,10 @@ export default function PortalHomePage() {
               <tbody>
                 {companyProjects.map((p) => {
                   const next = milestones.find((m) => m.projectId === p.id && m.status !== "Approved");
-                  const portalStatus = next?.status === "In Progress" ? "Awaiting Your Review" : p.status;
+                  const portalStatus =
+                    next?.status === "Awaiting Signoff" || next?.status === "In Progress"
+                      ? "Awaiting Your Review"
+                      : p.status;
                   return (
                     <tr key={p.id}>
                       <td className="font-medium text-[var(--color-navy)]">{p.name}</td>

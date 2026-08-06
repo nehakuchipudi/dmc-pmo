@@ -12,7 +12,18 @@ export function InvoiceDetail({ id }: { id: string }) {
   const payInvoice = useAppStore((s) => s.payInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const pushToast = useAppStore((s) => s.pushToast);
-  const invoice = invoices.find((i) => i.id === id) ?? invoices[0];
+  const invoice = invoices.find((i) => i.id === id);
+
+  if (!invoice) {
+    return (
+      <div className="fade-in panel p-6">
+        <p className="font-semibold text-[var(--color-navy)]">Invoice not found</p>
+        <Link href="/app/billing" className="btn btn-primary mt-4">
+          Back to billing
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">
@@ -41,7 +52,7 @@ export function InvoiceDetail({ id }: { id: string }) {
             >
               Send reminder
             </button>
-            {invoice.status !== "Paid" ? (
+            {invoice.status === "Sent" || invoice.status === "Overdue" ? (
               <button type="button" className="btn btn-primary" onClick={() => payInvoice(invoice.id)}>
                 Record payment
               </button>

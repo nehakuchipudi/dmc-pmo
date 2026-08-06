@@ -8,9 +8,11 @@ import {
   seedCompanies,
   seedContacts,
   seedEmailOutbox,
+  seedExpenses,
   seedInvoices,
   seedMilestones,
   seedNotifications,
+  seedOpportunities,
   seedProjects,
   seedRetainers,
   seedTasks,
@@ -25,9 +27,11 @@ import type {
   Company,
   Contact,
   EmailOutboxItem,
+  Expense,
   Invoice,
   Milestone,
   NotificationItem,
+  Opportunity,
   Project,
   Retainer,
   Task,
@@ -96,6 +100,8 @@ type AppState = {
   retainers: Retainer[];
   automations: AutomationRule[];
   emailOutbox: EmailOutboxItem[];
+  expenses: Expense[];
+  opportunities: Opportunity[];
   toasts: Toast[];
   recentlyViewed: { type: string; id: string; label: string }[];
 
@@ -104,6 +110,7 @@ type AppState = {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   trackView: (type: string, id: string, label: string) => void;
+  addActivityNote: (companyId: string, text: string, projectId?: string) => void;
 
   createCompany: (input: CreateCompanyInput) => string;
   createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
@@ -112,6 +119,10 @@ type AppState = {
   createTask: (input: CreateTaskInput) => string;
   createMilestone: (projectId: string, name: string, due: string) => string;
   createTimeEntry: (input: CreateTimeInput) => string;
+  createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
+  createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
+  advanceOpportunity: (id: string) => void;
+  approveExpense: (id: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   updateTicketStatus: (ticketId: string, status: Ticket["status"]) => void;
   addTicketMessage: (ticketId: string, author: string, body: string, visibility: "client" | "internal") => void;
@@ -157,6 +168,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   retainers: seedRetainers,
   automations: seedAutomations,
   emailOutbox: seedEmailOutbox,
+  expenses: seedExpenses,
+  opportunities: seedOpportunities,
   toasts: [],
   recentlyViewed: [
     { type: "company", id: "c-cascade", label: "Cascade Ventures" },
@@ -180,6 +193,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       recentlyViewed: [{ type, id, label }, ...s.recentlyViewed.filter((r) => !(r.type === type && r.id === id))].slice(0, 8),
     })),
+
+  addActivityNote: (companyId, text, projectId) => {
+    set((s) => ({
+      activities: [
+        { id: uid("a"), companyId, projectId, when: displayNow(), text },
+        ...s.activities,
+      ],
+      companies: s.companies.map((c) =>
+        c.id === companyId ? { ...c, lastActivity: formatDisplayDate(todayIso()) } : c,
+      ),
+    }));
+    get().pushToast("Note saved to activity");
+  },
 
   createCompany: (input) => {
     const id = uid("c");
@@ -215,7 +241,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       initials: initialsFromName(input.name),
       lastInteraction: formatDisplayDate(todayIso()),
     };
-    set((s) => ({ contacts: [contact, ...s.contacts] }));
+    set((s) => ({
+      contacts: [contact, ...s.contacts],
+      companies: s.companies.map((c) =>
+        c.id === input.companyId
+          ? {
+              ...c,
+              portalContacts: input.portal === "Enabled" ? c.portalContacts + 1 : c.portalContacts,
+              lastActivity: formatDisplayDate(todayIso()),
+            }
+          : c,
+      ),
+    }));
     get().pushToast(`Contact ${contact.name} created`);
     return id;
   },
@@ -361,16 +398,108 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
 
-  updateTaskStatus: (taskId, status) => {
+  createExpense: (input) => {
+    const project = get().projects.find((p) => p.id === input.projectId);
+    if (!project) return "";
+    const id = uid("ex");
+    const expense: Expense = {
+      id,
+      vendor: input.vendor,
+      projectId: project.id,
+      projectName: project.name,
+      amount: input.amount,
+      status: "Pending",
+      date: todayIso(),
+      note: input.note,
+    };
+    set((s) => ({ expenses: [expense, ...s.expenses] }));
+    get().pushToast("Expense submitted for approval");
+    return id;
+  },
+
+  createOpportunity: (input) => {
+    const company = get().companies.find((c) => c.id === input.companyId);
+    if (!company) return "";
+    const id = uid("o");
+    const opp: Opportunity = {
+      id,
+      name: input.name,
+      companyId: company.id,
+      companyName: company.name,
+      stage: "Qualify",
+      amount: input.amount,
+      close: input.close,
+    };
+    set((s) => ({ opportunities: [opp, ...s.opportunities] }));
+    get().pushToast("Opportunity added");
+    return id;
+  },
+
+  advanceOpportunity: (id) => {
+    const order: Opportunity["stage"][] = ["Qualify", "Propose", "Negotiate", "Won"];
+    const opp = get().opportunities.find((o) => o.id === id);
+    if (!opp || opp.stage === "Won" || opp.stage === "Lost") return;
+    const idx = order.indexOf(opp.stage);
+    const next = order[Math.min(idx + 1, order.length - 1)];
     set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status, dueLabel: status === "Done" ? `Completed ${formatDisplayDate(todayIso())}` : t.dueLabel } : t)),
+      opportunities: s.opportunities.map((o) => (o.id === id ? { ...o, stage: next } : o)),
     }));
+    if (next === "Won") {
+      get().createProject({
+        name: opp.name,
+        companyId: opp.companyId,
+        manager: "M. Doyle",
+        due: opp.close,
+        budgetHours: 80,
+      });
+      get().pushToast(`${opp.name} won and converted to a project`);
+    } else {
+      get().pushToast(`Moved to ${next}`);
+    }
+  },
+
+  approveExpense: (id) => {
+    set((s) => ({
+      expenses: s.expenses.map((e) => (e.id === id ? { ...e, status: "Approved" } : e)),
+    }));
+    get().pushToast("Expense approved");
+  },
+
+  updateTaskStatus: (taskId, status) => {
+    const task = get().tasks.find((t) => t.id === taskId);
+    set((s) => {
+      const tasks = s.tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, status, dueLabel: status === "Done" ? `Completed ${formatDisplayDate(todayIso())}` : t.dueLabel }
+          : t,
+      );
+      if (!task) return { tasks };
+      const projectTasks = tasks.filter((t) => t.projectId === task.projectId);
+      const done = projectTasks.filter((t) => t.status === "Done").length;
+      const progress = projectTasks.length ? Math.round((done / projectTasks.length) * 100) : 0;
+      return {
+        tasks,
+        projects: s.projects.map((p) => (p.id === task.projectId ? { ...p, progress } : p)),
+      };
+    });
   },
 
   updateTicketStatus: (ticketId, status) => {
-    set((s) => ({
-      tickets: s.tickets.map((t) => (t.id === ticketId ? { ...t, status } : t)),
-    }));
+    const prev = get().tickets.find((t) => t.id === ticketId);
+    set((s) => {
+      const tickets = s.tickets.map((t) => (t.id === ticketId ? { ...t, status } : t));
+      let companies = s.companies;
+      if (prev && prev.status !== "Resolved" && status === "Resolved") {
+        companies = s.companies.map((c) =>
+          c.id === prev.companyId ? { ...c, openTickets: Math.max(0, c.openTickets - 1) } : c,
+        );
+      } else if (prev && prev.status === "Resolved" && status !== "Resolved") {
+        companies = s.companies.map((c) =>
+          c.id === prev.companyId ? { ...c, openTickets: c.openTickets + 1 } : c,
+        );
+      }
+      return { tickets, companies };
+    });
     get().pushToast(`Ticket marked ${status}`);
   },
 
@@ -478,6 +607,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   payInvoice: (id) => {
     const inv = get().invoices.find((i) => i.id === id);
     if (!inv) return;
+    if (inv.status === "Draft") {
+      get().pushToast("Send the invoice before recording payment", "danger");
+      return;
+    }
+    if (inv.status === "Paid") return;
     set((s) => ({
       invoices: s.invoices.map((i) => (i.id === id ? { ...i, status: "Paid" } : i)),
       notifications: [
@@ -497,7 +631,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   requestSignoff: (projectId, milestoneName) => {
     const project = get().projects.find((p) => p.id === projectId);
+    const milestone = get().milestones.find(
+      (m) => m.projectId === projectId && m.name === milestoneName && m.status !== "Approved",
+    ) ?? get().milestones.find((m) => m.projectId === projectId && m.status !== "Approved");
     set((s) => ({
+      milestones: milestone
+        ? s.milestones.map((m) =>
+            m.id === milestone.id ? { ...m, status: "Awaiting Signoff" } : m,
+          )
+        : s.milestones,
       notifications: [
         {
           id: uid("n"),

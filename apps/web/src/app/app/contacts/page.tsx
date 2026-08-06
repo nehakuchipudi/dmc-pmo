@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
@@ -78,7 +79,11 @@ export default function ContactsPage() {
                     <Avatar initials={c.initials} />
                     {c.name}
                   </td>
-                  <td>{c.companyName}</td>
+                  <td>
+                    <Link href={`/app/companies/view/?id=${c.companyId}`} className="text-[var(--color-navy)] hover:underline">
+                      {c.companyName}
+                    </Link>
+                  </td>
                   <td>{c.title}</td>
                   <td className="text-[var(--color-muted)]">{c.email}</td>
                   <td>

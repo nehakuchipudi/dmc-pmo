@@ -29,16 +29,29 @@ export function ProjectDetail({ id }: { id: string }) {
   const [tab, setTab] = useState("Overview");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
 
-  const project = projects.find((p) => p.id === id) ?? projects[0];
-  const ms = milestones.filter((m) => m.projectId === project.id);
-  const projectTasks = tasks.filter((t) => t.projectId === project.id);
-  const projectTickets = tickets.filter((t) => t.projectId === project.id);
-  const projectTime = timeEntries.filter((t) => t.projectId === project.id);
-  const remaining = project.budgetHours - project.loggedHours;
+  const project = projects.find((p) => p.id === id);
+  const ms = milestones.filter((m) => m.projectId === project?.id);
+  const projectTasks = tasks.filter((t) => t.projectId === project?.id);
+  const projectTickets = tickets.filter((t) => t.projectId === project?.id);
+  const projectTime = timeEntries.filter((t) => t.projectId === project?.id);
+  const remaining = project ? project.budgetHours - project.loggedHours : 0;
 
   useEffect(() => {
+    if (!project) return;
     trackView("project", project.id, project.name);
-  }, [project.id, project.name, trackView]);
+  }, [project, trackView]);
+
+  if (!project) {
+    return (
+      <div className="fade-in panel p-6">
+        <p className="font-semibold text-[var(--color-navy)]">Project not found</p>
+        <p className="mt-2 text-sm text-[var(--color-muted)]">This record is not in the current session.</p>
+        <Link href="/app/projects" className="btn btn-primary mt-4">
+          Back to projects
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">

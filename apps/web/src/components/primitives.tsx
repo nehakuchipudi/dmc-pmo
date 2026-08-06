@@ -20,7 +20,7 @@ export function statusTone(status: string): "success" | "warning" | "danger" | "
   if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent"].includes(s)) {
     return "success";
   }
-  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "submitted", "draft"].includes(s)) {
+  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate"].includes(s)) {
     return "warning";
   }
   if (["overdue", "overdue inv.", "urgent", "rejected", "failed"].includes(s)) {

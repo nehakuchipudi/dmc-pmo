@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { roleLabel, useAuth } from "@/lib/auth";
-import { Avatar, Drawer } from "@/components/ui";
+import { Avatar, Drawer, Field, Modal, TextSelect, TextTextarea } from "@/components/ui";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
@@ -52,6 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
+  const [createDefaults, setCreateDefaults] = useState<{ companyId?: string; projectId?: string; hours?: number }>({});
   const [tasksOpen, setTasksOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -61,6 +62,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState("");
   const [timerRunning, setTimerRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [noteCompanyId, setNoteCompanyId] = useState("");
 
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);
@@ -104,8 +108,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const ss = String(seconds % 60).padStart(2, "0");
   const unread = notifications.filter((n) => !n.read).length;
 
-  function openCreate(kind: CreateKind) {
+  function openCreate(kind: CreateKind, defaults: typeof createDefaults = {}) {
     setCreateOpen(false);
+    setCreateDefaults(defaults);
     setCreateKind(kind);
   }
 
@@ -170,8 +175,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 className="btn btn-ghost text-sm"
                 onClick={() => {
+                  const elapsedHours = Math.max(0.25, Math.round((seconds / 3600) * 4) / 4);
                   setTimerRunning(false);
-                  setCreateKind("time");
+                  openCreate("time", { hours: elapsedHours });
+                  setSeconds(0);
                 }}
               >
                 <Clock3 size={16} className="text-[var(--color-danger)]" />
@@ -201,7 +208,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-fog)]"
                         onClick={() => {
                           setCreateOpen(false);
-                          useAppStore.getState().pushToast("Stream note saved to activity");
+                          setNoteCompanyId(companies[0]?.id ?? "");
+                          setNoteText("");
+                          setNoteOpen(true);
                         }}
                       >
                         Note
@@ -259,7 +268,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="content">{children}</main>
       </div>
 
-      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
+      <CreateForms
+        key={`${createKind}-${createDefaults.hours ?? ""}-${createDefaults.projectId ?? ""}`}
+        kind={createKind}
+        defaults={createDefaults}
+        onClose={() => {
+          setCreateKind(null);
+          setCreateDefaults({});
+        }}
+      />
+
+      <Modal open={noteOpen} title="Activity note" onClose={() => setNoteOpen(false)}>
+        <Field label="Company">
+          <TextSelect value={noteCompanyId} onChange={(e) => setNoteCompanyId(e.target.value)}>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </TextSelect>
+        </Field>
+        <Field label="Note">
+          <TextTextarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="What happened?" />
+        </Field>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            if (!noteText.trim() || !noteCompanyId) return;
+            useAppStore.getState().addActivityNote(noteCompanyId, `${user.name}: ${noteText.trim()}`);
+            setNoteOpen(false);
+            setNoteText("");
+          }}
+        >
+          Save note
+        </button>
+      </Modal>
 
       <Drawer open={tasksOpen} title="My open tasks" onClose={() => setTasksOpen(false)}>
         <div className="space-y-2">

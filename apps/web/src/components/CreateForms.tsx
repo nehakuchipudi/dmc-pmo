@@ -23,7 +23,7 @@ export function CreateForms({
 }: {
   kind: CreateKind;
   onClose: () => void;
-  defaults?: { companyId?: string; projectId?: string };
+  defaults?: { companyId?: string; projectId?: string; hours?: number };
 }) {
   const { user } = useAuth();
   const companies = useAppStore((s) => s.companies);
@@ -36,7 +36,7 @@ export function CreateForms({
   const createTask = useAppStore((s) => s.createTask);
   const createTimeEntry = useAppStore((s) => s.createTimeEntry);
   const createMilestone = useAppStore((s) => s.createMilestone);
-  const pushToast = useAppStore((s) => s.pushToast);
+  const createExpense = useAppStore((s) => s.createExpense);
 
   const title = useMemo(() => {
     switch (kind) {
@@ -130,6 +130,7 @@ export function CreateForms({
           tasks={tasks}
           userName={user?.name ?? "Staff"}
           defaultProjectId={defaults?.projectId}
+          defaultHours={defaults?.hours}
           onSubmit={(v) => {
             createTimeEntry(v);
             onClose();
@@ -137,36 +138,14 @@ export function CreateForms({
         />
       )}
       {kind === "expense" && (
-        <div>
-          <p className="mb-4 text-sm text-[var(--color-muted)]">
-            Expense capture saves a draft notification for manager approval in this demo phase.
-          </p>
-          <Field label="Amount">
-            <TextInput type="number" defaultValue={120} />
-          </Field>
-          <Field label="Project">
-            <TextSelect defaultValue={defaults?.projectId ?? projects[0]?.id}>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Note">
-            <TextTextarea defaultValue="Client travel" />
-          </Field>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              pushToast("Expense submitted for approval");
-              onClose();
-            }}
-          >
-            Submit expense
-          </button>
-        </div>
+        <ExpenseForm
+          projects={projects}
+          defaultProjectId={defaults?.projectId}
+          onSubmit={(v) => {
+            createExpense(v);
+            onClose();
+          }}
+        />
       )}
     </Modal>
   );
@@ -184,6 +163,7 @@ function CompanyForm({
   }) => void;
 }) {
   const [name, setName] = useState("");
+  const [industry, setIndustry] = useState("Professional Services");
   return (
     <form
       onSubmit={(e) => {
@@ -193,7 +173,7 @@ function CompanyForm({
           name: name.trim(),
           status: "Prospect",
           accountManager: "M. Doyle",
-          industry: "Consulting",
+          industry: industry.trim() || "Professional Services",
           billingTerms: "Net 30",
         });
       }}
@@ -202,7 +182,7 @@ function CompanyForm({
         <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Industry">
-        <TextInput name="industry" defaultValue="Professional Services" />
+        <TextInput value={industry} onChange={(e) => setIndustry(e.target.value)} />
       </Field>
       <button type="submit" className="btn btn-primary">
         Create company
@@ -435,17 +415,69 @@ function MilestoneForm({
   );
 }
 
+function ExpenseForm({
+  projects,
+  defaultProjectId,
+  onSubmit,
+}: {
+  projects: { id: string; name: string }[];
+  defaultProjectId?: string;
+  onSubmit: (v: { vendor: string; projectId: string; amount: number; note: string }) => void;
+}) {
+  const [vendor, setVendor] = useState("Vendor");
+  const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
+  const [amount, setAmount] = useState("120");
+  const [note, setNote] = useState("Client travel");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({
+          vendor: vendor.trim() || "Vendor",
+          projectId,
+          amount: Number(amount) || 0,
+          note,
+        });
+      }}
+    >
+      <Field label="Vendor">
+        <TextInput value={vendor} onChange={(e) => setVendor(e.target.value)} required />
+      </Field>
+      <Field label="Amount">
+        <TextInput type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      </Field>
+      <Field label="Project">
+        <TextSelect value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </TextSelect>
+      </Field>
+      <Field label="Note">
+        <TextTextarea value={note} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <button type="submit" className="btn btn-primary">
+        Submit expense
+      </button>
+    </form>
+  );
+}
+
 function TimeForm({
   projects,
   tasks,
   userName,
   defaultProjectId,
+  defaultHours,
   onSubmit,
 }: {
   projects: { id: string; name: string }[];
   tasks: { id: string; name: string; projectId: string }[];
   userName: string;
   defaultProjectId?: string;
+  defaultHours?: number;
   onSubmit: (v: {
     userName: string;
     projectId: string;
@@ -458,7 +490,7 @@ function TimeForm({
 }) {
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
   const [taskId, setTaskId] = useState("");
-  const [hours, setHours] = useState("1");
+  const [hours, setHours] = useState(String(defaultHours && defaultHours > 0 ? defaultHours : 1));
   const [note, setNote] = useState("");
   const [billable, setBillable] = useState(true);
   const projectTasks = tasks.filter((t) => t.projectId === projectId);

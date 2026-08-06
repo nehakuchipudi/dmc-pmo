@@ -4,9 +4,11 @@ import type {
   Company,
   Contact,
   EmailOutboxItem,
+  Expense,
   Invoice,
   Milestone,
   NotificationItem,
+  Opportunity,
   Project,
   Retainer,
   Task,
@@ -24,11 +26,11 @@ export const users: User[] = [
 ];
 
 export const seedCompanies: Company[] = [
-  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 2 },
+  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 1, openTickets: 0, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 1 },
   { id: "c-harlow", name: "Harlow & Pine Law", initials: "HP", status: "Prospect", accountManager: "J. Alvarez", openProjects: 0, openTickets: 0, lastActivity: "Aug 1, 2026", industry: "Legal", billingTerms: "Net 15", portalContacts: 0 },
-  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 1, openTickets: 3, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1 },
-  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 5, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 3 },
-  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 2, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2 },
+  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 0, openTickets: 1, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1 },
+  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 2 },
+  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 1, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2 },
 ];
 
 export const seedContacts: Contact[] = [
@@ -117,6 +119,17 @@ export const seedAutomations: AutomationRule[] = [
 export const seedEmailOutbox: EmailOutboxItem[] = [
   { id: "e1", to: "dana@cascadeventures.com", subject: "Invoice INV-2291 is overdue", body: "Please review and pay INV-2291 in the client portal.", sentAt: "2026-08-04 09:00", status: "Sent" },
   { id: "e2", to: "jkim@dillonmorgan.com", subject: "Reminder: submit timesheet", body: "You have draft time entries for this week.", sentAt: "2026-08-01 16:00", status: "Sent" },
+];
+
+export const seedExpenses: Expense[] = [
+  { id: "ex1", vendor: "Delta Travel", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", amount: 420, status: "Pending", date: "2026-08-04", note: "Client travel" },
+  { id: "ex2", vendor: "Office Depot", projectId: "p-website", projectName: "Website Replatform", amount: 86, status: "Approved", date: "2026-08-02", note: "Supplies" },
+];
+
+export const seedOpportunities: Opportunity[] = [
+  { id: "o1", name: "ERP readiness assessment", companyId: "c-harlow", companyName: "Harlow & Pine Law", stage: "Qualify", amount: 18000, close: "2026-09-15" },
+  { id: "o2", name: "Warehouse phase 2", companyId: "c-cascade", companyName: "Cascade Ventures", stage: "Propose", amount: 62000, close: "2026-08-28" },
+  { id: "o3", name: "Fleet expansion", companyId: "c-bellweather", companyName: "Bellweather Logistics", stage: "Negotiate", amount: 44000, close: "2026-09-05" },
 ];
 
 export function money(n: number) {

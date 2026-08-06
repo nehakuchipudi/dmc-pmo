@@ -28,20 +28,33 @@ export function CompanyDetail({ id }: { id: string }) {
   const [tab, setTab] = useState("Overview");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
 
-  const company = companies.find((c) => c.id === id) ?? companies[0];
-  const companyProjects = projects.filter((p) => p.companyId === company.id);
-  const companyContacts = contacts.filter((c) => c.companyId === company.id);
-  const companyTickets = tickets.filter((t) => t.companyId === company.id);
-  const companyInvoices = invoices.filter((i) => i.companyId === company.id);
-  const companyRetainers = retainers.filter((r) => r.companyId === company.id);
+  const company = companies.find((c) => c.id === id);
+  const companyProjects = projects.filter((p) => p.companyId === company?.id);
+  const companyContacts = contacts.filter((c) => c.companyId === company?.id);
+  const companyTickets = tickets.filter((t) => t.companyId === company?.id);
+  const companyInvoices = invoices.filter((i) => i.companyId === company?.id);
+  const companyRetainers = retainers.filter((r) => r.companyId === company?.id);
   const activity = useMemo(
-    () => activities.filter((a) => a.companyId === company.id),
-    [activities, company.id],
+    () => (company ? activities.filter((a) => a.companyId === company.id) : []),
+    [activities, company],
   );
 
   useEffect(() => {
+    if (!company) return;
     trackView("company", company.id, company.name);
-  }, [company.id, company.name, trackView]);
+  }, [company, trackView]);
+
+  if (!company) {
+    return (
+      <div className="fade-in panel p-6">
+        <p className="font-semibold text-[var(--color-navy)]">Company not found</p>
+        <p className="mt-2 text-sm text-[var(--color-muted)]">This record is not in the current session.</p>
+        <Link href="/app/companies" className="btn btn-primary mt-4">
+          Back to companies
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">

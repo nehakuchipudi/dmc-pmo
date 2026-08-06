@@ -2,29 +2,26 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { FilterChips, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
+import { Field, FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, TextSelect, statusTone } from "@/components/ui";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 
 const FILTERS = ["All Invoices", "Draft", "In Terms", "Overdue", "Paid"];
 
-type Expense = { id: string; vendor: string; project: string; amount: number; status: string; date: string };
-
-const SEED_EXPENSES: Expense[] = [
-  { id: "ex1", vendor: "Delta Travel", project: "Q3 Warehouse Rollout", amount: 420, status: "Pending", date: "2026-08-04" },
-  { id: "ex2", vendor: "Office Depot", project: "Website Replatform", amount: 86, status: "Approved", date: "2026-08-02" },
-];
-
 export default function BillingPage() {
+  const router = useRouter();
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
+  const expenses = useAppStore((s) => s.expenses);
   const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
-  const pushToast = useAppStore((s) => s.pushToast);
+  const approveExpense = useAppStore((s) => s.approveExpense);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [tab, setTab] = useState("Invoices");
-  const [expenses, setExpenses] = useState(SEED_EXPENSES);
+  const [newOpen, setNewOpen] = useState(false);
+  const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
 
   const rows = useMemo(() => {
     if (filter === "Overdue") return invoices.filter((i) => i.status === "Overdue");
@@ -35,7 +32,7 @@ export default function BillingPage() {
   }, [filter, invoices]);
 
   const totals = useMemo(() => {
-    const outstanding = invoices.filter((i) => i.status !== "Paid").reduce((s, i) => s + i.amount, 0);
+    const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Draft").reduce((s, i) => s + i.amount, 0);
     const overdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
     const inTerms = invoices.filter((i) => i.status === "Sent").reduce((s, i) => s + i.amount, 0);
     const paidMtd = invoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
@@ -67,14 +64,7 @@ export default function BillingPage() {
             >
               Export CSV
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                const id = createInvoiceDraft(companies[0]?.id ?? "c-cascade");
-                if (id) pushToast("Open the draft from the list");
-              }}
-            >
+            <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
               <Plus size={16} /> New Invoice
             </button>
           </>
@@ -162,7 +152,7 @@ export default function BillingPage() {
               {expenses.map((e) => (
                 <tr key={e.id}>
                   <td className="font-medium">{e.vendor}</td>
-                  <td>{e.project}</td>
+                  <td>{e.projectName}</td>
                   <td>{formatDisplayDate(e.date)}</td>
                   <td className="tabular-nums">{money(e.amount)}</td>
                   <td>
@@ -170,16 +160,7 @@ export default function BillingPage() {
                   </td>
                   <td className="text-right">
                     {e.status === "Pending" ? (
-                      <button
-                        type="button"
-                        className="btn btn-primary text-sm"
-                        onClick={() => {
-                          setExpenses((prev) =>
-                            prev.map((x) => (x.id === e.id ? { ...x, status: "Approved" } : x)),
-                          );
-                          pushToast("Expense approved");
-                        }}
-                      >
+                      <button type="button" className="btn btn-primary text-sm" onClick={() => approveExpense(e.id)}>
                         Approve
                       </button>
                     ) : null}
@@ -188,18 +169,44 @@ export default function BillingPage() {
               ))}
             </tbody>
           </table>
+          <p className="p-4 text-xs text-[var(--color-muted)]">
+            Create expenses from the Create (+) menu. They land here as Pending for approval.
+          </p>
         </div>
       ) : null}
       {tab === "Purchases" ? (
         <div className="panel p-6 text-sm text-[var(--color-muted)]">
-          Purchase orders for client bill-through will land with finance integrations. Track vendor spend under Expenses for now.
+          Purchase orders for client bill-through land with finance integrations later. Track vendor spend under Expenses for now.
         </div>
       ) : null}
       {tab === "Materials" ? (
         <div className="panel p-6 text-sm text-[var(--color-muted)]">
-          Materials (hardware, licenses) can be added to invoice line items from project billing. Sample materials appear on INV-2291.
+          Materials can be added as invoice line items. Sample materials appear on INV-2291.
         </div>
       ) : null}
+
+      <Modal open={newOpen} title="New invoice draft" onClose={() => setNewOpen(false)}>
+        <Field label="Company">
+          <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </TextSelect>
+        </Field>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            const id = createInvoiceDraft(companyId);
+            setNewOpen(false);
+            if (id) router.push(`/app/billing/view/?id=${id}`);
+          }}
+        >
+          Create draft
+        </button>
+      </Modal>
     </div>
   );
 }

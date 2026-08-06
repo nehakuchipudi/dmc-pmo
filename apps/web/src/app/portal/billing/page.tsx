@@ -39,7 +39,7 @@ export default function PortalBillingPage() {
                   <button type="button" className="btn btn-ghost text-sm" onClick={() => exportInvoicePdf(inv)}>
                     PDF
                   </button>
-                  {inv.status !== "Paid" ? (
+                  {inv.status === "Sent" || inv.status === "Overdue" ? (
                     <button type="button" className="btn btn-primary text-sm" onClick={() => payInvoice(inv.id)}>
                       Pay now
                     </button>

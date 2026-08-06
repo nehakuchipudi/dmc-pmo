@@ -12,7 +12,7 @@ export type TicketPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TicketStatus = "Open" | "In Progress" | "Resolved";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue";
 export type TaskStatus = "Not Started" | "In Progress" | "Review" | "Done";
-export type MilestoneStatus = "Approved" | "In Progress" | "Not Started";
+export type MilestoneStatus = "Approved" | "Awaiting Signoff" | "In Progress" | "Not Started";
 export type TimeEntryStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
 
 export interface User {
@@ -184,4 +184,25 @@ export interface EmailOutboxItem {
   body: string;
   sentAt: string;
   status: "Queued" | "Sent" | "Failed";
+}
+
+export interface Expense {
+  id: string;
+  vendor: string;
+  projectId: string;
+  projectName: string;
+  amount: number;
+  status: "Pending" | "Approved" | "Rejected";
+  date: string;
+  note: string;
+}
+
+export interface Opportunity {
+  id: string;
+  name: string;
+  companyId: string;
+  companyName: string;
+  stage: "Qualify" | "Propose" | "Negotiate" | "Won" | "Lost";
+  amount: number;
+  close: string;
 }

@@ -62,6 +62,11 @@ export default function WorkPage() {
         }
       />
       <FilterChips items={BOARDS} active={board} onChange={setBoard} />
+      {board !== "Status Board" ? (
+        <p className="mb-3 text-sm text-[var(--color-muted)]">
+          View-only board. Drag status changes on the Status Board.
+        </p>
+      ) : null}
       <div className="kanban" style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 4)}, minmax(200px, 1fr))` }}>
         {columns.map((col) => (
           <div

@@ -29,7 +29,7 @@ export default function ProjectsPage() {
     return projects;
   }, [filter, projects]);
 
-  const pendingSignoffs = milestones.filter((m) => m.status !== "Approved");
+  const pendingSignoffs = milestones.filter((m) => m.status === "Awaiting Signoff" || m.status === "In Progress");
 
   return (
     <div className="fade-in">

@@ -16,11 +16,22 @@ export function TicketDetail({ id }: { id: string }) {
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState<"client" | "internal">("client");
 
-  const ticket = tickets.find((t) => t.id === id) ?? tickets[0];
+  const ticket = tickets.find((t) => t.id === id);
   const thread = useMemo(
-    () => messages.filter((m) => m.ticketId === ticket.id).slice().reverse(),
-    [messages, ticket.id],
+    () => (ticket ? messages.filter((m) => m.ticketId === ticket.id).slice().reverse() : []),
+    [messages, ticket],
   );
+
+  if (!ticket) {
+    return (
+      <div className="fade-in panel p-6">
+        <p className="font-semibold text-[var(--color-navy)]">Ticket not found</p>
+        <Link href="/app/tickets" className="btn btn-primary mt-4">
+          Back to tickets
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">
