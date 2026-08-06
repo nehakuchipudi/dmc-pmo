@@ -118,12 +118,14 @@ export default function RetainersPage() {
                         <button
                           type="button"
                           onClick={() => {
+                            const contact = contacts.find((c) => c.id === r.contactId);
+                            const to = contact?.email ?? "billing@client.com";
                             queueEmail(
-                              r.contactName ? `${r.contactName.split(" ")[0].toLowerCase()}@client.com` : "billing@client.com",
+                              to,
                               `Retainer update: ${r.name}`,
                               `Current usage ${r.usedHours}/${r.budgetHours} hours.`,
                             );
-                            pushToast("Email queued");
+                            pushToast(`Email queued to ${to}`);
                             setMenuId(null);
                           }}
                         >

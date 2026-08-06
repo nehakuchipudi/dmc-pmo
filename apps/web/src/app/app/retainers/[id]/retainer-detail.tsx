@@ -36,6 +36,8 @@ export function RetainerDetail({ id }: { id: string }) {
   const generatePeriodInvoice = useAppStore((s) => s.generatePeriodInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const addRetainerFile = useAppStore((s) => s.addRetainerFile);
+  const deleteRetainerFile = useAppStore((s) => s.deleteRetainerFile);
+  const moveRetainerFile = useAppStore((s) => s.moveRetainerFile);
   const addRetainerNote = useAppStore((s) => s.addRetainerNote);
   const pushToast = useAppStore((s) => s.pushToast);
   const trackView = useAppStore((s) => s.trackView);
@@ -55,6 +57,10 @@ export function RetainerDetail({ id }: { id: string }) {
   const contacts = useMemo(
     () => allContacts.filter((c) => c.companyId === retainer?.companyId),
     [allContacts, retainer?.companyId],
+  );
+  const linkedContact = useMemo(
+    () => contacts.find((c) => c.id === retainer?.contactId) ?? contacts[0],
+    [contacts, retainer?.contactId],
   );
 
   useEffect(() => {
@@ -95,12 +101,13 @@ export function RetainerDetail({ id }: { id: string }) {
               type="button"
               className="btn btn-ghost"
               onClick={() => {
+                const to = linkedContact?.email ?? "billing@client.com";
                 queueEmail(
-                  retainer.contactName ? "contact@client.com" : "billing@client.com",
+                  to,
                   `Retainer: ${retainer.name}`,
                   `Usage ${retainer.usedHours}/${retainer.budgetHours}h. Period expires ${retainer.expires}.`,
                 );
-                pushToast("Email queued");
+                pushToast(`Email queued to ${to}`);
               }}
             >
               Send email
@@ -152,6 +159,13 @@ export function RetainerDetail({ id }: { id: string }) {
               <div>
                 <dt className="text-[var(--color-muted)]">Contact</dt>
                 <dd className="font-semibold">{retainer.contactName ?? "Not linked"}</dd>
+                {linkedContact ? (
+                  <dd className="mt-0.5 text-xs text-[var(--color-muted)]">
+                    <Link href={`/app/contacts`} className="hover:underline">
+                      {linkedContact.email}
+                    </Link>
+                  </dd>
+                ) : null}
               </div>
               <div>
                 <dt className="text-[var(--color-muted)]">Manager</dt>
@@ -333,6 +347,8 @@ export function RetainerDetail({ id }: { id: string }) {
           notes={retainer.notes}
           author={user?.name ?? "Staff"}
           onUpload={(file) => addRetainerFile(retainer.id, file)}
+          onDeleteFile={(fileId) => deleteRetainerFile(retainer.id, fileId)}
+          onMoveFile={(fileId, folder) => moveRetainerFile(retainer.id, fileId, folder)}
           onAddNote={(body, visibility) =>
             addRetainerNote(retainer.id, { author: user?.name ?? "Staff", body, visibility })
           }

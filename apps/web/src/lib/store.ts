@@ -127,6 +127,11 @@ type AppState = {
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => void;
+  duplicateProject: (id: string) => string;
+  deleteProjectFile: (projectId: string, fileId: string) => void;
+  moveProjectFile: (projectId: string, fileId: string, folder: string) => void;
+  deleteRetainerFile: (retainerId: string, fileId: string) => void;
+  moveRetainerFile: (retainerId: string, fileId: string, folder: string) => void;
   createTicket: (input: CreateTicketInput) => string;
   createTask: (input: CreateTaskInput) => string;
   updateTask: (id: string, patch: Partial<Task>) => void;
@@ -349,6 +354,52 @@ export const useAppStore = create<AppState>((set, get) => ({
         : s.companies,
     }));
     get().pushToast("Project deleted", "danger");
+  },
+
+  duplicateProject: (id) => {
+    const source = get().projects.find((p) => p.id === id);
+    if (!source) return "";
+    const newId = uid("p");
+    const msMap = new Map<string, string>();
+    const newMilestones = get()
+      .milestones.filter((m) => m.projectId === id)
+      .map((m) => {
+        const mid = uid("m");
+        msMap.set(m.id, mid);
+        return { ...m, id: mid, projectId: newId, status: "Not Started" as const };
+      });
+    const newTasks = get()
+      .tasks.filter((t) => t.projectId === id)
+      .map((t) => ({
+        ...t,
+        id: uid("tk"),
+        projectId: newId,
+        projectName: `${source.name} (copy)`,
+        milestoneId: t.milestoneId ? msMap.get(t.milestoneId) : undefined,
+        status: "Not Started" as const,
+        progress: 0,
+      }));
+    const project: Project = {
+      ...source,
+      id: newId,
+      name: `${source.name} (copy)`,
+      progress: 0,
+      status: "Planned",
+      loggedHours: 0,
+      materials: source.materials.map((m) => ({ ...m, id: uid("mat") })),
+      files: [],
+      notes: [],
+    };
+    set((s) => ({
+      projects: [project, ...s.projects],
+      milestones: [...newMilestones, ...s.milestones],
+      tasks: [...newTasks, ...s.tasks],
+      companies: s.companies.map((c) =>
+        c.id === source.companyId ? { ...c, openProjects: c.openProjects + 1 } : c,
+      ),
+    }));
+    get().pushToast("Project duplicated");
+    return newId;
   },
 
   createTicket: (input) => {
@@ -766,9 +817,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       retainers: s.retainers.map((r) => {
         if (r.id !== id) return r;
         const next = { ...r, ...patch };
-        if (patch.contactId) {
-          const contact = get().contacts.find((c) => c.id === patch.contactId);
-          next.contactName = contact?.name;
+        if ("contactId" in patch) {
+          if (patch.contactId) {
+            const contact = get().contacts.find((c) => c.id === patch.contactId);
+            next.contactName = contact?.name;
+          } else {
+            next.contactId = undefined;
+            next.contactName = undefined;
+          }
         }
         return next;
       }),
@@ -810,6 +866,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("File uploaded");
   },
 
+  deleteProjectFile: (projectId, fileId) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, files: p.files.filter((f) => f.id !== fileId) } : p,
+      ),
+    }));
+    get().pushToast("File removed", "danger");
+  },
+
+  moveProjectFile: (projectId, fileId, folder) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, files: p.files.map((f) => (f.id === fileId ? { ...f, folder } : f)) }
+          : p,
+      ),
+    }));
+    get().pushToast(`Moved to ${folder}`);
+  },
+
   addProjectNote: (projectId, note) => {
     set((s) => ({
       projects: s.projects.map((p) =>
@@ -831,6 +907,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }));
     get().pushToast("File uploaded");
+  },
+
+  deleteRetainerFile: (retainerId, fileId) => {
+    set((s) => ({
+      retainers: s.retainers.map((r) =>
+        r.id === retainerId ? { ...r, files: r.files.filter((f) => f.id !== fileId) } : r,
+      ),
+    }));
+    get().pushToast("File removed", "danger");
+  },
+
+  moveRetainerFile: (retainerId, fileId, folder) => {
+    set((s) => ({
+      retainers: s.retainers.map((r) =>
+        r.id === retainerId
+          ? { ...r, files: r.files.map((f) => (f.id === fileId ? { ...f, folder } : f)) }
+          : r,
+      ),
+    }));
+    get().pushToast(`Moved to ${folder}`);
   },
 
   addRetainerNote: (retainerId, note) => {

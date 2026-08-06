@@ -3,31 +3,45 @@
 import { useMemo, useState, startTransition } from "react";
 import type { ProjectFile, ProjectNote } from "@/lib/types";
 
-const FOLDERS = ["General", "Reports", "Presentations", "Images"];
+const DEFAULT_FOLDERS = ["General", "Reports", "Presentations", "Images"];
 
 export function FilesNotesPanel({
   files,
   notes,
   onUpload,
   onAddNote,
+  onDeleteFile,
+  onMoveFile,
   author,
 }: {
   files: ProjectFile[];
   notes: ProjectNote[];
   onUpload: (file: Omit<ProjectFile, "id">) => void;
   onAddNote: (body: string, visibility: "internal" | "client") => void;
+  onDeleteFile?: (fileId: string) => void;
+  onMoveFile?: (fileId: string, folder: string) => void;
   author: string;
 }) {
   const [tab, setTab] = useState<"Files" | "Notes">("Files");
   const [folder, setFolder] = useState("General");
+  const [folders, setFolders] = useState<string[]>(() => {
+    const fromFiles = files.map((f) => f.folder);
+    return Array.from(new Set([...DEFAULT_FOLDERS, ...fromFiles]));
+  });
   const [search, setSearch] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [visibility, setVisibility] = useState<"internal" | "client">("internal");
+  const [newFolder, setNewFolder] = useState("");
+
+  const allFolders = useMemo(() => {
+    const fromFiles = files.map((f) => f.folder);
+    return Array.from(new Set([...folders, ...fromFiles]));
+  }, [files, folders]);
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
     const map = new Map<string, ProjectFile[]>();
-    FOLDERS.forEach((f) => map.set(f, []));
+    allFolders.forEach((f) => map.set(f, []));
     files
       .filter((f) => !q || f.name.toLowerCase().includes(q) || f.folder.toLowerCase().includes(q))
       .forEach((f) => {
@@ -36,7 +50,7 @@ export function FilesNotesPanel({
         map.set(f.folder, list);
       });
     return map;
-  }, [files, search]);
+  }, [files, search, allFolders]);
 
   return (
     <div className="space-y-4">
@@ -62,7 +76,7 @@ export function FilesNotesPanel({
               onChange={(e) => setSearch(e.target.value)}
             />
             <select className="field-input w-auto" value={folder} onChange={(e) => setFolder(e.target.value)}>
-              {FOLDERS.map((f) => (
+              {allFolders.map((f) => (
                 <option key={f} value={f}>
                   {f}
                 </option>
@@ -88,6 +102,33 @@ export function FilesNotesPanel({
 
       {tab === "Files" ? (
         <div className="space-y-4">
+          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-[var(--color-border)] bg-white p-3">
+            <div className="min-w-[180px] flex-1">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                New folder
+              </label>
+              <input
+                className="field-input"
+                placeholder="e.g. Contracts"
+                value={newFolder}
+                onChange={(e) => setNewFolder(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                const name = newFolder.trim();
+                if (!name || allFolders.includes(name)) return;
+                setFolders((f) => [...f, name]);
+                setFolder(name);
+                setNewFolder("");
+              }}
+            >
+              + Add folder
+            </button>
+          </div>
+
           {[...grouped.entries()].map(([name, items]) => (
             <div key={name}>
               <div className="mb-2 text-sm font-semibold text-[var(--color-ink)]">
@@ -100,6 +141,31 @@ export function FilesNotesPanel({
                     <div className="mt-2 font-medium">{f.name}</div>
                     <div className="mt-1 text-xs text-[var(--color-muted)]">
                       {f.folder} · {f.sizeKb} KB
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {onMoveFile ? (
+                        <select
+                          className="field-input w-auto text-xs"
+                          value={f.folder}
+                          onChange={(e) => onMoveFile(f.id, e.target.value)}
+                          aria-label={`Move ${f.name}`}
+                        >
+                          {allFolders.map((folderName) => (
+                            <option key={folderName} value={folderName}>
+                              Move to {folderName}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                      {onDeleteFile ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost text-xs text-[var(--color-danger)]"
+                          onClick={() => onDeleteFile(f.id)}
+                        >
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))}

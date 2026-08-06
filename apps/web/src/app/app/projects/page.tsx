@@ -18,6 +18,7 @@ export default function ProjectsPage() {
   const projects = useAppStore((s) => s.projects);
   const companies = useAppStore((s) => s.companies);
   const deleteProject = useAppStore((s) => s.deleteProject);
+  const duplicateProject = useAppStore((s) => s.duplicateProject);
   const updateProject = useAppStore((s) => s.updateProject);
   const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
@@ -128,6 +129,16 @@ export default function ProjectsPage() {
                     <div className="row-menu">
                       <button type="button" onClick={() => { setEditId(p.id); setMenuId(null); }}>
                         Edit project
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const id = duplicateProject(p.id);
+                          setMenuId(null);
+                          if (id) router.push(`/app/projects/view/?id=${id}`);
+                        }}
+                      >
+                        Duplicate
                       </button>
                       <button
                         type="button"

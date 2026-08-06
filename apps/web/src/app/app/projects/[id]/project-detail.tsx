@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
@@ -23,10 +23,11 @@ const TABS = ["Overview", "Schedule", "Files & Notes", "Billing", "Tickets", "Si
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const project = useAppStore((s) => s.projects.find((p) => p.id === id));
+  const projects = useAppStore((s) => s.projects);
   const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
   const tickets = useAppStore((s) => s.tickets);
+  const contacts = useAppStore((s) => s.contacts);
   const createMilestone = useAppStore((s) => s.createMilestone);
   const createTask = useAppStore((s) => s.createTask);
   const updateTask = useAppStore((s) => s.updateTask);
@@ -39,6 +40,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const queueEmail = useAppStore((s) => s.queueEmail);
   const pushToast = useAppStore((s) => s.pushToast);
   const addProjectFile = useAppStore((s) => s.addProjectFile);
+  const deleteProjectFile = useAppStore((s) => s.deleteProjectFile);
+  const moveProjectFile = useAppStore((s) => s.moveProjectFile);
   const addProjectNote = useAppStore((s) => s.addProjectNote);
   const addMaterial = useAppStore((s) => s.addMaterial);
   const updateProject = useAppStore((s) => s.updateProject);
@@ -47,9 +50,23 @@ export function ProjectDetail({ id }: { id: string }) {
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
 
-  const ms = milestones.filter((m) => m.projectId === project?.id);
-  const projectTasks = tasks.filter((t) => t.projectId === project?.id);
-  const projectTickets = tickets.filter((t) => t.projectId === project?.id);
+  const project = useMemo(() => projects.find((p) => p.id === id), [projects, id]);
+  const ms = useMemo(
+    () => milestones.filter((m) => m.projectId === project?.id),
+    [milestones, project?.id],
+  );
+  const projectTasks = useMemo(
+    () => tasks.filter((t) => t.projectId === project?.id),
+    [tasks, project?.id],
+  );
+  const projectTickets = useMemo(
+    () => tickets.filter((t) => t.projectId === project?.id),
+    [tickets, project?.id],
+  );
+  const companyContact = useMemo(
+    () => contacts.find((c) => c.companyId === project?.companyId),
+    [contacts, project?.companyId],
+  );
   const remaining = project ? project.budgetHours - project.loggedHours : 0;
   const materialsTotal = project?.materials.reduce((s, m) => s + m.salePrice * m.qty, 0) ?? 0;
 
@@ -105,11 +122,11 @@ export function ProjectDetail({ id }: { id: string }) {
               className="btn btn-ghost"
               onClick={() => {
                 queueEmail(
-                  "dana@cascadeventures.com",
+                  companyContact?.email ?? "client@example.com",
                   `Update on ${project.name}`,
                   `Progress is ${project.progress}%. Next milestone updates are in the portal.`,
                 );
-                pushToast("Email queued to outbox");
+                pushToast(`Email queued to ${companyContact?.email ?? "client"}`);
               }}
             >
               Send email
@@ -245,6 +262,8 @@ export function ProjectDetail({ id }: { id: string }) {
           notes={project.notes}
           author={user?.name ?? "Staff"}
           onUpload={(file) => addProjectFile(project.id, file)}
+          onDeleteFile={(fileId) => deleteProjectFile(project.id, fileId)}
+          onMoveFile={(fileId, folder) => moveProjectFile(project.id, fileId, folder)}
           onAddNote={(body, visibility) =>
             addProjectNote(project.id, { author: user?.name ?? "Staff", body, visibility })
           }
