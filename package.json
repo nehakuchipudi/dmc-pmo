@@ -1,0 +1,12 @@
+{
+  "name": "dmc-pmo",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "start": "pnpm --filter web start",
+    "lint": "pnpm --filter web lint",
+    "check:copy": "node scripts/check-no-emdash.mjs"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

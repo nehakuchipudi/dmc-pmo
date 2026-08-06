@@ -1,41 +1,47 @@
 # Dillon Morgan PMO (`dmc-pmo`)
 
-Purpose-built Professional Services Automation / PMO platform for **Dillon Morgan Consulting Inc.**  
-Designed as an Accelo replacement with boutique supersets, a client portal, mobile apps, and an Azure-hosted analytics warehouse.
+Purpose-built Professional Services Automation / PMO for **Dillon Morgan Consulting Inc.**  
+Accelo replacement with boutique supersets, client portal, and Azure-ready packaging.
 
-## Status
+## Quick start
 
-**Phase: Product planning complete.** Implementation has not started.
+```bash
+pnpm install
+pnpm --filter web dev
+```
 
-Planning artifacts live in [`docs/`](./docs/).
+Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the login screen.
+
+| Demo user | Role | Lands on |
+| --- | --- | --- |
+| Dillon Morgan | Admin | Internal Companies |
+| M. Doyle | Project Manager | Internal Companies |
+| J. Kim | Staff | Internal Companies |
+| Dana Kessler | Client Contact | Client Portal (Cascade Ventures only) |
+
+## What's included (MVP preview)
+
+- Internal shell: Companies, Contacts, Projects, Tickets, Retainers, Work (Kanban), Billing, Reports, Sales placeholder
+- Client portal: Projects, Tickets, Billing, Retainers (company-scoped; no cost/margin)
+- Global Create menu, running timer chip, Navy/Gold design system
+- Seed data matching the blueprint mockups
+- Docker + Bicep skeleton for Azure Container Apps
+- Copy lint: no em/en dashes in `apps/web/src`
+
+## Docs
 
 | Document | Description |
 | --- | --- |
-| [docs/PRODUCT_MASTER_PLAN.md](./docs/PRODUCT_MASTER_PLAN.md) | Product vision, IA, modules, UX, security, roadmap |
-| [docs/USER_STORIES.md](./docs/USER_STORIES.md) | Epics, user stories, use cases, acceptance criteria |
-| [docs/ARCHITECTURE_AZURE.md](./docs/ARCHITECTURE_AZURE.md) | Azure topology, identity, CI/CD, cutover |
-| [docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md](./docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md) | Accelo research notes |
+| [docs/PRODUCT_MASTER_PLAN.md](./docs/PRODUCT_MASTER_PLAN.md) | Product vision and roadmap |
+| [docs/USER_STORIES.md](./docs/USER_STORIES.md) | Epics and acceptance criteria |
+| [docs/ARCHITECTURE_AZURE.md](./docs/ARCHITECTURE_AZURE.md) | Azure topology |
+| [docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md](./docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md) | Accelo research |
 
-## Product pillars
+## Deploy
 
-1. **One system of record** for companies, sales, projects, tickets, retainers, work, billing, reports  
-2. **Client portal** with strict company isolation and field redaction  
-3. **Web + mobile** on one API and one permission model  
-4. **Dimensional warehouse** for utilization, profitability, and delivery health  
-5. **Azure production** with Entra identity, private data plane, and auditability  
+```bash
+docker build -t dmc-pmo .
+docker run -p 3000:3000 dmc-pmo
+```
 
-## Hard product rules
-
-- No em dashes in any user-facing copy (UI, email, PDF, mobile)  
-- Portal users never see internal notes, cost/margin, or other companies  
-- RBAC + PostgreSQL RLS + automated IDOR tests  
-
-## Brand tokens (from blueprint)
-
-- Navy: `#1F3864`  
-- Gold: `#B08D57`  
-- Semantic status: green / amber / red  
-
-## Next
-
-Approve open decisions in the master plan (API stack, Azure region, portal payments), then scaffold the monorepo and Phase 0 Azure environments.
+Azure: see `infra/main.bicep` and `docs/ARCHITECTURE_AZURE.md`. Production deploy needs Azure credentials in the environment.
