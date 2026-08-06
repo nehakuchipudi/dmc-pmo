@@ -1,8 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://auric-index-bu3410i.shipstatic.com/login/
+https://chaotic-flare-ckz50oh.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/75d162adbb3744b6feaf8f2e1321e038c9249d3f02f0fc25793ee2e62b6ebcd2
+https://my.shipstatic.com/claim/5893d16ff674e0b368bc000c5c9d75c49072aab25e356d848b761485245eb191
+
+Previous (retainer fix):
+https://auric-index-bu3410i.shipstatic.com/login/
 
 Previous (Projects redesign):
 https://drifting-fog-167awwq.shipstatic.com/login/

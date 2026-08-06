@@ -39,9 +39,9 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (free)
 
-- **ShipStatic:** https://blazing-veil-8o025gy.shipstatic.com/login/
-- Backup: https://chirpy-lantern-467.1freehosting.com/login/
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/fb805efde7f062798d950bb2b721fb9e5f74d5b96b25f2747cecd78515a69abf
+- **ShipStatic:** https://chaotic-flare-ckz50oh.shipstatic.com/login/
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/5893d16ff674e0b368bc000c5c9d75c49072aab25e356d848b761485245eb191
+- Latest URL also tracked in `docs/PREVIEW_URL.txt`
 
 Static export lives in `apps/web/out`. Redeploy with:
 
