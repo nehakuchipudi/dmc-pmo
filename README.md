@@ -37,11 +37,17 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 | [docs/ARCHITECTURE_AZURE.md](./docs/ARCHITECTURE_AZURE.md) | Azure topology |
 | [docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md](./docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md) | Accelo research |
 
-## Deploy
+## Live preview (free)
+
+- **ShipStatic:** https://blazing-veil-8o025gy.shipstatic.com/login/
+- Backup: https://chirpy-lantern-467.1freehosting.com/login/
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/fb805efde7f062798d950bb2b721fb9e5f74d5b96b25f2747cecd78515a69abf
+
+Static export lives in `apps/web/out`. Redeploy with:
 
 ```bash
-docker build -t dmc-pmo .
-docker run -p 3000:3000 dmc-pmo
+GITHUB_PAGES=false pnpm --filter web build
+npx -y @shipstatic/ship apps/web/out --label dmc-pmo
 ```
 
-Azure: see `infra/main.bicep` and `docs/ARCHITECTURE_AZURE.md`. Production deploy needs Azure credentials in the environment.
+GitHub Pages: `gh-pages` branch is ready. Enable under repo Settings → Pages → Deploy from branch `gh-pages` → `/`.

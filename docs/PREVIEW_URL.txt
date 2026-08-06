@@ -1,1 +1,11 @@
-https://build-certainly-principle-mysterious.trycloudflare.com
+Primary (ShipStatic, free, ~3 day anonymous unless claimed):
+https://blazing-veil-8o025gy.shipstatic.com/login/
+
+Claim to keep permanently:
+https://my.shipstatic.com/claim/fb805efde7f062798d950bb2b721fb9e5f74d5b96b25f2747cecd78515a69abf
+
+Backup (1FreeHosting):
+https://chirpy-lantern-467.1freehosting.com/login/
+
+GitHub Pages (after enabling Settings → Pages → gh-pages branch):
+https://nehakuchipudi.github.io/dmc-pmo/login/
