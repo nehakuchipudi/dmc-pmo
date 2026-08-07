@@ -11,8 +11,8 @@
 | Steel | `#3D5A73` | Primary actions, active nav |
 | Steel deep | `#2F4558` | Sidebar base |
 | Steel soft | `#6B8AAB` | Progress, links accent |
-| Pastel canvas | `#F4F6F9` | Page background |
-| Pastel panel | `#EEF2F6` | Soft wells, hover rows |
+| Canvas | `#FFFFFF` | Page background |
+| Soft well | `#F3F6F9` | Hover rows, search, chips wells |
 | Surface | `#FFFFFF` | Cards, tables |
 | Border | `#D5DEE8` | Hairlines |
 | Muted | `#6B7C8F` | Secondary text |

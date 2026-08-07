@@ -6,8 +6,8 @@
   --color-navy-deep: #2f4558;
   --color-gold: #6b8aab;
   --color-gold-soft: #a8bdd0;
-  --color-fog: #eef2f6;
-  --color-bg: #f4f6f9;
+  --color-fog: #f3f6f9;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-muted: #6b7c8f;
   --color-border: #d5dee8;
@@ -302,7 +302,7 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-muted);
   padding: 13px 16px;
   border-bottom: 1px solid var(--color-border);
-  background: #fbfcfe;
+  background: #fff;
 }
 .table td {
   padding: 15px 16px;
