@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
 import { MoreVertical, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
-import { Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { Avatar, Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { initialsFromName } from "@/lib/seed";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -107,7 +108,12 @@ export default function ProjectsPage() {
                     {p.companyName}
                   </Link>
                 </td>
-                <td>{p.manager}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <Avatar initials={initialsFromName(p.manager)} name={p.manager} size={28} />
+                    <span>{p.manager}</span>
+                  </div>
+                </td>
                 <td className="min-w-[140px]">
                   <ProgressBar value={p.progress} />
                 </td>

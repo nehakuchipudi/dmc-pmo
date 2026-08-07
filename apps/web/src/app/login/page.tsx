@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/ui";
 import { users } from "@/lib/data";
 import { roleLabel, useAuth } from "@/lib/auth";
 
@@ -11,10 +12,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid place-items-center px-4">
       <div className="panel w-full max-w-xl p-8 fade-in">
-        <div className="mb-2 text-sm font-semibold tracking-[0.16em] text-[var(--color-gold)]">
-          DILLON MORGAN CONSULTING
+        <div className="mb-3 inline-flex items-center gap-2">
+          <span className="brand-mark !mb-0 !bg-[var(--color-navy)]">DMC</span>
+          <div className="text-sm font-semibold tracking-[0.14em] text-[var(--color-navy)]">
+            DILLON MORGAN CONSULTING
+          </div>
         </div>
-        <h1 className="page-title text-[1.8rem]">Sign in to PMO</h1>
+        <h1 className="page-title text-[1.7rem]">Sign in to PMO</h1>
         <p className="page-sub mb-6">
           Demo access with role-based views. Client portal users are isolated to their company.
         </p>
@@ -23,19 +27,19 @@ export default function LoginPage() {
             <button
               key={user.id}
               type="button"
-              className="flex w-full items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-gold)] hover:shadow-[var(--shadow-soft)]"
+              className="flex w-full items-center justify-between rounded-[12px] border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-gold)] hover:bg-[var(--color-fog)] hover:shadow-[var(--shadow-soft)]"
               onClick={() => {
                 setUserId(user.id);
                 router.push(user.role === "client" ? "/portal" : "/app/companies");
               }}
             >
               <div>
-                <div className="font-semibold text-[var(--color-navy)]">{user.name}</div>
+                <div className="font-semibold text-[var(--color-ink)]">{user.name}</div>
                 <div className="text-sm text-[var(--color-muted)]">
                   {roleLabel(user.role)} · {user.email}
                 </div>
               </div>
-              <span className="avatar">{user.initials}</span>
+              <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} size={40} />
             </button>
           ))}
         </div>

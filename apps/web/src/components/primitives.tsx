@@ -30,8 +30,46 @@ export function statusTone(status: string): "success" | "warning" | "danger" | "
   return "neutral";
 }
 
-export function Avatar({ initials }: { initials: string }) {
-  return <span className="avatar">{initials}</span>;
+export function avatarUrlFor(seed: string) {
+  return `https://i.pravatar.cc/128?u=${encodeURIComponent(seed)}`;
+}
+
+export function Avatar({
+  initials,
+  src,
+  name,
+  size = 34,
+}: {
+  initials: string;
+  src?: string;
+  name?: string;
+  size?: number;
+}) {
+  const photo = src || (name ? avatarUrlFor(name) : undefined);
+  return (
+    <span className="avatar" style={{ width: size, height: size }} title={name}>
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="avatar-photo"
+          src={photo}
+          alt={name ?? initials}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const parent = e.currentTarget.parentElement;
+            if (parent && !parent.querySelector("[data-fallback]")) {
+              const span = document.createElement("span");
+              span.dataset.fallback = "1";
+              span.textContent = initials;
+              parent.appendChild(span);
+            }
+          }}
+        />
+      ) : (
+        initials
+      )}
+    </span>
+  );
 }
 
 export function PageHeader({
@@ -147,7 +185,7 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--color-ink)]">{title}</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-ink)]">{title}</h2>
           <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
@@ -174,7 +212,7 @@ export function Drawer({
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-[family-name:var(--font-display)] text-lg text-[var(--color-ink)]">{title}</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-ink)]">{title}</h2>
           <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>

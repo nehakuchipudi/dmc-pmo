@@ -27,10 +27,39 @@ const defaultFiles = [
 ];
 
 export const users: User[] = [
-  { id: "u-admin", name: "Dillon Morgan", initials: "DM", role: "admin", email: "dillon@dillonmorgan.com" },
-  { id: "u-pm", name: "M. Doyle", initials: "MD", role: "pm", email: "mdoyle@dillonmorgan.com" },
-  { id: "u-staff", name: "J. Kim", initials: "JK", role: "staff", email: "jkim@dillonmorgan.com" },
-  { id: "u-client", name: "Dana Kessler", initials: "DK", role: "client", email: "dana@cascadeventures.com", companyId: "c-cascade" },
+  {
+    id: "u-admin",
+    name: "Dillon Morgan",
+    initials: "DM",
+    role: "admin",
+    email: "dillon@dillonmorgan.com",
+    avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan",
+  },
+  {
+    id: "u-pm",
+    name: "M. Doyle",
+    initials: "MD",
+    role: "pm",
+    email: "mdoyle@dillonmorgan.com",
+    avatarUrl: "https://i.pravatar.cc/128?u=m-doyle",
+  },
+  {
+    id: "u-staff",
+    name: "J. Kim",
+    initials: "JK",
+    role: "staff",
+    email: "jkim@dillonmorgan.com",
+    avatarUrl: "https://i.pravatar.cc/128?u=j-kim",
+  },
+  {
+    id: "u-client",
+    name: "Dana Kessler",
+    initials: "DK",
+    role: "client",
+    email: "dana@cascadeventures.com",
+    companyId: "c-cascade",
+    avatarUrl: "https://i.pravatar.cc/128?u=dana-kessler",
+  },
 ];
 
 export const seedCompanies: Company[] = [

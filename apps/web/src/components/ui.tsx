@@ -1,5 +1,6 @@
 export {
   Avatar,
+  avatarUrlFor,
   Field,
   FilterChips,
   Modal,

@@ -78,7 +78,7 @@ export default function PortalTicketsPage() {
           {selected ? (
             <>
               <div className="mb-3">
-                <div className="font-[family-name:var(--font-display)] text-lg text-[var(--color-navy)]">
+                <div className="text-lg font-semibold text-[var(--color-navy)]">
                   #{selected.number} {selected.subject}
                 </div>
                 <div className="text-sm text-[var(--color-muted)]">Submitted {selected.submitted}</div>

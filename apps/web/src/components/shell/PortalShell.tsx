@@ -51,8 +51,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-title">{company?.name.toUpperCase() ?? "CLIENT"}</div>
-          <div className="brand-sub">CLIENT PORTAL</div>
+          <div className="brand-mark">CP</div>
+          <div className="brand-title">{company?.name ?? "Client"}</div>
+          <div className="brand-sub">Client portal</div>
         </div>
         <nav>
           {NAV.map((item) => {
@@ -81,7 +82,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             onClick={logout}
             title="Sign out"
           >
-            <Avatar initials={user.initials} />
+            <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
           </button>
         </header>
         <main className="content">{children}</main>

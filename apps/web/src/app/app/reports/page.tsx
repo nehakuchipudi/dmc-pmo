@@ -124,7 +124,7 @@ export default function ReportsPage() {
               active === d.key ? "ring-2 ring-[var(--color-gold)]" : ""
             }`}
           >
-            <div className="h-24 bg-gradient-to-br from-[var(--color-gold-soft)]/50 to-[var(--color-navy)]/15" />
+            <div className="h-24 bg-[var(--color-fog)]" />
             <div className="p-3 text-sm font-semibold text-[var(--color-navy)]">{d.name}</div>
           </button>
         ))}
@@ -139,7 +139,7 @@ export default function ReportsPage() {
 
       {active === "schedule" ? (
         <div className="panel p-4">
-          <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg">Schedule</h2>
+          <h2 className="mb-3 text-lg font-semibold">Schedule</h2>
           <ul className="space-y-2 text-sm">
             {tasks
               .filter((t) => t.status !== "Done")
@@ -240,7 +240,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="panel p-4">
       <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{label}</div>
-      <div className="mt-1 font-[family-name:var(--font-display)] text-2xl text-[var(--color-navy)]">{value}</div>
+      <div className="mt-1 text-2xl font-semibold text-[var(--color-navy)]">{value}</div>
     </div>
   );
 }

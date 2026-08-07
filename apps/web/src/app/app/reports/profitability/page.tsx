@@ -99,7 +99,7 @@ export default function ProfitabilityPage() {
             {bars.map((h, i) => (
               <div key={filtered[i]?.id ?? i} className="flex flex-1 flex-col items-center gap-2" title={filtered[i]?.name}>
                 <div
-                  className="w-full rounded-t-md bg-gradient-to-t from-[var(--color-navy)] to-[var(--color-gold)]"
+                  className="w-full rounded-t-md bg-[var(--color-navy)]"
                   style={{ height: `${h}%` }}
                 />
                 <span className="truncate text-[10px] text-[var(--color-muted)]">{filtered[i]?.marginPct}%</span>

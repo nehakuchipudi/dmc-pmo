@@ -18,15 +18,15 @@ function statusColor(status: TaskStatus | Milestone["status"]) {
   switch (status) {
     case "Done":
     case "Approved":
-      return "#00C875";
+      return "#7BA891";
     case "In Progress":
     case "Awaiting Signoff":
-      return "#FDAB3D";
+      return "#D4A574";
     case "Review":
-      return "#A25DDC";
+      return "#8B8FB8";
     case "Not Started":
     default:
-      return "#579BFC";
+      return "#6B8FB5";
   }
 }
 
@@ -80,7 +80,7 @@ export function GanttBoard({
             <button
               key={s}
               type="button"
-              className={`rounded-md px-3 py-1 text-sm font-semibold ${scale === s ? "bg-[#579BFC] text-white" : "text-[var(--color-muted)]"}`}
+              className={`rounded-md px-3 py-1 text-sm font-semibold ${scale === s ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"}`}
               onClick={() => setScale(s)}
             >
               {s}

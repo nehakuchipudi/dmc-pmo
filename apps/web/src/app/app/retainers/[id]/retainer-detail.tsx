@@ -136,8 +136,10 @@ export function RetainerDetail({ id }: { id: string }) {
           <button
             key={s}
             type="button"
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-              retainer.status === s ? "bg-[#00C875] text-white" : "bg-white text-[var(--color-muted)] border border-[var(--color-border)]"
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+              retainer.status === s
+                ? "bg-[var(--color-success)] text-white"
+                : "bg-white text-[var(--color-muted)] border border-[var(--color-border)]"
             }`}
             onClick={() => updateRetainer(retainer.id, { status: s as RetainerStatus })}
           >
@@ -243,7 +245,12 @@ export function RetainerDetail({ id }: { id: string }) {
             <tbody>
               {periods.map((p) => {
                 const burn = Math.round((p.usedHours / Math.max(p.budgetHours, 1)) * 100);
-                const barClass = burn > 100 ? "bg-[#E2445C]" : burn > 80 ? "bg-[#FDAB3D]" : "bg-[#00C875]";
+                const barClass =
+                  burn > 100
+                    ? "bg-[var(--color-danger)]"
+                    : burn > 80
+                      ? "bg-[var(--color-warning)]"
+                      : "bg-[var(--color-success)]";
                 return (
                   <tr key={p.id}>
                     <td>
@@ -418,7 +425,7 @@ function Metric({ label, value, accent }: { label: string; value: string; accent
   return (
     <div className="rounded-xl bg-[var(--color-fog)] p-3">
       <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{label}</div>
-      <div className={`mt-1 text-lg font-semibold ${accent ? "text-[#00C875]" : "text-[var(--color-navy)]"}`}>{value}</div>
+      <div className={`mt-1 text-lg font-semibold ${accent ? "text-[var(--color-success)]" : "text-[var(--color-navy)]"}`}>{value}</div>
     </div>
   );
 }

@@ -60,7 +60,7 @@ export function FilesNotesPanel({
             <button
               key={t}
               type="button"
-              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${tab === t ? "bg-[var(--color-ink)] text-white" : "text-[var(--color-muted)]"}`}
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${tab === t ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"}`}
               onClick={() => startTransition(() => setTab(t))}
             >
               {t} ({t === "Files" ? files.length : notes.length})

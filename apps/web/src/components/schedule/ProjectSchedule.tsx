@@ -48,7 +48,7 @@ export function ProjectSchedule({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--color-ink)]">Project schedule</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Project schedule</h2>
           <p className="text-sm text-[var(--color-muted)]">Manage milestones, tasks, and timeline.</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={onAddMilestone}>
@@ -69,7 +69,7 @@ export function ProjectSchedule({
               key={v}
               type="button"
               className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                view === v ? "bg-[#579BFC] text-white" : "text-[var(--color-muted)]"
+                view === v ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
               }`}
               onClick={() => startTransition(() => setView(v))}
             >
@@ -79,8 +79,8 @@ export function ProjectSchedule({
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#FDAB3D]/40 bg-[#FFF8EB] px-3 py-2 text-sm text-[var(--color-ink)]">
-        Click any field to edit. Switch to Gantt for the Monday-style timeline (flat colors, no gradients).
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-fog)] px-3 py-2 text-sm text-[var(--color-ink)]">
+        Click any field to edit. Switch to Gantt for the timeline view (soft flat colors, no gradients).
       </div>
 
       {view === "List" ? (

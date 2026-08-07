@@ -118,8 +118,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className={clsx("app-shell", collapsed && "collapsed")}>
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-title">{collapsed ? "DMC" : "DILLON MORGAN"}</div>
-          {!collapsed ? <div className="brand-sub">PMO</div> : null}
+          <div className="brand-mark">DMC</div>
+          {!collapsed ? (
+            <>
+              <div className="brand-title">Dillon Morgan</div>
+              <div className="brand-sub">Consulting PMO</div>
+            </>
+          ) : null}
         </div>
         <nav>
           {NAV.map((item) => {
@@ -186,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             ) : null}
             <div className="relative">
-              <button type="button" className="btn btn-ghost" aria-label="Create" onClick={() => setCreateOpen((v) => !v)}>
+              <button type="button" className="icon-btn" aria-label="Create" onClick={() => setCreateOpen((v) => !v)}>
                 <Plus size={18} />
               </button>
               {createOpen ? (
@@ -234,15 +239,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
-            <button type="button" className="btn btn-ghost" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
+            <button type="button" className="icon-btn" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
               <Briefcase size={18} />
             </button>
-            <button type="button" className="btn btn-ghost" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
+            <button type="button" className="icon-btn" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
               <CalendarDays size={18} />
             </button>
             <button
               type="button"
-              className="btn btn-ghost"
+              className={clsx("icon-btn", timerRunning && "active-soft")}
               aria-label="Time"
               onClick={() => {
                 setTimerRunning(true);
@@ -251,17 +256,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Clock3 size={18} />
             </button>
-            <button type="button" className="btn btn-ghost relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
+            <button type="button" className="icon-btn relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
               <Bell size={18} />
-              {unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--color-danger)] px-1 text-[10px] text-white">{unread}</span> : null}
+              {unread ? (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--color-danger)] px-1 text-[10px] text-white">
+                  {unread}
+                </span>
+              ) : null}
             </button>
             <button
               type="button"
-              className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-2 py-1"
+              className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white py-1 pl-1 pr-2.5"
               onClick={logout}
               title={`${user.name} (${roleLabel(user.role)}). Click to sign out.`}
             >
-              <Avatar initials={user.initials} />
+              <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
+              <span className="hidden text-sm font-medium text-[var(--color-ink)] sm:inline">{user.name.split(" ")[0]}</span>
             </button>
           </div>
         </header>
@@ -355,7 +365,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               key={n.id}
               type="button"
-              className={clsx("panel w-full p-3 text-left", !n.read && "border-[var(--color-gold)]")}
+              className={clsx("panel w-full p-3 text-left", !n.read && "border-[var(--color-navy)]")}
               onClick={() => {
                 markRead(n.id);
                 if (n.href) router.push(n.href);
