@@ -1,11 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://hyper-ion-c9hj18u.shipstatic.com/login/
+https://edgy-drone-aof2d45.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/09a2a5e51032f47f38a8cd4de5a00fdef05ef1cdf2dc984a6cba8931c10833a3
+https://my.shipstatic.com/claim/1aa923398868abed838c7b51ec168333e6d8592c2eba95b5adb4a3017e7036b7
 
-Previous (steel theme):
-https://intense-seed-2n3e8oy.shipstatic.com/login/
+Previous (white background):
+https://hyper-ion-c9hj18u.shipstatic.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/

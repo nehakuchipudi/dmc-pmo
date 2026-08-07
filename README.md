@@ -39,8 +39,8 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (free)
 
-- **ShipStatic:** https://hyper-ion-c9hj18u.shipstatic.com/login/
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/09a2a5e51032f47f38a8cd4de5a00fdef05ef1cdf2dc984a6cba8931c10833a3
+- **ShipStatic:** https://edgy-drone-aof2d45.shipstatic.com/login/
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/1aa923398868abed838c7b51ec168333e6d8592c2eba95b5adb4a3017e7036b7
 - Latest URL also tracked in `docs/PREVIEW_URL.txt`
 
 Static export lives in `apps/web/out`. Redeploy with:
