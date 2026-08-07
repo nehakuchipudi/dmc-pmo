@@ -93,8 +93,13 @@ export function GanttBoard({
         <div className="gantt-sidebar">
           <div className="gantt-side-head">Item</div>
           {milestones.map((m) => (
-            <div key={m.id} className="gantt-side-row gantt-side-ms">
-              ◆ {m.name}
+            <div
+              key={m.id}
+              className="gantt-side-row gantt-side-ms"
+              style={{ paddingLeft: m.parentId || m.kind === "group" ? 28 : 12 }}
+            >
+              {m.kind === "group" || m.parentId ? "▹ " : "◆ "}
+              {m.name}
             </div>
           ))}
           {tasks.map((t) => (
@@ -102,6 +107,7 @@ export function GanttBoard({
               key={t.id}
               type="button"
               className={`gantt-side-row ${selected === t.id ? "active" : ""}`}
+              style={{ paddingLeft: 40 }}
               onClick={() => setSelected(t.id)}
             >
               <div className="truncate font-medium">{t.name}</div>
@@ -122,10 +128,18 @@ export function GanttBoard({
           {milestones.map((m) => (
             <div key={m.id} className="gantt-lane">
               <div
-                className="gantt-diamond"
-                style={{ left: styleFor(m.due, m.due).left, background: statusColor(m.status) }}
-                title={`${m.name} · ${formatDisplayDate(m.due)}`}
-              />
+                className="gantt-bar-flat"
+                style={{
+                  ...styleFor(m.start, m.due),
+                  background: m.kind === "group" || m.parentId ? "#8B8FB8" : "#7A8BA3",
+                  opacity: 0.85,
+                  height: 18,
+                  top: 17,
+                }}
+                title={`${m.name}: ${formatDisplayDate(m.start)} to ${formatDisplayDate(m.due)}`}
+              >
+                {m.name}
+              </div>
             </div>
           ))}
           {tasks.map((t) => (

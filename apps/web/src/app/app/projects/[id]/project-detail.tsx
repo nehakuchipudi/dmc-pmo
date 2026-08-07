@@ -7,23 +7,29 @@ import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
 import {
+  Field,
+  Modal,
   PageHeader,
   SideRail,
   StatusPill,
   Tabs,
+  TextInput,
+  TextSelect,
   statusTone,
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
+import type { ProjectStatus } from "@/lib/types";
 
-const TABS = ["Overview", "Schedule", "Files & Notes", "Billing", "Tickets", "Signoffs"];
+const TABS = ["Overview", "Scope", "Schedule", "Files", "Billing", "Tickets", "Signoffs"];
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
   const projects = useAppStore((s) => s.projects);
+  const companies = useAppStore((s) => s.companies);
   const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
   const tickets = useAppStore((s) => s.tickets);
@@ -33,6 +39,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const updateTask = useAppStore((s) => s.updateTask);
   const updateMilestone = useAppStore((s) => s.updateMilestone);
   const deleteTask = useAppStore((s) => s.deleteTask);
+  const deleteMilestone = useAppStore((s) => s.deleteMilestone);
   const requestSignoff = useAppStore((s) => s.requestSignoff);
   const approveSignoff = useAppStore((s) => s.approveSignoff);
   const trackView = useAppStore((s) => s.trackView);
@@ -42,19 +49,25 @@ export function ProjectDetail({ id }: { id: string }) {
   const addProjectFile = useAppStore((s) => s.addProjectFile);
   const deleteProjectFile = useAppStore((s) => s.deleteProjectFile);
   const moveProjectFile = useAppStore((s) => s.moveProjectFile);
+  const linkFileToTask = useAppStore((s) => s.linkFileToTask);
   const addProjectNote = useAppStore((s) => s.addProjectNote);
   const addMaterial = useAppStore((s) => s.addMaterial);
   const updateProject = useAppStore((s) => s.updateProject);
+  const updateProjectScope = useAppStore((s) => s.updateProjectScope);
   const deleteProject = useAppStore((s) => s.deleteProject);
+  const addTaskLink = useAppStore((s) => s.addTaskLink);
+  const removeTaskLink = useAppStore((s) => s.removeTaskLink);
   const [tab, setTab] = useState("Overview");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
+  const [editOpen, setEditOpen] = useState(false);
 
   const project = useMemo(() => projects.find((p) => p.id === id), [projects, id]);
   const ms = useMemo(
     () => milestones.filter((m) => m.projectId === project?.id),
     [milestones, project?.id],
   );
+  const phases = useMemo(() => ms.filter((m) => m.kind === "phase" || !m.parentId), [ms]);
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.projectId === project?.id),
     [tasks, project?.id],
@@ -86,6 +99,8 @@ export function ProjectDetail({ id }: { id: string }) {
     );
   }
 
+  const scope = project.scope;
+
   return (
     <div className="fade-in">
       <div className="mb-2 text-sm text-[var(--color-muted)]">
@@ -97,6 +112,9 @@ export function ProjectDetail({ id }: { id: string }) {
         actions={
           <>
             <StatusPill tone={statusTone(project.status)}>{project.status}</StatusPill>
+            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
+              Edit project
+            </button>
             <button
               type="button"
               className="btn btn-ghost"
@@ -149,11 +167,7 @@ export function ProjectDetail({ id }: { id: string }) {
         }
       />
 
-      <Tabs
-        tabs={TABS}
-        active={tab}
-        onChange={(t) => startTransition(() => setTab(t))}
-      />
+      <Tabs tabs={TABS} active={tab} onChange={(t) => startTransition(() => setTab(t))} />
 
       {tab === "Overview" ? (
         <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
@@ -170,7 +184,7 @@ export function ProjectDetail({ id }: { id: string }) {
             </div>
             <div className="panel p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-[var(--color-navy)]">Next milestones</h2>
+                <h2 className="font-semibold text-[var(--color-navy)]">Phases</h2>
                 <button type="button" className="btn btn-ghost text-sm" onClick={() => setTab("Schedule")}>
                   Edit in schedule
                 </button>
@@ -178,13 +192,13 @@ export function ProjectDetail({ id }: { id: string }) {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Milestone</th>
+                    <th>Phase</th>
                     <th>Due</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ms.slice(0, 4).map((m) => (
+                  {phases.slice(0, 6).map((m) => (
                     <tr key={m.id}>
                       <td>{m.name}</td>
                       <td>{formatDisplayDate(m.due)}</td>
@@ -200,8 +214,14 @@ export function ProjectDetail({ id }: { id: string }) {
           <div className="space-y-4">
             <SideRail title="Quick actions">
               <div className="space-y-2">
+                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setEditOpen(true)}>
+                  Edit project
+                </button>
+                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Scope")}>
+                  Edit scope
+                </button>
                 <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Schedule")}>
-                  + Milestone / task
+                  + Phase / workstream / task
                 </button>
                 <button
                   type="button"
@@ -236,34 +256,93 @@ export function ProjectDetail({ id }: { id: string }) {
         </div>
       ) : null}
 
+      {tab === "Scope" ? (
+        <div className="panel p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-semibold text-[var(--color-navy)]">Project scope</h2>
+              <p className="text-sm text-[var(--color-muted)]">Objectives, boundaries, and deliverables.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                updateProjectScope(project.id, scope);
+                pushToast("Scope saved");
+              }}
+            >
+              Save scope
+            </button>
+          </div>
+          <Field label="Objectives">
+            <textarea
+              className="field-input min-h-24"
+              value={scope.objectives}
+              onChange={(e) => updateProjectScope(project.id, { ...scope, objectives: e.target.value })}
+            />
+          </Field>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ScopeList
+              title="In scope"
+              items={scope.inScope}
+              onChange={(items) => updateProjectScope(project.id, { ...scope, inScope: items })}
+            />
+            <ScopeList
+              title="Out of scope"
+              items={scope.outOfScope}
+              onChange={(items) => updateProjectScope(project.id, { ...scope, outOfScope: items })}
+            />
+            <ScopeList
+              title="Deliverables"
+              items={scope.deliverables}
+              onChange={(items) => updateProjectScope(project.id, { ...scope, deliverables: items })}
+            />
+            <ScopeList
+              title="Assumptions"
+              items={scope.assumptions}
+              onChange={(items) => updateProjectScope(project.id, { ...scope, assumptions: items })}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {tab === "Schedule" ? (
         <ProjectSchedule
           milestones={ms}
           tasks={projectTasks}
-          onAddMilestone={() => createMilestone(project.id, "New milestone", project.due)}
-          onAddTask={(milestoneId) =>
+          projectFiles={project.files.map((f) => ({ id: f.id, name: f.name }))}
+          onAddPhase={() => createMilestone(project.id, "New phase", project.due, { kind: "phase" })}
+          onAddGroup={(phaseId) =>
+            createMilestone(project.id, "New workstream", project.due, { kind: "group", parentId: phaseId })
+          }
+          onAddTask={(groupId) =>
             createTask({
               name: "New task",
               projectId: project.id,
               assignee: "J. Kim",
               due: project.due,
-              milestoneId,
+              milestoneId: groupId,
             })
           }
           onUpdateTask={updateTask}
           onUpdateMilestone={updateMilestone}
           onDeleteTask={deleteTask}
+          onDeleteMilestone={deleteMilestone}
+          onAddTaskLink={addTaskLink}
+          onRemoveTaskLink={removeTaskLink}
         />
       ) : null}
 
-      {tab === "Files & Notes" ? (
+      {tab === "Files" ? (
         <FilesNotesPanel
           files={project.files}
           notes={project.notes}
+          tasks={projectTasks}
           author={user?.name ?? "Staff"}
           onUpload={(file) => addProjectFile(project.id, file)}
           onDeleteFile={(fileId) => deleteProjectFile(project.id, fileId)}
           onMoveFile={(fileId, folder) => moveProjectFile(project.id, fileId, folder)}
+          onLinkFileToTask={(fileId, taskId) => linkFileToTask(project.id, fileId, taskId)}
           onAddNote={(body, visibility) =>
             addProjectNote(project.id, { author: user?.name ?? "Staff", body, visibility })
           }
@@ -274,7 +353,7 @@ export function ProjectDetail({ id }: { id: string }) {
         <div className="space-y-4">
           <div className="panel p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold text-[var(--color-navy)]">2. Materials</h2>
+              <h2 className="font-semibold text-[var(--color-navy)]">Materials</h2>
               <button
                 type="button"
                 className="btn btn-primary"
@@ -302,9 +381,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     <td>{m.qty}</td>
                     <td className="tabular-nums">{money(m.purchasePrice)}</td>
                     <td className="tabular-nums">{money(m.salePrice)}</td>
-                    <td className="tabular-nums">
-                      {money(m.salePrice - m.purchasePrice)}
-                    </td>
+                    <td className="tabular-nums">{money(m.salePrice - m.purchasePrice)}</td>
                   </tr>
                 ))}
                 {!project.materials.length ? (
@@ -318,7 +395,7 @@ export function ProjectDetail({ id }: { id: string }) {
             </table>
           </div>
           <div className="panel p-4">
-            <h2 className="mb-3 font-semibold text-[var(--color-navy)]">3. Totals</h2>
+            <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Totals</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt>Service items</dt>
@@ -349,6 +426,18 @@ export function ProjectDetail({ id }: { id: string }) {
 
       {tab === "Tickets" ? (
         <div className="panel overflow-hidden">
+          <div className="flex justify-end p-3">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setCreateDefaults({ projectId: project.id, companyId: project.companyId });
+                setCreateKind("ticket");
+              }}
+            >
+              + Ticket
+            </button>
+          </div>
           <table className="table">
             <thead>
               <tr>
@@ -376,7 +465,7 @@ export function ProjectDetail({ id }: { id: string }) {
               {!projectTickets.length ? (
                 <tr>
                   <td colSpan={3} className="text-[var(--color-muted)]">
-                    No tickets linked. Use Create (+) Ticket with this company.
+                    No tickets linked.
                   </td>
                 </tr>
               ) : null}
@@ -390,49 +479,143 @@ export function ProjectDetail({ id }: { id: string }) {
           <table className="table">
             <thead>
               <tr>
-                <th>Deliverable</th>
-                <th>Due</th>
+                <th>Phase / workstream</th>
                 <th>Status</th>
-                <th />
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {ms.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.name}</td>
-                  <td>{formatDisplayDate(m.due)}</td>
-                  <td>
-                    <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
-                  </td>
-                  <td className="space-x-2 text-right">
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-sm"
-                      onClick={() => requestSignoff(project.id, m.name)}
-                    >
-                      Request
-                    </button>
-                    {m.status !== "Approved" ? (
-                      <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>
-                        Approve
+              {ms
+                .filter((m) => m.kind === "phase" || !m.parentId)
+                .map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.name}</td>
+                    <td>
+                      <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
+                    </td>
+                    <td className="space-x-2">
+                      <button
+                        type="button"
+                        className="btn btn-ghost text-sm"
+                        onClick={() => requestSignoff(project.id, m.name)}
+                      >
+                        Request
                       </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
+                      {user?.role === "admin" || user?.role === "pm" ? (
+                        <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>
+                          Approve
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       ) : null}
 
       <CreateForms
-        key={createKind ?? "closed"}
         kind={createKind}
         defaults={createDefaults}
-        onClose={() => setCreateKind(null)}
+        onClose={() => {
+          setCreateKind(null);
+          setCreateDefaults({});
+        }}
       />
+
+      <Modal open={editOpen} title="Edit project" onClose={() => setEditOpen(false)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const companyId = String(fd.get("companyId") || project.companyId);
+            updateProject(project.id, {
+              name: String(fd.get("name") || project.name),
+              manager: String(fd.get("manager") || project.manager),
+              status: String(fd.get("status") || project.status) as ProjectStatus,
+              due: String(fd.get("due") || project.due),
+              start: String(fd.get("start") || project.start),
+              description: String(fd.get("description") || ""),
+              budgetHours: Number(fd.get("budgetHours") || project.budgetHours),
+              companyId,
+              companyName: companies.find((c) => c.id === companyId)?.name ?? project.companyName,
+            });
+            setEditOpen(false);
+          }}
+        >
+          <Field label="Name">
+            <TextInput name="name" defaultValue={project.name} />
+          </Field>
+          <Field label="Company">
+            <TextSelect name="companyId" defaultValue={project.companyId}>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field label="Manager">
+            <TextInput name="manager" defaultValue={project.manager} />
+          </Field>
+          <Field label="Status">
+            <TextSelect name="status" defaultValue={project.status}>
+              {["Planned", "On Track", "At Risk", "Overdue", "Completed"].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Start">
+              <TextInput type="date" name="start" defaultValue={project.start} />
+            </Field>
+            <Field label="Due">
+              <TextInput type="date" name="due" defaultValue={project.due} />
+            </Field>
+          </div>
+          <Field label="Budget hours">
+            <TextInput type="number" name="budgetHours" defaultValue={project.budgetHours} />
+          </Field>
+          <Field label="Description">
+            <TextInput name="description" defaultValue={project.description} />
+          </Field>
+          <button type="submit" className="btn btn-primary">
+            Save changes
+          </button>
+        </form>
+      </Modal>
     </div>
   );
+}
+
+function ScopeList({
+  title,
+  items,
+  onChange,
+}: {
+  title: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}) {
+  return (
+    <Field label={title}>
+      <textarea
+        className="field-input min-h-28"
+        value={items.join("\n")}
+        placeholder="One item per line"
+        onChange={(e) => onChange(splitLines(e.target.value))}
+      />
+    </Field>
+  );
+}
+
+function splitLines(value: string) {
+  return value
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function Metric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {

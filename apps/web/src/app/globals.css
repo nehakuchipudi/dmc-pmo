@@ -488,6 +488,76 @@ button, input, select, textarea { font: inherit; }
   background: #fbfcfe;
 }
 
+.wbs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.wbs-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+}
+.wbs-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef2f6;
+  vertical-align: middle;
+}
+.wbs-table .wbs-name { min-width: 280px; }
+.wbs-l1 td { background: #f7f9fc; font-weight: 650; }
+.wbs-l2 td { background: #fbfcfe; }
+.wbs-l3 td { background: #fff; }
+
+.files-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  min-height: 420px;
+}
+.files-rail {
+  border-right: 1px solid var(--color-border);
+  background: #fbfcfe;
+  padding: 12px;
+}
+.files-rail button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.files-rail button.active {
+  background: var(--color-info-bg);
+  color: var(--color-navy);
+  font-weight: 650;
+}
+.files-main { padding: 14px 16px; }
+.files-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 100px 120px 90px 40px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid #eef2f6;
+  transition: background 140ms ease;
+}
+.files-row:hover { background: #f7f9fc; }
+
 .schedule-group {
   border: 1px solid var(--color-border);
   border-radius: 14px;
@@ -706,4 +776,10 @@ button, input, select, textarea { font: inherit; }
   .kanban { grid-template-columns: 1fr; }
   .content { padding: 16px; }
   .gantt-grid { grid-template-columns: 1fr; }
+  .files-layout { grid-template-columns: 1fr; }
+  .files-rail { border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .files-row { grid-template-columns: 40px 1fr 40px; }
+  .files-row > span:nth-child(3),
+  .files-row > span:nth-child(4),
+  .files-row > span:nth-child(5) { display: none; }
 }

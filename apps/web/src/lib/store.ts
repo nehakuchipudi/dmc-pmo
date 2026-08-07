@@ -17,6 +17,7 @@ import {
   seedRetainers,
   seedRetainerPeriods,
   seedTasks,
+  seedTeam,
   seedTicketMessages,
   seedTickets,
   seedTimeEntries,
@@ -36,12 +37,15 @@ import type {
   Project,
   ProjectFile,
   ProjectNote,
+  ProjectScope,
   Retainer,
   RetainerPeriod,
   RetainerType,
   Task,
+  TaskLink,
   TaskPriority,
   TaskStatus,
+  TeamMember,
   Ticket,
   TicketMessage,
   TimeEntry,
@@ -136,9 +140,22 @@ type AppState = {
   createTask: (input: CreateTaskInput) => string;
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
-  createMilestone: (projectId: string, name: string, due: string) => string;
+  createMilestone: (
+    projectId: string,
+    name: string,
+    due: string,
+    opts?: { kind?: "phase" | "group"; parentId?: string; start?: string },
+  ) => string;
   updateMilestone: (id: string, patch: Partial<Milestone>) => void;
   deleteMilestone: (id: string) => void;
+  addTaskLink: (taskId: string, link: Omit<TaskLink, "id">) => void;
+  removeTaskLink: (taskId: string, linkId: string) => void;
+  linkFileToTask: (projectId: string, fileId: string, taskId: string) => void;
+  updateProjectScope: (projectId: string, scope: ProjectScope) => void;
+  team: TeamMember[];
+  addTeamMember: (input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean }) => string;
+  updateTeamMember: (id: string, patch: Partial<TeamMember>) => void;
+  setTeamMemberActive: (id: string, active: boolean) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
   createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
@@ -201,6 +218,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tickets: seedTickets,
   ticketMessages: seedTicketMessages,
   tasks: seedTasks,
+  team: seedTeam,
   invoices: seedInvoices,
   timeEntries: seedTimeEntries,
   notifications: seedNotifications,
@@ -323,6 +341,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       materials: [],
       files: [],
       notes: [],
+      scope: {
+        objectives: "",
+        inScope: [],
+        outOfScope: [],
+        deliverables: [],
+        assumptions: [],
+      },
     };
     set((s) => ({
       projects: [project, ...s.projects],
@@ -361,13 +386,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!source) return "";
     const newId = uid("p");
     const msMap = new Map<string, string>();
+    get()
+      .milestones.filter((m) => m.projectId === id)
+      .forEach((m) => msMap.set(m.id, uid("m")));
     const newMilestones = get()
       .milestones.filter((m) => m.projectId === id)
-      .map((m) => {
-        const mid = uid("m");
-        msMap.set(m.id, mid);
-        return { ...m, id: mid, projectId: newId, status: "Not Started" as const };
-      });
+      .map((m) => ({
+        ...m,
+        id: msMap.get(m.id)!,
+        projectId: newId,
+        parentId: m.parentId ? msMap.get(m.parentId) : undefined,
+        status: "Not Started" as const,
+      }));
     const newTasks = get()
       .tasks.filter((t) => t.projectId === id)
       .map((t) => ({
@@ -378,6 +408,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         milestoneId: t.milestoneId ? msMap.get(t.milestoneId) : undefined,
         status: "Not Started" as const,
         progress: 0,
+        links: t.links.map((l) => ({ ...l, id: uid("tl") })),
       }));
     const project: Project = {
       ...source,
@@ -389,6 +420,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       materials: source.materials.map((m) => ({ ...m, id: uid("mat") })),
       files: [],
       notes: [],
+      scope: { ...source.scope, inScope: [...source.scope.inScope], outOfScope: [...source.scope.outOfScope], deliverables: [...source.scope.deliverables], assumptions: [...source.scope.assumptions] },
     };
     set((s) => ({
       projects: [project, ...s.projects],
@@ -460,6 +492,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       start: input.start ?? todayIso(),
       clientEditable: false,
       estimateHours: 4,
+      links: [],
     };
     set((s) => ({ tasks: [task, ...s.tasks] }));
     get().pushToast(`Task created on ${project.name}`);
@@ -493,15 +526,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Task deleted", "danger");
   },
 
-  createMilestone: (projectId, name, due) => {
+  createMilestone: (projectId, name, due, opts) => {
     const id = uid("m");
+    const kind = opts?.kind ?? (opts?.parentId ? "group" : "phase");
     set((s) => ({
       milestones: [
-        { id, projectId, name, due, start: todayIso(), status: "Not Started" },
+        {
+          id,
+          projectId,
+          name,
+          due,
+          start: opts?.start ?? todayIso(),
+          status: "Not Started",
+          kind,
+          parentId: opts?.parentId,
+        },
         ...s.milestones,
       ],
     }));
-    get().pushToast("Milestone added");
+    get().pushToast(kind === "phase" ? "Phase added" : "Workstream added");
     return id;
   },
 
@@ -512,11 +555,108 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteMilestone: (id) => {
+    set((s) => {
+      const childIds = s.milestones.filter((m) => m.parentId === id).map((m) => m.id);
+      const remove = new Set([id, ...childIds]);
+      return {
+        milestones: s.milestones.filter((m) => !remove.has(m.id)),
+        tasks: s.tasks.map((t) =>
+          t.milestoneId && remove.has(t.milestoneId) ? { ...t, milestoneId: undefined } : t,
+        ),
+      };
+    });
+    get().pushToast("Plan item deleted", "danger");
+  },
+
+  addTaskLink: (taskId, link) => {
     set((s) => ({
-      milestones: s.milestones.filter((m) => m.id !== id),
-      tasks: s.tasks.map((t) => (t.milestoneId === id ? { ...t, milestoneId: undefined } : t)),
+      tasks: s.tasks.map((t) =>
+        t.id === taskId ? { ...t, links: [{ id: uid("tl"), ...link }, ...t.links] } : t,
+      ),
     }));
-    get().pushToast("Milestone deleted", "danger");
+    get().pushToast("Link added to task");
+  },
+
+  removeTaskLink: (taskId, linkId) => {
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === taskId ? { ...t, links: t.links.filter((l) => l.id !== linkId) } : t,
+      ),
+    }));
+  },
+
+  linkFileToTask: (projectId, fileId, taskId) => {
+    const file = get().projects.find((p) => p.id === projectId)?.files.find((f) => f.id === fileId);
+    if (!file) return;
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              files: p.files.map((f) =>
+                f.id === fileId
+                  ? { ...f, linkedTaskIds: Array.from(new Set([...(f.linkedTaskIds ?? []), taskId])) }
+                  : f,
+              ),
+            }
+          : p,
+      ),
+      tasks: s.tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              links: t.links.some((l) => l.fileId === fileId)
+                ? t.links
+                : [
+                    {
+                      id: uid("tl"),
+                      type: file.kind === "img" ? "image" : "file",
+                      label: file.name,
+                      href: `#${fileId}`,
+                      fileId,
+                    },
+                    ...t.links,
+                  ],
+            }
+          : t,
+      ),
+    }));
+    get().pushToast(`Linked ${file.name} to task`);
+  },
+
+  updateProjectScope: (projectId, scope) => {
+    set((s) => ({
+      projects: s.projects.map((p) => (p.id === projectId ? { ...p, scope } : p)),
+    }));
+    get().pushToast("Scope updated");
+  },
+
+  addTeamMember: (input) => {
+    const id = uid("tm");
+    const member: TeamMember = {
+      id,
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      initials: initialsFromName(input.name),
+      active: input.active ?? true,
+      avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
+    };
+    set((s) => ({ team: [member, ...s.team] }));
+    get().pushToast(`${member.name} added`);
+    return id;
+  },
+
+  updateTeamMember: (id, patch) => {
+    set((s) => ({
+      team: s.team.map((m) => (m.id === id ? { ...m, ...patch, initials: patch.name ? initialsFromName(patch.name) : m.initials } : m)),
+    }));
+    get().pushToast("Team member updated");
+  },
+
+  setTeamMemberActive: (id, active) => {
+    set((s) => ({ team: s.team.map((m) => (m.id === id ? { ...m, active } : m)) }));
+    get().pushToast(active ? "Member reactivated" : "Member deactivated", active ? "success" : "danger");
   },
 
   createTimeEntry: (input) => {

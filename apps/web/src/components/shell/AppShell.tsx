@@ -394,6 +394,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Friday timesheet reminder</span>
             <input type="checkbox" defaultChecked />
           </label>
+          <Link href="/app/settings" className="btn btn-primary w-full justify-center" onClick={() => setSettingsOpen(false)}>
+            Users & roles
+          </Link>
           <Link href="/app/automations" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
             Manage automations
           </Link>

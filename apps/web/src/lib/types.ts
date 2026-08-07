@@ -70,6 +70,7 @@ export interface ProjectFile {
   name: string;
   kind: "pdf" | "docx" | "pptx" | "img" | "other";
   sizeKb: number;
+  linkedTaskIds?: string[];
 }
 
 export interface ProjectNote {
@@ -78,6 +79,22 @@ export interface ProjectNote {
   body: string;
   createdAt: string;
   visibility: "internal" | "client";
+}
+
+export interface ProjectScope {
+  objectives: string;
+  inScope: string[];
+  outOfScope: string[];
+  deliverables: string[];
+  assumptions: string[];
+}
+
+export interface TaskLink {
+  id: string;
+  type: "file" | "url" | "image";
+  label: string;
+  href: string;
+  fileId?: string;
 }
 
 export interface Project {
@@ -101,8 +118,10 @@ export interface Project {
   materials: MaterialLine[];
   files: ProjectFile[];
   notes: ProjectNote[];
+  scope: ProjectScope;
 }
 
+/** L1 phase or L2 workstream/group in the project WBS */
 export interface Milestone {
   id: string;
   projectId: string;
@@ -110,6 +129,8 @@ export interface Milestone {
   due: string;
   start: string;
   status: MilestoneStatus;
+  kind: "phase" | "group";
+  parentId?: string;
 }
 
 export interface Ticket {
@@ -140,6 +161,7 @@ export interface Task {
   name: string;
   projectId: string;
   projectName: string;
+  /** Prefer L2 workstream id; may point at L1 phase when ungrouped */
   milestoneId?: string;
   assignee: string;
   assigneeInitials: string;
@@ -152,6 +174,17 @@ export interface Task {
   clientEditable: boolean;
   estimateHours: number;
   dependsOn?: string;
+  links: TaskLink[];
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  initials: string;
+  role: Role;
+  active: boolean;
+  avatarUrl?: string;
 }
 
 export interface Invoice {
