@@ -1,11 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://edgy-drone-aof2d45.shipstatic.com/login/
+https://sharded-cloud-ro77si3.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/1aa923398868abed838c7b51ec168333e6d8592c2eba95b5adb4a3017e7036b7
+https://my.shipstatic.com/claim/72dccf286e02899836b37d75acf452fae74c9e663cbb0250dd1eb0602c1cbfc8
 
-Previous (white background):
-https://hyper-ion-c9hj18u.shipstatic.com/login/
+Previous (Projects WBS):
+https://edgy-drone-aof2d45.shipstatic.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/

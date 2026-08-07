@@ -39,8 +39,8 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (free)
 
-- **ShipStatic:** https://edgy-drone-aof2d45.shipstatic.com/login/
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/1aa923398868abed838c7b51ec168333e6d8592c2eba95b5adb4a3017e7036b7
+- **ShipStatic:** https://sharded-cloud-ro77si3.shipstatic.com/login/
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/72dccf286e02899836b37d75acf452fae74c9e663cbb0250dd1eb0602c1cbfc8
 - Latest URL also tracked in `docs/PREVIEW_URL.txt`
 
 Static export lives in `apps/web/out`. Redeploy with:
