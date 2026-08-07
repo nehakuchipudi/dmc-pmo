@@ -39,8 +39,8 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (free)
 
-- **ShipStatic:** https://chaotic-flare-ckz50oh.shipstatic.com/login/
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/5893d16ff674e0b368bc000c5c9d75c49072aab25e356d848b761485245eb191
+- **ShipStatic:** https://intense-seed-2n3e8oy.shipstatic.com/login/
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/5710d5930266d515eb878c96cba50314fcc5d4e2edb8a4358816ace70dbe0239
 - Latest URL also tracked in `docs/PREVIEW_URL.txt`
 
 Static export lives in `apps/web/out`. Redeploy with:

@@ -1,14 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://chaotic-flare-ckz50oh.shipstatic.com/login/
+https://intense-seed-2n3e8oy.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/5893d16ff674e0b368bc000c5c9d75c49072aab25e356d848b761485245eb191
+https://my.shipstatic.com/claim/5710d5930266d515eb878c96cba50314fcc5d4e2edb8a4358816ace70dbe0239
 
-Previous (retainer fix):
-https://auric-index-bu3410i.shipstatic.com/login/
-
-Previous (Projects redesign):
-https://drifting-fog-167awwq.shipstatic.com/login/
+Previous (Projects/Retainers polish):
+https://chaotic-flare-ckz50oh.shipstatic.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/
