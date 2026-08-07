@@ -1,11 +1,11 @@
 Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://intense-seed-2n3e8oy.shipstatic.com/login/
+https://hyper-ion-c9hj18u.shipstatic.com/login/
 
 Claim to keep permanently:
-https://my.shipstatic.com/claim/5710d5930266d515eb878c96cba50314fcc5d4e2edb8a4358816ace70dbe0239
+https://my.shipstatic.com/claim/09a2a5e51032f47f38a8cd4de5a00fdef05ef1cdf2dc984a6cba8931c10833a3
 
-Previous (Projects/Retainers polish):
-https://chaotic-flare-ckz50oh.shipstatic.com/login/
+Previous (steel theme):
+https://intense-seed-2n3e8oy.shipstatic.com/login/
 
 GitHub Pages (after enabling Settings → Pages → gh-pages branch):
 https://nehakuchipudi.github.io/dmc-pmo/login/
