@@ -23,7 +23,7 @@ import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 import type { ProjectStatus } from "@/lib/types";
 
-const TABS = ["Overview", "Scope", "Schedule", "Files", "Billing", "Tickets", "Signoffs"];
+const TABS = ["Overview", "Plan", "Files", "Billing"];
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -113,7 +113,7 @@ export function ProjectDetail({ id }: { id: string }) {
           <>
             <StatusPill tone={statusTone(project.status)}>{project.status}</StatusPill>
             <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
-              Edit project
+              Edit
             </button>
             <button
               type="button"
@@ -133,7 +133,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 if (inv) router.push(`/app/billing/view/?id=${inv}`);
               }}
             >
-              Generate invoice
+              Invoice
             </button>
             <button
               type="button"
@@ -142,26 +142,15 @@ export function ProjectDetail({ id }: { id: string }) {
                 queueEmail(
                   companyContact?.email ?? "client@example.com",
                   `Update on ${project.name}`,
-                  `Progress is ${project.progress}%. Next milestone updates are in the portal.`,
+                  `Progress is ${project.progress}%.`,
                 );
                 pushToast(`Email queued to ${companyContact?.email ?? "client"}`);
               }}
             >
-              Send email
+              Email
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => exportProjectPlanPdf(project, ms, projectTasks)}
-            >
-              Export plan PDF
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => startTransition(() => setTab("Schedule"))}
-            >
-              Open schedule
+            <button type="button" className="btn btn-primary" onClick={() => startTransition(() => setTab("Plan"))}>
+              Open plan
             </button>
           </>
         }
@@ -170,11 +159,13 @@ export function ProjectDetail({ id }: { id: string }) {
       <Tabs tabs={TABS} active={tab} onChange={(t) => startTransition(() => setTab(t))} />
 
       {tab === "Overview" ? (
-        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+        <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
           <div className="space-y-4">
-            <div className="panel p-4">
+            <div className="panel p-5">
               <h2 className="mb-2 font-semibold text-[var(--color-navy)]">Summary</h2>
-              <p className="text-sm text-[var(--color-muted)]">{project.description || "No description yet."}</p>
+              <p className="text-sm leading-relaxed text-[var(--color-muted)]">
+                {project.description || "No description yet."}
+              </p>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Metric label="Budget hrs" value={`${project.budgetHours}h`} />
                 <Metric label="Logged" value={`${project.loggedHours}h`} />
@@ -182,28 +173,140 @@ export function ProjectDetail({ id }: { id: string }) {
                 <Metric label="Margin" value={`${project.marginPct}%`} accent />
               </div>
             </div>
-            <div className="panel p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-[var(--color-navy)]">Phases</h2>
-                <button type="button" className="btn btn-ghost text-sm" onClick={() => setTab("Schedule")}>
-                  Edit in schedule
+
+            <div className="panel p-5">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-[var(--color-navy)]">Scope</h2>
+                <button
+                  type="button"
+                  className="btn btn-ghost text-sm"
+                  onClick={() => {
+                    updateProjectScope(project.id, scope);
+                    pushToast("Scope saved");
+                  }}
+                >
+                  Save
                 </button>
               </div>
+              <Field label="Objectives">
+                <textarea
+                  className="field-input min-h-20"
+                  value={scope.objectives}
+                  onChange={(e) => updateProjectScope(project.id, { ...scope, objectives: e.target.value })}
+                />
+              </Field>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <ScopeList
+                  title="In scope"
+                  items={scope.inScope}
+                  onChange={(items) => updateProjectScope(project.id, { ...scope, inScope: items })}
+                />
+                <ScopeList
+                  title="Out of scope"
+                  items={scope.outOfScope}
+                  onChange={(items) => updateProjectScope(project.id, { ...scope, outOfScope: items })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="panel p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="font-semibold text-[var(--color-navy)]">Phases</h2>
+                  <button type="button" className="btn btn-ghost text-sm" onClick={() => setTab("Plan")}>
+                    Edit plan
+                  </button>
+                </div>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Phase</th>
+                      <th>Due</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {phases.map((m) => (
+                      <tr key={m.id}>
+                        <td className="font-medium">{m.name}</td>
+                        <td className="tabular-nums">{formatDisplayDate(m.due)}</td>
+                        <td>
+                          <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="panel p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="font-semibold text-[var(--color-navy)]">Tickets</h2>
+                  <button
+                    type="button"
+                    className="btn btn-ghost text-sm"
+                    onClick={() => {
+                      setCreateDefaults({ projectId: project.id, companyId: project.companyId });
+                      setCreateKind("ticket");
+                    }}
+                  >
+                    + Ticket
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {projectTickets.slice(0, 5).map((t) => (
+                    <Link
+                      key={t.id}
+                      href={`/app/tickets/view/?id=${t.id}`}
+                      className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[var(--color-fog)]"
+                    >
+                      <span className="truncate font-medium">
+                        #{t.number} {t.subject}
+                      </span>
+                      <StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill>
+                    </Link>
+                  ))}
+                  {!projectTickets.length ? (
+                    <p className="text-sm text-[var(--color-muted)]">No tickets linked.</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="panel p-5">
+              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Signoffs</h2>
               <table className="table">
                 <thead>
                   <tr>
                     <th>Phase</th>
-                    <th>Due</th>
                     <th>Status</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {phases.slice(0, 6).map((m) => (
+                  {phases.map((m) => (
                     <tr key={m.id}>
                       <td>{m.name}</td>
-                      <td>{formatDisplayDate(m.due)}</td>
                       <td>
                         <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
+                      </td>
+                      <td className="space-x-2 text-right">
+                        <button
+                          type="button"
+                          className="btn btn-ghost text-sm"
+                          onClick={() => requestSignoff(project.id, m.name)}
+                        >
+                          Request
+                        </button>
+                        {user?.role === "admin" || user?.role === "pm" ? (
+                          <button
+                            type="button"
+                            className="btn btn-primary text-sm"
+                            onClick={() => approveSignoff(m.id)}
+                          >
+                            Approve
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -211,17 +314,22 @@ export function ProjectDetail({ id }: { id: string }) {
               </table>
             </div>
           </div>
+
           <div className="space-y-4">
-            <SideRail title="Quick actions">
+            <SideRail title="Actions">
               <div className="space-y-2">
                 <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setEditOpen(true)}>
                   Edit project
                 </button>
-                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Scope")}>
-                  Edit scope
+                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Plan")}>
+                  Open plan
                 </button>
-                <button type="button" className="btn btn-ghost w-full justify-start" onClick={() => setTab("Schedule")}>
-                  + Phase / workstream / task
+                <button
+                  type="button"
+                  className="btn btn-ghost w-full justify-start"
+                  onClick={() => exportProjectPlanPdf(project, ms, projectTasks)}
+                >
+                  Export plan PDF
                 </button>
                 <button
                   type="button"
@@ -250,63 +358,13 @@ export function ProjectDetail({ id }: { id: string }) {
               <div className="text-2xl font-semibold tabular-nums text-[var(--color-navy)]">
                 {money(project.budgetAmount)}
               </div>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">Services + materials sale value</p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">Services + materials</p>
             </SideRail>
           </div>
         </div>
       ) : null}
 
-      {tab === "Scope" ? (
-        <div className="panel p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="font-semibold text-[var(--color-navy)]">Project scope</h2>
-              <p className="text-sm text-[var(--color-muted)]">Objectives, boundaries, and deliverables.</p>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                updateProjectScope(project.id, scope);
-                pushToast("Scope saved");
-              }}
-            >
-              Save scope
-            </button>
-          </div>
-          <Field label="Objectives">
-            <textarea
-              className="field-input min-h-24"
-              value={scope.objectives}
-              onChange={(e) => updateProjectScope(project.id, { ...scope, objectives: e.target.value })}
-            />
-          </Field>
-          <div className="grid gap-4 md:grid-cols-2">
-            <ScopeList
-              title="In scope"
-              items={scope.inScope}
-              onChange={(items) => updateProjectScope(project.id, { ...scope, inScope: items })}
-            />
-            <ScopeList
-              title="Out of scope"
-              items={scope.outOfScope}
-              onChange={(items) => updateProjectScope(project.id, { ...scope, outOfScope: items })}
-            />
-            <ScopeList
-              title="Deliverables"
-              items={scope.deliverables}
-              onChange={(items) => updateProjectScope(project.id, { ...scope, deliverables: items })}
-            />
-            <ScopeList
-              title="Assumptions"
-              items={scope.assumptions}
-              onChange={(items) => updateProjectScope(project.id, { ...scope, assumptions: items })}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {tab === "Schedule" ? (
+      {tab === "Plan" ? (
         <ProjectSchedule
           milestones={ms}
           tasks={projectTasks}
@@ -424,96 +482,6 @@ export function ProjectDetail({ id }: { id: string }) {
         </div>
       ) : null}
 
-      {tab === "Tickets" ? (
-        <div className="panel overflow-hidden">
-          <div className="flex justify-end p-3">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setCreateDefaults({ projectId: project.id, companyId: project.companyId });
-                setCreateKind("ticket");
-              }}
-            >
-              + Ticket
-            </button>
-          </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ticket</th>
-                <th>Priority</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projectTickets.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    <Link href={`/app/tickets/view/?id=${t.id}`} className="font-medium text-[var(--color-navy)]">
-                      #{t.number} {t.subject}
-                    </Link>
-                  </td>
-                  <td>
-                    <StatusPill tone={statusTone(t.priority)}>{t.priority}</StatusPill>
-                  </td>
-                  <td>
-                    <StatusPill tone={statusTone(t.status)}>{t.status}</StatusPill>
-                  </td>
-                </tr>
-              ))}
-              {!projectTickets.length ? (
-                <tr>
-                  <td colSpan={3} className="text-[var(--color-muted)]">
-                    No tickets linked.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {tab === "Signoffs" ? (
-        <div className="panel overflow-hidden">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Phase / workstream</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ms
-                .filter((m) => m.kind === "phase" || !m.parentId)
-                .map((m) => (
-                  <tr key={m.id}>
-                    <td>{m.name}</td>
-                    <td>
-                      <StatusPill tone={statusTone(m.status)}>{m.status}</StatusPill>
-                    </td>
-                    <td className="space-x-2">
-                      <button
-                        type="button"
-                        className="btn btn-ghost text-sm"
-                        onClick={() => requestSignoff(project.id, m.name)}
-                      >
-                        Request
-                      </button>
-                      {user?.role === "admin" || user?.role === "pm" ? (
-                        <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>
-                          Approve
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
       <CreateForms
         kind={createKind}
         defaults={createDefaults}
@@ -602,20 +570,20 @@ function ScopeList({
   return (
     <Field label={title}>
       <textarea
-        className="field-input min-h-28"
+        className="field-input min-h-24"
         value={items.join("\n")}
         placeholder="One item per line"
-        onChange={(e) => onChange(splitLines(e.target.value))}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
+        }
       />
     </Field>
   );
-}
-
-function splitLines(value: string) {
-  return value
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function Metric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {

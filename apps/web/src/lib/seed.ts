@@ -530,6 +530,14 @@ export function formatDisplayDate(iso: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Consistent table/Gantt short date: MM/DD/YYYY */
+export function formatShortDate(iso: string) {
+  if (!iso.includes("-")) return iso;
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${m}/${d}/${y}`;
+}
+
 export function initialsFromName(name: string) {
   return name
     .split(" ")

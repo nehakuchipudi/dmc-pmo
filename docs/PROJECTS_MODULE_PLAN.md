@@ -22,17 +22,14 @@
 
 ## 2. Target information architecture
 
-### Project detail tabs (7)
+### Project detail tabs (4)
 
-1. **Overview** – health, KPIs, next due work, quick actions, **Edit project**
-2. **Scope** – objectives, in/out of scope, deliverables, assumptions (editable)
-3. **Schedule** – 3-level WBS List + Gantt
-4. **Files** – Drive-style browser (folders + compact rows); Notes as sub-panel
-5. **Billing** – materials, totals, generate invoice
-6. **Tickets** – linked tickets
-7. **Signoffs** – milestone approvals
+1. **Overview** – summary, scope, phases, tickets, signoffs, quick actions, **Edit project**
+2. **Plan** – 3-level WBS List + Gantt (Phase → Workstream → Task)
+3. **Files** – Drive-style browser (folders + compact rows); Notes as sub-panel
+4. **Billing** – materials, totals, generate invoice
 
-*(Users/Roles live under Settings, not inside a project, but gate project actions.)*
+Scope, Tickets, and Signoffs fold into Overview. Users/Roles live under Settings.
 
 ---
 
@@ -80,7 +77,7 @@ L1 Phase          (summary: bold, expandable)
 ### Overview
 - View health, budget burn, margin, next L1/L2 due items
 - **Edit project** (name, company, manager, status, dates, budget, description)
-- Jump to Schedule / Scope / Billing
+- Jump to Plan / Billing
 - Delete / toggle at-risk
 
 ### Scope

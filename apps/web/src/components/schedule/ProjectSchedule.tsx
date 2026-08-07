@@ -1,11 +1,11 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useMemo, useState, type ReactNode } from "react";
 import { GanttBoard } from "@/components/Gantt";
-import type { Milestone, Task, TaskLink, TaskPriority, TaskStatus } from "@/lib/types";
+import { formatShortDate } from "@/lib/seed";
+import type { Milestone, Task, TaskLink, TaskStatus } from "@/lib/types";
 
 const ASSIGNEES = ["M. Doyle", "J. Kim", "S. Ahmed", "S. Cho", "J. Alvarez"];
-const PRIORITIES: TaskPriority[] = ["Critical", "High", "Med", "Low"];
 const STATUSES: TaskStatus[] = ["Not Started", "In Progress", "Review", "Done"];
 
 function toTime(iso: string) {
@@ -16,7 +16,7 @@ function durationDays(start: string, due: string) {
   return Math.max(1, Math.round((toTime(due) - toTime(start)) / 86400000) + 1);
 }
 
-function rollup(items: { start: string; due: string; progress: number; status: string }[]) {
+function rollup(items: { start: string; due: string; progress: number }[]) {
   if (!items.length) {
     const today = new Date().toISOString().slice(0, 10);
     return { start: today, due: today, duration: 1, progress: 0 };
@@ -25,6 +25,14 @@ function rollup(items: { start: string; due: string; progress: number; status: s
   const due = [...items].map((i) => i.due).sort().slice(-1)[0];
   const progress = Math.round(items.reduce((s, i) => s + i.progress, 0) / items.length);
   return { start, due, duration: durationDays(start, due), progress };
+}
+
+function statusClass(status: string) {
+  const s = status.toLowerCase().replace(/\s/g, "");
+  if (s === "done" || s === "approved") return "wbs-status wbs-status-done";
+  if (s === "inprogress" || s === "awaitingsignoff") return "wbs-status wbs-status-progress";
+  if (s === "review") return "wbs-status wbs-status-review";
+  return "wbs-status wbs-status-todo";
 }
 
 export function ProjectSchedule({
@@ -37,7 +45,6 @@ export function ProjectSchedule({
   onUpdateTask,
   onUpdateMilestone,
   onDeleteTask,
-  onDeleteMilestone,
   onAddTaskLink,
   onRemoveTaskLink,
 }: {
@@ -78,16 +85,13 @@ export function ProjectSchedule({
       const phaseGroups = groups.filter((g) => g.parentId === phase.id);
       const groupNodes = phaseGroups.map((group) => {
         const groupTasks = tasks.filter((t) => t.milestoneId === group.id && matchTask(t));
-        const roll = rollup(groupTasks);
-        return { group, tasks: groupTasks, roll };
+        return { group, tasks: groupTasks, roll: rollup(groupTasks) };
       });
-      const orphanTasks = tasks.filter(
-        (t) => t.milestoneId === phase.id && matchTask(t),
-      );
+      const orphanTasks = tasks.filter((t) => t.milestoneId === phase.id && matchTask(t));
       const allLeaf = [
-        ...groupNodes.flatMap((g) => g.tasks.map((t) => ({ start: t.start, due: t.due, progress: t.progress, status: t.status }))),
-        ...orphanTasks.map((t) => ({ start: t.start, due: t.due, progress: t.progress, status: t.status })),
-      ];
+        ...groupNodes.flatMap((g) => g.tasks),
+        ...orphanTasks,
+      ].map((t) => ({ start: t.start, due: t.due, progress: t.progress }));
       return { phase, groups: groupNodes, orphanTasks, roll: rollup(allLeaf) };
     });
   }, [phases, groups, tasks, query]);
@@ -96,208 +100,199 @@ export function ProjectSchedule({
     const rows: Milestone[] = [];
     tree.forEach((p) => {
       rows.push({ ...p.phase, start: p.roll.start, due: p.roll.due });
-      p.groups.forEach((g) => {
-        rows.push({ ...g.group, start: g.roll.start, due: g.roll.due });
-      });
+      p.groups.forEach((g) => rows.push({ ...g.group, start: g.roll.start, due: g.roll.due }));
     });
     return rows;
   }, [tree]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Project schedule</h2>
-          <p className="text-sm text-[var(--color-muted)]">
-            3-level plan: Phase → Workstream → Task. Summary rows roll up dates and progress.
+          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Plan</h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Phase → Workstream → Task
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={onAddPhase}>
-          + Add phase
-        </button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          className="field-input max-w-md flex-1"
-          placeholder="Search tasks..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
-          {(["List", "Gantt"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                view === v ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
-              }`}
-              onClick={() => startTransition(() => setView(v))}
-            >
-              {v} view
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
+            {(["List", "Gantt"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
+                  view === v ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
+                }`}
+                onClick={() => startTransition(() => setView(v))}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          {view === "List" ? (
+            <button type="button" className="btn btn-primary" onClick={onAddPhase}>
+              + Add phase
             </button>
-          ))}
+          ) : null}
         </div>
       </div>
 
       {view === "List" ? (
-        <div className="panel overflow-hidden">
-          <table className="wbs-table">
-            <thead>
-              <tr>
-                <th className="wbs-name">Name</th>
-                <th>Dur.</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Assignee</th>
-                <th>Status</th>
-                <th>Progress</th>
-                <th>Links</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {tree.map((p) => {
-                const phaseCollapsed = collapsed[p.phase.id];
-                return (
-                  <FragmentRows key={p.phase.id}>
-                    <tr className="wbs-l1">
-                      <td>
-                        <div className="flex items-center gap-2" style={{ paddingLeft: 0 }}>
-                          <button
-                            type="button"
-                            className="schedule-collapse"
-                            onClick={() => setCollapsed((c) => ({ ...c, [p.phase.id]: !c[p.phase.id] }))}
-                          >
-                            {phaseCollapsed ? "▸" : "▾"}
-                          </button>
-                          <input
-                            className="schedule-title-input"
-                            value={p.phase.name}
-                            onChange={(e) => onUpdateMilestone(p.phase.id, { name: e.target.value })}
-                          />
-                        </div>
-                      </td>
-                      <td className="tabular-nums">{p.roll.duration}</td>
-                      <td className="tabular-nums text-sm">{p.roll.start.slice(5)}</td>
-                      <td className="tabular-nums text-sm">{p.roll.due.slice(5)}</td>
-                      <td className="text-[var(--color-muted)]">-</td>
-                      <td>
-                        <span className="pill pill-neutral">{p.phase.status}</span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <div className="schedule-progress">
-                            <span style={{ width: `${p.roll.progress}%` }} />
+        <>
+          <input
+            className="field-input max-w-sm"
+            placeholder="Search tasks..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="panel overflow-x-auto">
+            <table className="wbs-table">
+              <thead>
+                <tr>
+                  <th className="wbs-name">Name</th>
+                  <th className="wbs-num">Dur.</th>
+                  <th className="wbs-date">Start</th>
+                  <th className="wbs-date">End</th>
+                  <th>Assignee</th>
+                  <th>Status</th>
+                  <th className="wbs-progress-col">Progress</th>
+                  <th>Links</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {tree.map((p) => {
+                  const phaseCollapsed = collapsed[p.phase.id];
+                  return (
+                    <FragmentRows key={p.phase.id}>
+                      <tr className="wbs-l1">
+                        <td>
+                          <div className="wbs-name-cell">
+                            <button
+                              type="button"
+                              className="wbs-toggle"
+                              onClick={() => setCollapsed((c) => ({ ...c, [p.phase.id]: !c[p.phase.id] }))}
+                              aria-label="Toggle phase"
+                            >
+                              {phaseCollapsed ? "▸" : "▾"}
+                            </button>
+                            <input
+                              className="wbs-name-input"
+                              value={p.phase.name}
+                              onChange={(e) => onUpdateMilestone(p.phase.id, { name: e.target.value })}
+                            />
                           </div>
-                          <span className="text-xs tabular-nums">{p.roll.progress}%</span>
-                        </div>
-                      </td>
-                      <td />
-                      <td className="text-right">
-                        <button type="button" className="btn btn-ghost text-sm" onClick={() => onAddGroup(p.phase.id)}>
-                          + Workstream
-                        </button>
-                      </td>
-                    </tr>
-                    {!phaseCollapsed
-                      ? p.groups.map((g) => {
-                          const groupCollapsed = collapsed[g.group.id];
-                          return (
-                            <FragmentRows key={g.group.id}>
-                              <tr className="wbs-l2">
-                                <td>
-                                  <div className="flex items-center gap-2" style={{ paddingLeft: 22 }}>
+                        </td>
+                        <td className="wbs-num tabular-nums">{p.roll.duration}</td>
+                        <td className="wbs-date tabular-nums">{formatShortDate(p.roll.start)}</td>
+                        <td className="wbs-date tabular-nums">{formatShortDate(p.roll.due)}</td>
+                        <td className="text-[var(--color-muted)]">-</td>
+                        <td>
+                          <span className={statusClass(p.phase.status)}>{p.phase.status}</span>
+                        </td>
+                        <td>
+                          <ProgressCell value={p.roll.progress} />
+                        </td>
+                        <td />
+                        <td className="text-right">
+                          <button type="button" className="btn btn-ghost text-sm" onClick={() => onAddGroup(p.phase.id)}>
+                            + Workstream
+                          </button>
+                        </td>
+                      </tr>
+                      {!phaseCollapsed
+                        ? p.groups.map((g) => {
+                            const groupCollapsed = collapsed[g.group.id];
+                            return (
+                              <FragmentRows key={g.group.id}>
+                                <tr className="wbs-l2">
+                                  <td>
+                                    <div className="wbs-name-cell wbs-indent-1">
+                                      <button
+                                        type="button"
+                                        className="wbs-toggle"
+                                        onClick={() =>
+                                          setCollapsed((c) => ({ ...c, [g.group.id]: !c[g.group.id] }))
+                                        }
+                                        aria-label="Toggle workstream"
+                                      >
+                                        {groupCollapsed ? "▸" : "▾"}
+                                      </button>
+                                      <input
+                                        className="wbs-name-input"
+                                        value={g.group.name}
+                                        onChange={(e) => onUpdateMilestone(g.group.id, { name: e.target.value })}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="wbs-num tabular-nums">{g.roll.duration}</td>
+                                  <td className="wbs-date tabular-nums">{formatShortDate(g.roll.start)}</td>
+                                  <td className="wbs-date tabular-nums">{formatShortDate(g.roll.due)}</td>
+                                  <td className="text-[var(--color-muted)]">-</td>
+                                  <td>
+                                    <span className={statusClass(g.group.status)}>{g.group.status}</span>
+                                  </td>
+                                  <td>
+                                    <ProgressCell value={g.roll.progress} />
+                                  </td>
+                                  <td />
+                                  <td className="text-right">
                                     <button
                                       type="button"
-                                      className="schedule-collapse"
-                                      onClick={() =>
-                                        setCollapsed((c) => ({ ...c, [g.group.id]: !c[g.group.id] }))
-                                      }
+                                      className="btn btn-ghost text-sm"
+                                      onClick={() => onAddTask(g.group.id)}
                                     >
-                                      {groupCollapsed ? "▸" : "▾"}
+                                      + Task
                                     </button>
-                                    <input
-                                      className="schedule-title-input"
-                                      value={g.group.name}
-                                      onChange={(e) => onUpdateMilestone(g.group.id, { name: e.target.value })}
-                                    />
-                                  </div>
-                                </td>
-                                <td className="tabular-nums">{g.roll.duration}</td>
-                                <td className="tabular-nums text-sm">{g.roll.start.slice(5)}</td>
-                                <td className="tabular-nums text-sm">{g.roll.due.slice(5)}</td>
-                                <td className="text-[var(--color-muted)]">-</td>
-                                <td>
-                                  <span className="pill pill-info">{g.group.status}</span>
-                                </td>
-                                <td>
-                                  <div className="flex items-center gap-2">
-                                    <div className="schedule-progress">
-                                      <span style={{ width: `${g.roll.progress}%` }} />
-                                    </div>
-                                    <span className="text-xs tabular-nums">{g.roll.progress}%</span>
-                                  </div>
-                                </td>
-                                <td />
-                                <td className="text-right">
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost text-sm"
-                                    onClick={() => onAddTask(g.group.id)}
-                                  >
-                                    + Task
-                                  </button>
-                                </td>
-                              </tr>
-                              {!groupCollapsed
-                                ? g.tasks.map((t) => (
-                                    <TaskRow
-                                      key={t.id}
-                                      task={t}
-                                      indent={44}
-                                      onUpdateTask={onUpdateTask}
-                                      onDeleteTask={onDeleteTask}
-                                      onOpenLinks={() => {
-                                        setLinkTaskId(t.id);
-                                        setLinkLabel("");
-                                        setLinkUrl("https://");
-                                        setLinkFileId(projectFiles[0]?.id ?? "");
-                                      }}
-                                      onRemoveLink={onRemoveTaskLink}
-                                    />
-                                  ))
-                                : null}
-                            </FragmentRows>
-                          );
-                        })
-                      : null}
-                    {!phaseCollapsed
-                      ? p.orphanTasks.map((t) => (
-                          <TaskRow
-                            key={t.id}
-                            task={t}
-                            indent={22}
-                            onUpdateTask={onUpdateTask}
-                            onDeleteTask={onDeleteTask}
-                            onOpenLinks={() => setLinkTaskId(t.id)}
-                            onRemoveLink={onRemoveTaskLink}
-                          />
-                        ))
-                      : null}
-                  </FragmentRows>
-                );
-              })}
-              {!tree.length ? (
-                <tr>
-                  <td colSpan={9} className="p-6 text-[var(--color-muted)]">
-                    No phases yet. Add a phase to start the plan.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+                                  </td>
+                                </tr>
+                                {!groupCollapsed
+                                  ? g.tasks.map((t) => (
+                                      <TaskRow
+                                        key={t.id}
+                                        task={t}
+                                        indentClass="wbs-indent-2"
+                                        onUpdateTask={onUpdateTask}
+                                        onDeleteTask={onDeleteTask}
+                                        onOpenLinks={() => {
+                                          setLinkTaskId(t.id);
+                                          setLinkLabel("");
+                                          setLinkUrl("https://");
+                                          setLinkFileId(projectFiles[0]?.id ?? "");
+                                        }}
+                                      />
+                                    ))
+                                  : null}
+                              </FragmentRows>
+                            );
+                          })
+                        : null}
+                      {!phaseCollapsed
+                        ? p.orphanTasks.map((t) => (
+                            <TaskRow
+                              key={t.id}
+                              task={t}
+                              indentClass="wbs-indent-1"
+                              onUpdateTask={onUpdateTask}
+                              onDeleteTask={onDeleteTask}
+                              onOpenLinks={() => setLinkTaskId(t.id)}
+                            />
+                          ))
+                        : null}
+                    </FragmentRows>
+                  );
+                })}
+                {!tree.length ? (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-[var(--color-muted)]">
+                      No phases yet. Add a phase to start the plan.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : (
         <GanttBoard milestones={ganttMilestones} tasks={tasks} onUpdateTask={onUpdateTask} />
       )}
@@ -310,12 +305,38 @@ export function ProjectSchedule({
               Close
             </button>
           </div>
+          {(() => {
+            const linked = tasks.find((t) => t.id === linkTaskId)?.links ?? [];
+            if (!linked.length) return null;
+            return (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {linked.map((l) => (
+                  <span key={l.id} className="inline-flex items-center gap-1 rounded-md bg-[var(--color-fog)] px-2 py-1 text-xs">
+                    {l.label}
+                    <button
+                      type="button"
+                      className="text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+                      onClick={() => onRemoveTaskLink(linkTaskId, l.id)}
+                      aria-label={`Remove ${l.label}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                 External URL
               </div>
-              <input className="field-input mb-2" value={linkLabel} placeholder="Label" onChange={(e) => setLinkLabel(e.target.value)} />
+              <input
+                className="field-input mb-2"
+                value={linkLabel}
+                placeholder="Label"
+                onChange={(e) => setLinkLabel(e.target.value)}
+              />
               <input className="field-input mb-2" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
               <button
                 type="button"
@@ -370,31 +391,60 @@ export function ProjectSchedule({
   );
 }
 
-function FragmentRows({ children }: { children: React.ReactNode }) {
+function FragmentRows({ children }: { children: ReactNode }) {
   return <>{children}</>;
+}
+
+function ProgressCell({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange?: (n: number) => void;
+}) {
+  return (
+    <div className="wbs-progress">
+      <div className="wbs-progress-track">
+        <span style={{ width: `${value}%` }} />
+      </div>
+      {onChange ? (
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={5}
+          className="wbs-pct-input"
+          value={value}
+          onChange={(e) => onChange(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+          aria-label="Progress percent"
+        />
+      ) : (
+        <span className="wbs-pct-label tabular-nums">{value}%</span>
+      )}
+    </div>
+  );
 }
 
 function TaskRow({
   task: t,
-  indent,
+  indentClass,
   onUpdateTask,
   onDeleteTask,
   onOpenLinks,
-  onRemoveLink,
 }: {
   task: Task;
-  indent: number;
+  indentClass: string;
   onUpdateTask: (id: string, patch: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   onOpenLinks: () => void;
-  onRemoveLink: (taskId: string, linkId: string) => void;
 }) {
   return (
     <tr className="wbs-l3">
       <td>
-        <div className="flex items-center gap-2" style={{ paddingLeft: indent }}>
+        <div className={`wbs-name-cell ${indentClass}`}>
           <input
             type="checkbox"
+            className="wbs-check"
             checked={t.status === "Done"}
             onChange={(e) =>
               onUpdateTask(t.id, {
@@ -404,32 +454,32 @@ function TaskRow({
             }
           />
           <input
-            className="schedule-cell-input font-medium"
+            className="wbs-name-input wbs-name-task"
             value={t.name}
             onChange={(e) => onUpdateTask(t.id, { name: e.target.value })}
           />
         </div>
       </td>
-      <td className="tabular-nums">{durationDays(t.start, t.due)}</td>
-      <td>
+      <td className="wbs-num tabular-nums">{durationDays(t.start, t.due)}</td>
+      <td className="wbs-date">
         <input
           type="date"
-          className="schedule-select"
+          className="wbs-date-input"
           value={t.start}
           onChange={(e) => onUpdateTask(t.id, { start: e.target.value })}
         />
       </td>
-      <td>
+      <td className="wbs-date">
         <input
           type="date"
-          className="schedule-select"
+          className="wbs-date-input"
           value={t.due}
           onChange={(e) => onUpdateTask(t.id, { due: e.target.value })}
         />
       </td>
       <td>
         <select
-          className="schedule-select"
+          className="wbs-select"
           value={t.assignee}
           onChange={(e) => onUpdateTask(t.id, { assignee: e.target.value })}
         >
@@ -442,7 +492,7 @@ function TaskRow({
       </td>
       <td>
         <select
-          className={`status-chip status-${t.status.replace(/\s/g, "").toLowerCase()}`}
+          className={statusClass(t.status)}
           value={t.status}
           onChange={(e) => onUpdateTask(t.id, { status: e.target.value as TaskStatus })}
         >
@@ -454,50 +504,24 @@ function TaskRow({
         </select>
       </td>
       <td>
-        <div className="flex items-center gap-2">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={t.progress}
-            onChange={(e) => onUpdateTask(t.id, { progress: Number(e.target.value) })}
-          />
-          <span className="w-10 text-xs tabular-nums">{t.progress}%</span>
-        </div>
+        <ProgressCell
+          value={t.progress}
+          onChange={(progress) => onUpdateTask(t.id, { progress })}
+        />
       </td>
       <td>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {t.links.slice(0, 2).map((l) => (
-            <a
-              key={l.id}
-              href={l.href.startsWith("#") ? undefined : l.href}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded bg-[var(--color-fog)] px-1.5 py-0.5 text-[11px] text-[var(--color-navy)]"
-              title={l.href}
-              onClick={(e) => {
-                if (l.href.startsWith("#")) e.preventDefault();
-              }}
-            >
+            <span key={l.id} className="wbs-link-chip" title={l.href}>
               {l.label}
-            </a>
+            </span>
           ))}
-          <button type="button" className="text-xs text-[var(--color-navy)] underline" onClick={onOpenLinks}>
+          <button type="button" className="text-xs font-medium text-[var(--color-navy)]" onClick={onOpenLinks}>
             + Link
           </button>
-          {t.links[0] ? (
-            <button
-              type="button"
-              className="text-[11px] text-[var(--color-muted)]"
-              onClick={() => onRemoveLink(t.id, t.links[0].id)}
-            >
-              ×
-            </button>
-          ) : null}
         </div>
       </td>
-      <td>
+      <td className="text-right">
         <button type="button" className="btn btn-ghost text-sm" onClick={() => onDeleteTask(t.id)}>
           Delete
         </button>

@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Minus, Plus, Search } from "lucide-react";
-import { formatDisplayDate } from "@/lib/seed";
+import { formatDisplayDate, formatShortDate } from "@/lib/seed";
 import type { Milestone, Task, TaskStatus } from "@/lib/types";
 
-const PHASE_COLORS = ["#A66B6B", "#C4845A", "#6F8F75", "#6B8AAB", "#8B8FB8"];
+const PHASE_COLORS = ["#8FA8BF", "#C4A574", "#7BA891", "#9AA0C4", "#9AA6B5"];
+
+function tickLabel(iso: string, scale: "Days" | "Weeks") {
+  const [, m, d] = iso.split("-");
+  if (!m || !d) return iso;
+  return scale === "Days" ? `${m}/${d}` : `${m}/${d}`;
+}
 
 function toTime(iso: string) {
   return new Date(`${iso}T12:00:00`).getTime();
@@ -25,7 +31,7 @@ function statusColor(status: TaskStatus | Milestone["status"], phaseColor: strin
   switch (status) {
     case "Done":
     case "Approved":
-      return "#6F8F75";
+      return "#7BA891";
     case "In Progress":
     case "Awaiting Signoff":
       return phaseColor;
@@ -257,8 +263,7 @@ export function GanttBoard({
                     <span className="truncate font-medium">{row.group.name}</span>
                   </span>
                   <span className="text-xs text-[var(--color-muted)]">
-                    {formatDisplayDate(row.start).replace(/,.*/, "")} to{" "}
-                    {formatDisplayDate(row.due).replace(/,.*/, "")}
+                    {formatShortDate(row.start)} to {formatShortDate(row.due)}
                   </span>
                 </button>
               );
@@ -270,10 +275,9 @@ export function GanttBoard({
                 className={`gantt-side-row gantt-side-task ${selected === row.task.id ? "active" : ""}`}
                 onClick={() => setSelected(row.task.id)}
               >
-                <div className="truncate pl-8 font-medium">{row.task.name}</div>
-                <div className="pl-8 text-xs text-[var(--color-muted)]">
-                  {formatDisplayDate(row.task.start).replace(/,.*/, "")} to{" "}
-                  {formatDisplayDate(row.task.due).replace(/,.*/, "")}
+                <div className="truncate pl-7 font-medium">{row.task.name}</div>
+                <div className="pl-7 text-xs text-[var(--color-muted)]">
+                  {formatShortDate(row.task.start)} to {formatShortDate(row.task.due)}
                 </div>
               </button>
             );
@@ -288,12 +292,21 @@ export function GanttBoard({
             >
               {ticks.map((d) => (
                 <div key={d} className="gantt-tick">
-                  {scale === "Days" ? d.slice(5) : `W ${d.slice(5)}`}
+                  {tickLabel(d, scale)}
                 </div>
               ))}
             </div>
 
             <div className="gantt-lanes" style={{ position: "relative" }}>
+              <div
+                className="gantt-vgrid"
+                style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(${zoom}px, 1fr))` }}
+                aria-hidden
+              >
+                {ticks.map((d) => (
+                  <div key={`vg-${d}`} />
+                ))}
+              </div>
               {todayLeft >= 0 && todayLeft <= 100 ? (
                 <div className="gantt-today" style={{ left: `${todayLeft}%` }}>
                   <span>{today.slice(8)}</span>
@@ -376,6 +389,7 @@ export function GanttBoard({
                     </div>
                   );
                 }
+                const barColor = statusColor(row.task.status, row.color);
                 return (
                   <div key={row.id} className={`gantt-lane ${selected === row.task.id ? "active" : ""}`}>
                     <button
@@ -384,12 +398,16 @@ export function GanttBoard({
                       style={{
                         left: `${pctLeft(row.task.start)}%`,
                         width: `${pctWidth(row.task.start, row.task.due)}%`,
-                        background: statusColor(row.task.status, row.color),
+                        background: barColor,
                       }}
                       onClick={() => setSelected(row.task.id)}
                       title={`${row.task.name}: ${formatDisplayDate(row.task.start)} to ${formatDisplayDate(row.task.due)}`}
                     >
-                      <span>{row.task.name}</span>
+                      <span
+                        className="gantt-bar-progress"
+                        style={{ width: `${row.task.progress}%`, background: "rgba(255,255,255,0.22)" }}
+                      />
+                      <span className="gantt-bar-label">{row.task.name}</span>
                     </button>
                   </div>
                 );
