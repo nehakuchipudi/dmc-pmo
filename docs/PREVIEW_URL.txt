@@ -1,11 +1,10 @@
-Primary (ShipStatic, free, ~3 day anonymous unless claimed):
-https://circular-wave-tdry99a.shipstatic.com/login
+Primary (Vercel, named project after claim/link):
+https://dmc-pmo.vercel.app/login
 
-Claim to keep permanently:
-https://my.shipstatic.com/claim/b1baf49abb897ccc8ba44256ff37b409
+Current anonymous Vercel deployment (expires in ~60 minutes unless claimed):
+https://temporary-instant-aspen-6epusce.vercel.app/login
 
-Previous:
-https://abstract-drip-9tohu21.shipstatic.com/login/
-https://sharded-cloud-ro77si3.shipstatic.com/login/
+Claim this deployment into your Vercel account as project `dmc-pmo`:
+https://vercel.com/claim-deployment?code=42ccf2a4-bb9a-4904-a264-09ee687a9542
 
 Login roles: Admin (Dillon Morgan), PM (M. Doyle), Staff (J. Kim), Client (Dana Kessler → portal)

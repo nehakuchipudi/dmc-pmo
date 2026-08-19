@@ -37,17 +37,14 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 | [docs/ARCHITECTURE_AZURE.md](./docs/ARCHITECTURE_AZURE.md) | Azure topology |
 | [docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md](./docs/research/ACCELLO_COMPETITIVE_ANALYSIS.md) | Accelo research |
 
-## Live preview (free)
+## Live preview (Vercel)
 
-- **ShipStatic:** https://circular-wave-tdry99a.shipstatic.com/login
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/b1baf49abb897ccc8ba44256ff37b409
-- Latest URL also tracked in `docs/PREVIEW_URL.txt`
+Production URL after the project is claimed/linked: `https://dmc-pmo.vercel.app/login`
 
-Static export lives in `apps/web/out`. Redeploy with:
+Deploy from the repo root:
 
 ```bash
-GITHUB_PAGES=false pnpm --filter web build
-npx -y @shipstatic/ship apps/web/out --label dmc-pmo
+vercel --prod --yes
 ```
 
-GitHub Pages: `gh-pages` branch is ready. Enable under repo Settings → Pages → Deploy from branch `gh-pages` → `/`.
+`vercel.json` builds the Next.js static export (`apps/web/out`) and publishes it on Vercel. Latest URL is tracked in `docs/PREVIEW_URL.txt`.
