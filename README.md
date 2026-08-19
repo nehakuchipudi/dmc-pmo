@@ -39,8 +39,8 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (free)
 
-- **ShipStatic:** https://sharded-cloud-ro77si3.shipstatic.com/login/
-- Claim ShipStatic permanently: https://my.shipstatic.com/claim/72dccf286e02899836b37d75acf452fae74c9e663cbb0250dd1eb0602c1cbfc8
+- **ShipStatic:** https://circular-wave-tdry99a.shipstatic.com/login
+- Claim ShipStatic permanently: https://my.shipstatic.com/claim/b1baf49abb897ccc8ba44256ff37b409
 - Latest URL also tracked in `docs/PREVIEW_URL.txt`
 
 Static export lives in `apps/web/out`. Redeploy with:
