@@ -39,9 +39,11 @@ Open [http://localhost:3000](http://localhost:3000) and pick a demo role on the 
 
 ## Live preview (Vercel)
 
-Production URL after the project is claimed/linked: `https://dmc-pmo.vercel.app/login`
+**https://dmc-pmo.vercel.app/login**
 
-Deploy from the repo root:
+Dashboard: https://vercel.com/nehakuchipudi-5607s-projects/dmc-pmo
+
+Deploy from the repo root (requires `vercel login` or `VERCEL_TOKEN`):
 
 ```bash
 vercel --prod --yes

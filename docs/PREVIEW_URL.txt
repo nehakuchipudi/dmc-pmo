@@ -1,10 +1,10 @@
-Primary (Vercel, named project after claim/link):
+Primary (Vercel production):
 https://dmc-pmo.vercel.app/login
 
-Current anonymous Vercel deployment (expires in ~60 minutes unless claimed):
-https://temporary-instant-aspen-6epusce.vercel.app/login
+Team alias:
+https://dmc-pmo-nehakuchipudi-5607s-projects.vercel.app/login
 
-Claim this deployment into your Vercel account as project `dmc-pmo`:
-https://vercel.com/claim-deployment?code=42ccf2a4-bb9a-4904-a264-09ee687a9542
+Dashboard:
+https://vercel.com/nehakuchipudi-5607s-projects/dmc-pmo
 
 Login roles: Admin (Dillon Morgan), PM (M. Doyle), Staff (J. Kim), Client (Dana Kessler → portal)
