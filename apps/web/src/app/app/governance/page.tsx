@@ -31,7 +31,7 @@ export default function GovernancePage() {
               <div className="font-semibold">{gate.name}</div>
               <div className="text-xs text-[var(--color-muted)]">{gate.criteria}</div>
             </div>,
-            <Link href={`/app/projects/view/?id=${gate.projectId}`} className="text-[var(--color-navy)]">
+            <Link key={`${gate.id}-p`} href={`/app/projects/view/?id=${gate.projectId}`} className="text-[var(--color-navy)]">
               {projects.find((p) => p.id === gate.projectId)?.name ?? gate.projectId}
             </Link>,
             gate.stage,

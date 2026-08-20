@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
-import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
+import { DataTable, MetricCard, MetricGrid, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { useAppStore } from "@/lib/store";
 
 export default function BenefitsPage() {
