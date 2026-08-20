@@ -23,24 +23,49 @@ import {
   seedTimeEntries,
   uid,
 } from "./seed";
+import {
+  seedAllocations,
+  seedBenefits,
+  seedDependencies,
+  seedGates,
+  seedIdeas,
+  seedIssues,
+  seedObjectives,
+  seedPortfolios,
+  seedPrograms,
+  seedRisks,
+} from "./ppm-seed";
 import type {
   ActivityItem,
   AutomationRule,
+  Benefit,
   Company,
   Contact,
+  CrossDependency,
   EmailOutboxItem,
   Expense,
+  GateStatus,
+  GovernanceGate,
+  Idea,
+  IdeaStage,
   Invoice,
+  IssueItem,
   Milestone,
   NotificationItem,
   Opportunity,
+  Portfolio,
+  Program,
   Project,
   ProjectFile,
   ProjectNote,
   ProjectScope,
+  ResourceAllocation,
   Retainer,
   RetainerPeriod,
   RetainerType,
+  RiskItem,
+  RiskStatus,
+  StrategicObjective,
   Task,
   TaskLink,
   TaskPriority,
@@ -116,6 +141,16 @@ type AppState = {
   emailOutbox: EmailOutboxItem[];
   expenses: Expense[];
   opportunities: Opportunity[];
+  objectives: StrategicObjective[];
+  ideas: Idea[];
+  portfolios: Portfolio[];
+  programs: Program[];
+  risks: RiskItem[];
+  issues: IssueItem[];
+  dependencies: CrossDependency[];
+  benefits: Benefit[];
+  gates: GovernanceGate[];
+  allocations: ResourceAllocation[];
   toasts: Toast[];
   recentlyViewed: { type: string; id: string; label: string }[];
 
@@ -195,6 +230,15 @@ type AppState = {
   toggleAutomation: (id: string) => void;
   runAutomation: (id: string) => void;
   queueEmail: (to: string, subject: string, body: string) => void;
+  createObjective: (input: { name: string; owner: string; horizon: string; target: string; description: string }) => string;
+  createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string }) => string;
+  advanceIdea: (id: string) => void;
+  convertIdea: (id: string) => string | undefined;
+  createRisk: (input: { title: string; owner: string; projectId?: string; probability: RiskItem["probability"]; impact: RiskItem["impact"]; mitigation: string; due: string }) => string;
+  updateRiskStatus: (id: string, status: RiskStatus) => void;
+  updateIssueStatus: (id: string, status: IssueItem["status"]) => void;
+  decideGate: (id: string, status: Extract<GateStatus, "Approved" | "Rejected">) => void;
+  createDependency: (input: { predecessorProjectId: string; successorProjectId: string; type: CrossDependency["type"]; note: string }) => string;
 };
 
 function todayIso() {
@@ -229,6 +273,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   emailOutbox: seedEmailOutbox,
   expenses: seedExpenses,
   opportunities: seedOpportunities,
+  objectives: seedObjectives,
+  ideas: seedIdeas,
+  portfolios: seedPortfolios,
+  programs: seedPrograms,
+  risks: seedRisks,
+  issues: seedIssues,
+  dependencies: seedDependencies,
+  benefits: seedBenefits,
+  gates: seedGates,
+  allocations: seedAllocations,
   toasts: [],
   recentlyViewed: [
     { type: "company", id: "c-cascade", label: "Cascade Ventures" },
@@ -1242,6 +1296,132 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...s.emailOutbox,
       ],
     }));
+  },
+
+  createObjective: (input) => {
+    const id = uid("so");
+    const objective: StrategicObjective = {
+      id,
+      code: `SO-${get().objectives.length + 1}`,
+      name: input.name,
+      owner: input.owner,
+      horizon: input.horizon,
+      status: "On Track",
+      target: input.target,
+      progress: 0,
+      description: input.description,
+    };
+    set((s) => ({ objectives: [objective, ...s.objectives] }));
+    get().pushToast("Objective added");
+    return id;
+  },
+
+  createIdea: (input) => {
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const id = uid("idea");
+    const idea: Idea = {
+      id,
+      name: input.name,
+      companyId: company?.id,
+      companyName: company?.name,
+      submitter: input.submitter,
+      stage: "Submitted",
+      score: 50,
+      strategicFit: 5,
+      valueScore: 5,
+      riskScore: 5,
+      objectiveId: input.objectiveId,
+      requestedBudget: input.requestedBudget,
+      summary: input.summary,
+    };
+    set((s) => ({ ideas: [idea, ...s.ideas] }));
+    get().pushToast("Idea submitted");
+    return id;
+  },
+
+  advanceIdea: (id) => {
+    const order: IdeaStage[] = ["Submitted", "Scoring", "Approved", "Converted"];
+    const idea = get().ideas.find((i) => i.id === id);
+    if (!idea || idea.stage === "Deferred" || idea.stage === "Converted") return;
+    const next = order[Math.min(order.indexOf(idea.stage) + 1, order.length - 1)];
+    if (next === "Converted") {
+      get().convertIdea(id);
+      return;
+    }
+    set((s) => ({ ideas: s.ideas.map((i) => (i.id === id ? { ...i, stage: next, score: Math.min(99, i.score + 8) } : i)) }));
+    get().pushToast(`Idea moved to ${next}`);
+  },
+
+  convertIdea: (id) => {
+    const idea = get().ideas.find((i) => i.id === id);
+    if (!idea || idea.convertedProjectId) return;
+    const companyId = idea.companyId ?? get().companies[0]?.id;
+    if (!companyId) return;
+    const projectId = get().createProject({
+      name: idea.name,
+      companyId,
+      manager: idea.submitter,
+      due: todayIso(),
+      budgetHours: Math.max(40, Math.round(idea.requestedBudget / 250)),
+    });
+    set((s) => ({
+      ideas: s.ideas.map((i) => (i.id === id ? { ...i, stage: "Converted", convertedProjectId: projectId } : i)),
+      portfolios: s.portfolios.map((p) =>
+        p.id === "pf-delivery" ? { ...p, projectIds: [...p.projectIds, projectId] } : p,
+      ),
+    }));
+    get().pushToast("Idea converted to a project");
+    return projectId;
+  },
+
+  createRisk: (input) => {
+    const id = uid("rk");
+    const risk: RiskItem = {
+      id,
+      title: input.title,
+      projectId: input.projectId,
+      owner: input.owner,
+      probability: input.probability,
+      impact: input.impact,
+      status: "Open",
+      due: input.due,
+      mitigation: input.mitigation,
+    };
+    set((s) => ({ risks: [risk, ...s.risks] }));
+    get().pushToast("Risk logged");
+    return id;
+  },
+
+  updateRiskStatus: (id, status) => {
+    set((s) => ({ risks: s.risks.map((r) => (r.id === id ? { ...r, status } : r)) }));
+    get().pushToast(`Risk ${status.toLowerCase()}`);
+  },
+
+  updateIssueStatus: (id, status) => {
+    set((s) => ({ issues: s.issues.map((i) => (i.id === id ? { ...i, status } : i)) }));
+    get().pushToast("Issue updated");
+  },
+
+  decideGate: (id, status) => {
+    const gate = get().gates.find((g) => g.id === id);
+    const project = gate ? get().projects.find((p) => p.id === gate.projectId) : undefined;
+    set((s) => ({ gates: s.gates.map((g) => (g.id === id ? { ...g, status } : g)) }));
+    if (gate && project) {
+      get().addActivityNote(project.companyId, `Gate ${status.toLowerCase()}: ${gate.name}`, project.id);
+    }
+    get().pushToast(`Gate ${status.toLowerCase()}`);
+  },
+
+  createDependency: (input) => {
+    const id = uid("dep");
+    set((s) => ({
+      dependencies: [
+        { id, ...input, status: "On Track" },
+        ...s.dependencies,
+      ],
+    }));
+    get().pushToast("Dependency recorded");
+    return id;
   },
 }));
 

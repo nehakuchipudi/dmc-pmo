@@ -11,7 +11,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!user) router.replace("/login");
     else if (isClient) router.replace("/portal");
-    else router.replace("/app/companies");
+    else router.replace("/app/home");
   }, [user, isClient, router]);
 
   return (

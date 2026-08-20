@@ -13,7 +13,7 @@ const body = Manrope({
 export const metadata: Metadata = {
   title: "Dillon Morgan PMO",
   description:
-    "Professional services automation for Dillon Morgan Consulting: projects, tickets, billing, and client portal.",
+    "Enterprise PMO and PPM for Dillon Morgan Consulting: strategy, portfolios, programs, delivery, and client portal.",
 };
 
 export default function RootLayout({

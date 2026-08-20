@@ -13,13 +13,23 @@ import {
   ClipboardList,
   Clock3,
   FileText,
+  FolderKanban,
+  GitBranch,
+  Landmark,
+  Layers3,
   LayoutDashboard,
+  Lightbulb,
   MessageSquare,
   Plus,
   Receipt,
+  Scale,
   Search,
   Settings,
+  ShieldAlert,
+  Sparkles,
+  Target,
   Ticket,
+  Users,
   Workflow,
   Zap,
   PanelLeftClose,
@@ -32,17 +42,61 @@ import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
 
-const NAV = [
-  { href: "/app/companies", label: "Companies", icon: Building2 },
-  { href: "/app/sales", label: "Sales", icon: ChartColumn },
-  { href: "/app/projects", label: "Projects", icon: LayoutDashboard },
-  { href: "/app/tickets", label: "Tickets", icon: Ticket },
-  { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
-  { href: "/app/work", label: "Work", icon: Workflow },
-  { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
-  { href: "/app/billing", label: "Billing", icon: Receipt },
-  { href: "/app/reports", label: "Reports", icon: FileText },
-  { href: "/app/automations", label: "Automations", icon: Zap },
+const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] }[] = [
+  {
+    label: "Overview",
+    items: [{ href: "/app/home", label: "Home", icon: LayoutDashboard, exact: true }],
+  },
+  {
+    label: "Align",
+    items: [
+      { href: "/app/strategy", label: "Strategy", icon: Target },
+      { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
+      { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
+      { href: "/app/programs", label: "Programs", icon: FolderKanban },
+    ],
+  },
+  {
+    label: "Deliver",
+    items: [
+      { href: "/app/projects", label: "Projects", icon: Briefcase },
+      { href: "/app/work", label: "Work", icon: Workflow },
+      { href: "/app/tickets", label: "Tickets", icon: Ticket },
+      { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
+    ],
+  },
+  {
+    label: "Clients",
+    items: [
+      { href: "/app/companies", label: "Companies", icon: Building2 },
+      { href: "/app/sales", label: "Sales", icon: ChartColumn },
+      { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Govern",
+    items: [
+      { href: "/app/resources", label: "Resources", icon: Users },
+      { href: "/app/risks", label: "Risks", icon: ShieldAlert },
+      { href: "/app/dependencies", label: "Dependencies", icon: GitBranch },
+      { href: "/app/governance", label: "Governance", icon: Scale },
+    ],
+  },
+  {
+    label: "Value",
+    items: [
+      { href: "/app/billing", label: "Billing", icon: Receipt },
+      { href: "/app/benefits", label: "Benefits", icon: Landmark },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { href: "/app/reports", label: "Reports", icon: FileText },
+      { href: "/app/ai", label: "Insights", icon: Sparkles },
+      { href: "/app/automations", label: "Automations", icon: Zap },
+    ],
+  },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -71,6 +125,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const companies = useAppStore((s) => s.companies);
   const tickets = useAppStore((s) => s.tickets);
   const contacts = useAppStore((s) => s.contacts);
+  const portfolios = useAppStore((s) => s.portfolios);
+  const programs = useAppStore((s) => s.programs);
+  const ideas = useAppStore((s) => s.ideas);
   const notifications = useAppStore((s) => s.notifications);
   const markRead = useAppStore((s) => s.markNotificationRead);
   const markAll = useAppStore((s) => s.markAllNotificationsRead);
@@ -95,12 +152,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const q = search.trim().toLowerCase();
     if (!q) return [];
     return [
-      ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
+      ...portfolios.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/portfolios/view/?id=${p.id}`, label: p.name, type: "Portfolio" })),
+      ...programs.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/programs/view/?id=${p.id}`, label: p.name, type: "Program" })),
       ...projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/projects/view/?id=${p.id}`, label: p.name, type: "Project" })),
+      ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
+      ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: "/app/ideas", label: i.name, type: "Idea" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: "/app/contacts", label: c.name, type: "Contact" })),
     ].slice(0, 8);
-  }, [search, companies, projects, tickets, contacts]);
+  }, [search, companies, projects, tickets, contacts, portfolios, programs, ideas]);
 
   if (!user || !isInternal) return null;
 
@@ -122,21 +182,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {!collapsed ? (
             <>
               <div className="brand-title">Dillon Morgan</div>
-              <div className="brand-sub">Consulting PMO</div>
+              <div className="brand-sub">PMO / PPM</div>
             </>
           ) : null}
         </div>
         <nav>
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                <Icon size={18} />
-                {!collapsed ? <span>{item.label}</span> : null}
-              </Link>
-            );
-          })}
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              {!collapsed ? <div className="nav-group">{group.label}</div> : null}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                return (
+                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
+                    <Icon size={17} />
+                    {!collapsed ? <span>{item.label}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="nav-footer space-y-1">
           <button type="button" className="nav-link w-full" onClick={() => setCollapsed((v) => !v)}>
@@ -171,7 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <button type="button" className="search text-left text-[var(--color-muted)]" onClick={() => setSearchOpen(true)}>
             <span className="inline-flex items-center gap-2">
-              <Search size={15} /> Search companies, projects, tickets, contacts...
+              <Search size={15} /> Search portfolios, projects, companies...
             </span>
           </button>
           <div className="relative flex items-center gap-2 justify-end">
@@ -229,6 +294,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         ["project", "Project"],
                         ["ticket", "Ticket"],
                         ["milestone", "Milestone"],
+                        ["idea", "Idea"],
+                        ["risk", "Risk"],
                       ].map(([k, label]) => (
                         <button key={k} type="button" className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-fog)]" onClick={() => openCreate(k as CreateKind)}>
                           {label}
@@ -405,8 +472,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <Drawer open={helpOpen} title="Help" onClose={() => setHelpOpen(false)}>
         <div className="space-y-3 text-sm text-[var(--color-muted)]">
-          <p>Use Create (+) to add companies, projects, tickets, tasks, and time.</p>
-          <p>Start the timer with the clock icon, then Stop and log to capture hours.</p>
+          <p>Home answers whether the firm is on the right work, with the right people, cost, and risk.</p>
+          <p>Create (+) still adds companies, projects, tickets, tasks, ideas, and risks.</p>
           <p>Client portal users only see their company projects, tickets, billing, and retainers.</p>
           <Link href="/app/automations" className="btn btn-primary w-full justify-center" onClick={() => setHelpOpen(false)}>
             Open automations

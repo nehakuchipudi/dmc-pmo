@@ -301,3 +301,128 @@ export interface Opportunity {
   amount: number;
   close: string;
 }
+
+export type ObjectiveStatus = "On Track" | "At Risk" | "Lagging" | "Achieved";
+export interface StrategicObjective {
+  id: string;
+  code: string;
+  name: string;
+  owner: string;
+  horizon: string;
+  status: ObjectiveStatus;
+  target: string;
+  progress: number;
+  description: string;
+}
+
+export type IdeaStage = "Submitted" | "Scoring" | "Approved" | "Deferred" | "Converted";
+export interface Idea {
+  id: string;
+  name: string;
+  companyId?: string;
+  companyName?: string;
+  submitter: string;
+  stage: IdeaStage;
+  score: number;
+  strategicFit: number;
+  valueScore: number;
+  riskScore: number;
+  objectiveId?: string;
+  requestedBudget: number;
+  summary: string;
+  convertedProjectId?: string;
+}
+
+export type PortfolioHealth = "Healthy" | "Watch" | "Critical";
+export interface Portfolio {
+  id: string;
+  name: string;
+  owner: string;
+  theme: string;
+  budget: number;
+  projectIds: string[];
+  objectiveIds: string[];
+  description: string;
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  portfolioId: string;
+  owner: string;
+  status: ProjectStatus;
+  projectIds: string[];
+  objectiveId?: string;
+  description: string;
+}
+
+export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
+export type RiskStatus = "Open" | "Mitigating" | "Closed";
+export interface RiskItem {
+  id: string;
+  title: string;
+  projectId?: string;
+  programId?: string;
+  owner: string;
+  probability: RiskLevel;
+  impact: RiskLevel;
+  status: RiskStatus;
+  due: string;
+  mitigation: string;
+}
+
+export interface IssueItem {
+  id: string;
+  title: string;
+  projectId: string;
+  owner: string;
+  severity: RiskLevel;
+  status: "Open" | "In Progress" | "Resolved";
+  raised: string;
+}
+
+export interface CrossDependency {
+  id: string;
+  predecessorProjectId: string;
+  successorProjectId: string;
+  type: "Finish to Start" | "Shared Resource" | "Data";
+  status: "On Track" | "Blocked" | "At Risk";
+  note: string;
+}
+
+export interface Benefit {
+  id: string;
+  name: string;
+  objectiveId: string;
+  projectId?: string;
+  metric: string;
+  baseline: string;
+  target: string;
+  current: string;
+  progress: number;
+  owner: string;
+}
+
+export type GateStatus = "Upcoming" | "In Review" | "Approved" | "Rejected";
+export interface GovernanceGate {
+  id: string;
+  name: string;
+  projectId: string;
+  stage: string;
+  owner: string;
+  due: string;
+  status: GateStatus;
+  criteria: string;
+}
+
+export interface ResourceAllocation {
+  id: string;
+  memberId: string;
+  memberName: string;
+  projectId: string;
+  projectName: string;
+  allocationPct: number;
+  hoursPerWeek: number;
+  start: string;
+  end: string;
+}

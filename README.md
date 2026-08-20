@@ -1,7 +1,7 @@
 # Dillon Morgan PMO (`dmc-pmo`)
 
-Purpose-built Professional Services Automation / PMO for **Dillon Morgan Consulting Inc.**  
-Accelo replacement with boutique supersets, client portal, and Azure-ready packaging.
+Purpose-built PMO / PPM platform for **Dillon Morgan Consulting Inc.**  
+Strategy, portfolios, programs, and delivery on top of the existing client, project, ticket, retainer, and billing workflows.
 
 ## Quick start
 

@@ -30,7 +30,7 @@ export default function LoginPage() {
               className="flex w-full items-center justify-between rounded-[12px] border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-gold)] hover:bg-[var(--color-fog)] hover:shadow-[var(--shadow-soft)]"
               onClick={() => {
                 setUserId(user.id);
-                router.push(user.role === "client" ? "/portal" : "/app/companies");
+                router.push(user.role === "client" ? "/portal" : "/app/home");
               }}
             >
               <div>

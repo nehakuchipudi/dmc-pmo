@@ -14,6 +14,8 @@ export type CreateKind =
   | "expense"
   | "time"
   | "milestone"
+  | "idea"
+  | "risk"
   | null;
 
 export function CreateForms({
@@ -37,6 +39,9 @@ export function CreateForms({
   const createTimeEntry = useAppStore((s) => s.createTimeEntry);
   const createMilestone = useAppStore((s) => s.createMilestone);
   const createExpense = useAppStore((s) => s.createExpense);
+  const createIdea = useAppStore((s) => s.createIdea);
+  const createRisk = useAppStore((s) => s.createRisk);
+  const objectives = useAppStore((s) => s.objectives);
 
   const title = useMemo(() => {
     switch (kind) {
@@ -56,6 +61,10 @@ export function CreateForms({
         return "Log time";
       case "milestone":
         return "New milestone";
+      case "idea":
+        return "New idea";
+      case "risk":
+        return "Log risk";
       default:
         return "";
     }
@@ -146,6 +155,114 @@ export function CreateForms({
             onClose();
           }}
         />
+      )}
+      {kind === "idea" && (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            createIdea({
+              name: String(data.get("name") ?? ""),
+              summary: String(data.get("summary") ?? ""),
+              submitter: user?.name ?? "Staff",
+              requestedBudget: Number(data.get("budget") ?? 0),
+              companyId: String(data.get("companyId") || "") || undefined,
+              objectiveId: String(data.get("objectiveId") || "") || undefined,
+            });
+            onClose();
+          }}
+        >
+          <Field label="Name">
+            <TextInput name="name" required />
+          </Field>
+          <Field label="Company">
+            <TextSelect name="companyId" defaultValue="">
+              <option value="">Internal / unassigned</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field label="Objective">
+            <TextSelect name="objectiveId" defaultValue="">
+              <option value="">None yet</option>
+              {objectives.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.code} {o.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field label="Requested budget">
+            <TextInput name="budget" type="number" defaultValue={25000} />
+          </Field>
+          <Field label="Summary">
+            <TextTextarea name="summary" />
+          </Field>
+          <button type="submit" className="btn btn-primary">
+            Submit idea
+          </button>
+        </form>
+      )}
+      {kind === "risk" && (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            createRisk({
+              title: String(data.get("title") ?? ""),
+              owner: user?.name ?? "PMO",
+              projectId: String(data.get("projectId") || "") || undefined,
+              probability: String(data.get("probability") ?? "Medium") as "Low" | "Medium" | "High" | "Critical",
+              impact: String(data.get("impact") ?? "High") as "Low" | "Medium" | "High" | "Critical",
+              mitigation: String(data.get("mitigation") ?? ""),
+              due: String(data.get("due") ?? new Date().toISOString().slice(0, 10)),
+            });
+            onClose();
+          }}
+        >
+          <Field label="Title">
+            <TextInput name="title" required />
+          </Field>
+          <Field label="Project">
+            <TextSelect name="projectId" defaultValue={projects[0]?.id}>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field label="Probability">
+            <TextSelect name="probability" defaultValue="Medium">
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Critical</option>
+            </TextSelect>
+          </Field>
+          <Field label="Impact">
+            <TextSelect name="impact" defaultValue="High">
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Critical</option>
+            </TextSelect>
+          </Field>
+          <Field label="Due">
+            <TextInput name="due" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          </Field>
+          <Field label="Mitigation">
+            <TextTextarea name="mitigation" />
+          </Field>
+          <button type="submit" className="btn btn-primary">
+            Save risk
+          </button>
+        </form>
       )}
     </Modal>
   );
