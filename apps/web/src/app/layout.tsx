@@ -11,9 +11,9 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Dillon Morgan PMO",
+  title: "DMC PMO | Turn Projects Into Business Outcomes",
   description:
-    "Enterprise PMO and PPM for Dillon Morgan Consulting: strategy, portfolios, programs, delivery, and client portal.",
+    "DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire project portfolio.",
 };
 
 export default function RootLayout({

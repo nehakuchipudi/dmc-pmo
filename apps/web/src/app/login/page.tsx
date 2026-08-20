@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui";
 import { users } from "@/lib/data";
@@ -46,6 +47,9 @@ export default function LoginPage() {
         <p className="mt-6 text-xs text-[var(--color-muted)]">
           Production will use Microsoft Entra ID for staff and Entra External ID for portal contacts.
         </p>
+        <Link href="/" className="mt-4 inline-block text-sm font-semibold text-[var(--color-navy)]">
+          Back to DMC PMO
+        </Link>
       </div>
     </div>
   );
