@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { money } from "@/lib/seed";
@@ -13,8 +13,12 @@ function PortfolioView() {
   const id = useSearchParams().get("id");
   const portfolio = useAppStore((s) => s.portfolios.find((p) => p.id === id));
   const projects = useAppStore((s) => s.projects);
-  const programs = useAppStore((s) => s.programs.filter((p) => p.portfolioId === id));
+  const allPrograms = useAppStore((s) => s.programs);
   const objectives = useAppStore((s) => s.objectives);
+  const programs = useMemo(
+    () => allPrograms.filter((p) => p.portfolioId === id),
+    [allPrograms, id],
+  );
 
   if (!portfolio) {
     return (

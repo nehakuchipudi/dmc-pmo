@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { PageHeader } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { money } from "@/lib/seed";
@@ -15,7 +15,14 @@ function ProgramView() {
   const projects = useAppStore((s) => s.projects);
   const portfolio = useAppStore((s) => s.portfolios.find((p) => p.id === program?.portfolioId));
   const objective = useAppStore((s) => s.objectives.find((o) => o.id === program?.objectiveId));
-  const risks = useAppStore((s) => s.risks.filter((r) => r.programId === id || (program && r.projectId && program.projectIds.includes(r.projectId))));
+  const allRisks = useAppStore((s) => s.risks);
+  const risks = useMemo(
+    () =>
+      allRisks.filter(
+        (r) => r.programId === id || (program && r.projectId && program.projectIds.includes(r.projectId)),
+      ),
+    [allRisks, id, program],
+  );
 
   if (!program) {
     return (
