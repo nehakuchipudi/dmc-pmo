@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Manrope, Poppins } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import { ToastHost } from "@/components/ui";
 import "./globals.css";
@@ -8,6 +8,12 @@ const body = Manrope({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const display = Poppins({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -23,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${body.variable} antialiased`}>
+      <body className={`${body.variable} ${display.variable} antialiased`}>
         <AuthProvider>
           {children}
           <ToastHost />

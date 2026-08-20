@@ -14,21 +14,24 @@ export type FilmScene = {
 
 export function ProductFilm({
   title,
-  eyebrow = "Product film",
+  eyebrow = "Watch",
   scenes,
-  autoPlayOnView = false,
+  autoPlay = false,
+  loop = true,
+  variant = "default",
 }: {
   title: string;
   eyebrow?: string;
   scenes: FilmScene[];
-  autoPlayOnView?: boolean;
+  autoPlay?: boolean;
+  loop?: boolean;
+  variant?: "default" | "hero";
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(autoPlay);
   const [elapsed, setElapsed] = useState(0);
   const [wide, setWide] = useState(false);
-  const started = useRef(false);
 
   const total = useMemo(() => scenes.reduce((sum, s) => sum + s.durationMs, 0), [scenes]);
   const offsets = useMemo(() => {
@@ -54,12 +57,22 @@ export function ProductFilm({
   );
 
   useEffect(() => {
+    setIndex(0);
+    setElapsed(0);
+    if (autoPlay) setPlaying(true);
+  }, [title, autoPlay]);
+
+  useEffect(() => {
     if (!playing) return;
     const id = window.setInterval(() => {
       setElapsed((ms) => {
         const sceneLen = scenes[index]?.durationMs ?? 4000;
         if (ms + 80 >= sceneLen) {
           if (index >= scenes.length - 1) {
+            if (loop) {
+              setIndex(0);
+              return 0;
+            }
             setPlaying(false);
             return sceneLen;
           }
@@ -70,27 +83,10 @@ export function ProductFilm({
       });
     }, 80);
     return () => window.clearInterval(id);
-  }, [playing, index, scenes]);
-
-  useEffect(() => {
-    if (!autoPlayOnView || started.current) return;
-    const node = rootRef.current;
-    if (!node) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          setPlaying(true);
-        }
-      },
-      { threshold: 0.45 },
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, [autoPlayOnView]);
+  }, [playing, index, scenes, loop]);
 
   function toggle() {
-    if (!playing && index === scenes.length - 1 && elapsed >= (scene?.durationMs ?? 0) - 20) {
+    if (!playing && index === scenes.length - 1 && elapsed >= (scene?.durationMs ?? 0) - 20 && !loop) {
       setIndex(0);
       setElapsed(0);
     }
@@ -111,25 +107,18 @@ export function ProductFilm({
     }
   }
 
-  const clock = formatClock(globalTime);
-  const endClock = formatClock(total);
-
   return (
-    <div ref={rootRef} className={clsx("mkt-film", wide && "is-wide")}>
-      <div className="mkt-film-meta">
-        <span>{eyebrow}</span>
-        <strong>{title}</strong>
-      </div>
+    <div ref={rootRef} className={clsx("mkt-film", variant === "hero" && "mkt-film-hero", wide && "is-wide")}>
       <div className="mkt-film-stage">
         <button type="button" className="mkt-film-hit" onClick={toggle} aria-label={playing ? "Pause film" : "Play film"}>
           <div className={clsx("mkt-film-scene", playing && "is-live")} key={scene?.id}>
             {scene?.render()}
           </div>
         </button>
-        {!playing && elapsed === 0 && index === 0 ? (
+        {!playing ? (
           <div className="mkt-film-poster">
             <button type="button" className="mkt-film-play" onClick={toggle} aria-label="Play product film">
-              <Play size={22} fill="currentColor" />
+              <Play size={26} fill="currentColor" />
             </button>
             <div>
               <div className="mkt-film-poster-kicker">{eyebrow}</div>
@@ -137,10 +126,10 @@ export function ProductFilm({
             </div>
           </div>
         ) : null}
-        <div className="mkt-film-caption">
-          <em>{scene?.title}</em>
-          <span>{scene?.caption}</span>
-        </div>
+      </div>
+      <div className="mkt-film-caption">
+        <em>{scene?.title}</em>
+        <span>{scene?.caption}</span>
       </div>
       <div className="mkt-film-controls">
         <button type="button" onClick={() => goTo(index - 1)} aria-label="Previous chapter">
@@ -153,7 +142,7 @@ export function ProductFilm({
           <SkipForward size={16} />
         </button>
         <div className="mkt-film-time">
-          {clock} / {endClock}
+          {formatClock(globalTime)} / {formatClock(total)}
         </div>
         <input
           type="range"

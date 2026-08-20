@@ -43,8 +43,8 @@ export function ProductFrame({
         <div className="mkt-product-brand">
           <span className="brand-mark !mb-0">DMC</span>
           <div>
-            <div className="mkt-product-brand-title">Dillon Morgan</div>
-            <div className="mkt-product-brand-sub">PMO / PPM</div>
+            <div className="mkt-product-brand-title">DMC PMO</div>
+            <div className="mkt-product-brand-sub">Portfolio</div>
           </div>
         </div>
         <nav>
