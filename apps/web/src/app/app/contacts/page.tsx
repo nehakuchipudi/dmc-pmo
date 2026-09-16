@@ -17,6 +17,7 @@ export default function ContactsPage() {
   const companies = useAppStore((s) => s.companies);
   const projects = useAppStore((s) => s.projects);
   const recentlyViewed = useAppStore((s) => s.recentlyViewed);
+  const focusCompanyId = useAppStore((s) => s.focusCompanyId);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [query, setQuery] = useState("");
   const [companyId, setCompanyId] = useState("all");
@@ -99,7 +100,7 @@ export default function ContactsPage() {
         <FilterChips items={FILTERS} active={filter} onChange={setFilter} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-        <div className="panel overflow-hidden">
+        <div className="panel overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
@@ -110,7 +111,6 @@ export default function ContactsPage() {
                 <th>Phone</th>
                 <th>Portal</th>
                 <th>Last Interaction</th>
-                <th />
               </tr>
             </thead>
             <tbody>
@@ -122,14 +122,17 @@ export default function ContactsPage() {
                 return (
                   <tr key={c.id}>
                     <td>
-                      <Link href={`/app/contacts/view/?id=${c.id}`} className="flex items-center gap-3 font-medium text-[var(--color-navy)]">
-                        <Avatar initials={c.initials} name={c.name} />
-                        <span>
-                          {c.name}
-                          {primary ? <span className="ml-2 text-xs text-[var(--color-muted)]">Primary</span> : null}
-                          <div className="text-xs font-normal text-[var(--color-muted)]">{projectCount} projects</div>
-                        </span>
-                      </Link>
+                      <div className="flex items-center justify-between gap-3">
+                        <Link href={`/app/contacts/view/?id=${c.id}`} className="flex items-center gap-3 font-medium text-[var(--color-navy)]">
+                          <Avatar initials={c.initials} name={c.name} />
+                          <span>
+                            {c.name}
+                            {primary ? <span className="ml-2 text-xs text-[var(--color-muted)]">Primary</span> : null}
+                            <div className="text-xs font-normal text-[var(--color-muted)]">{projectCount} projects</div>
+                          </span>
+                        </Link>
+                        <ContactActions contact={c} compact />
+                      </div>
                     </td>
                     <td>
                       <Link href={`/app/companies/view/?id=${c.companyId}`} className="text-[var(--color-navy)] hover:underline">
@@ -138,20 +141,17 @@ export default function ContactsPage() {
                     </td>
                     <td>{c.title}</td>
                     <td className="text-[var(--color-muted)]">{c.email}</td>
-                    <td className="text-[var(--color-muted)]">{c.phone || "None"}</td>
+                    <td className="contacts-phone text-[var(--color-muted)]">{c.phone || "None"}</td>
                     <td>
                       <StatusPill tone={statusTone(c.portal)}>{c.portal}</StatusPill>
                     </td>
                     <td>{c.lastInteraction}</td>
-                    <td>
-                      <ContactActions contact={c} compact />
-                    </td>
                   </tr>
                 );
               })}
               {!rows.length ? (
                 <tr>
-                  <td colSpan={8} className="text-[var(--color-muted)]">
+                    <td colSpan={7} className="text-[var(--color-muted)]">
                     No contacts match these filters.
                   </td>
                 </tr>
@@ -203,7 +203,7 @@ export default function ContactsPage() {
           </SideRail>
         </div>
       </div>
-      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
+      <CreateForms kind={createKind} defaults={{ companyId: focusCompanyId ?? undefined }} onClose={() => setCreateKind(null)} />
     </div>
   );
 }

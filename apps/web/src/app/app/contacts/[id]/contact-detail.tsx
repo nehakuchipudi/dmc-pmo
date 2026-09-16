@@ -414,10 +414,10 @@ function ContactEditForm({
       }}
     >
       <Field label="Full name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
+        <TextInput name="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Company">
-        <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+        <TextSelect name="companyId" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -426,13 +426,13 @@ function ContactEditForm({
         </TextSelect>
       </Field>
       <Field label="Role / title">
-        <TextInput value={title} onChange={(e) => setTitle(e.target.value)} />
+        <TextInput name="title" value={title} onChange={(e) => setTitle(e.target.value)} />
       </Field>
       <Field label="Email">
-        <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <TextInput name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
       <Field label="Phone">
-        <TextInput type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <TextInput name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </Field>
       <Field label="Portal">
         <TextSelect value={portal} onChange={(e) => setPortal(e.target.value as Contact["portal"])}>

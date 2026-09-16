@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
+import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
@@ -693,11 +694,14 @@ export function CompanyDetail({ id }: { id: string }) {
                       <TonePill value={c.portal} />
                     </td>
                     <td className="text-right">
-                      {primary?.id === c.id ? null : (
-                        <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
-                          Set primary
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        <ContactActions contact={c} compact />
+                        {primary?.id === c.id ? null : (
+                          <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
+                            Set primary
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

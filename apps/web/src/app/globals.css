@@ -1477,7 +1477,8 @@ button, input, select, textarea { font: inherit; }
 .contacts-toolbar .mb-4 { margin-bottom: 0; }
 .contacts-search { max-width: 280px; flex: 1 1 220px; }
 .contacts-company { max-width: 220px; }
-.contact-actions { display: inline-flex; align-items: center; gap: 4px; }
+.contact-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.contacts-phone { white-space: nowrap; }
 .contact-overview { display: grid; gap: 14px; }
 
 .activity-stream { display: grid; gap: 14px; }

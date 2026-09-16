@@ -355,10 +355,10 @@ function ContactForm({
       }}
     >
       <Field label="Full name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
+        <TextInput name="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Company">
-        <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+        <TextSelect name="companyId" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -367,13 +367,13 @@ function ContactForm({
         </TextSelect>
       </Field>
       <Field label="Role / title">
-        <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VP Operations" />
+        <TextInput name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VP Operations" />
       </Field>
       <Field label="Email">
-        <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <TextInput name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
       <Field label="Phone">
-        <TextInput type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 503 555 0100" />
+        <TextInput name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 503 555 0100" />
       </Field>
       <Field label="Portal">
         <TextSelect value={portal} onChange={(e) => setPortal(e.target.value as "Enabled" | "Not Invited")}>
