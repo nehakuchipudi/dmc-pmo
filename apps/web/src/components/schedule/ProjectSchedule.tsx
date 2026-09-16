@@ -39,6 +39,10 @@ export function ProjectSchedule({
   milestones,
   tasks,
   projectFiles,
+  projectStart,
+  projectDue,
+  hoursByTaskId = {},
+  onUpdateDates,
   onAddPhase,
   onAddGroup,
   onAddTask,
@@ -51,6 +55,10 @@ export function ProjectSchedule({
   milestones: Milestone[];
   tasks: Task[];
   projectFiles: { id: string; name: string }[];
+  projectStart?: string;
+  projectDue?: string;
+  hoursByTaskId?: Record<string, number>;
+  onUpdateDates?: (start: string, due: string) => void;
   onAddPhase: () => void;
   onAddGroup: (phaseId: string) => void;
   onAddTask: (groupId: string) => void;
@@ -61,7 +69,7 @@ export function ProjectSchedule({
   onAddTaskLink: (taskId: string, link: Omit<TaskLink, "id">) => void;
   onRemoveTaskLink: (taskId: string, linkId: string) => void;
 }) {
-  const [view, setView] = useState<"List" | "Gantt">("List");
+  const [view, setView] = useState<"List" | "Gantt" | "Split">("Split");
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [linkTaskId, setLinkTaskId] = useState<string | null>(null);
@@ -109,14 +117,34 @@ export function ProjectSchedule({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Plan</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Phase → Workstream → Task
-          </p>
+          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Project plan</h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">Phase, workstream, and task on one schedule</p>
+          {projectStart && projectDue && onUpdateDates ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <label className="inline-flex items-center gap-2">
+                Planned start
+                <input
+                  type="date"
+                  className="field-input"
+                  value={projectStart}
+                  onChange={(e) => onUpdateDates(e.target.value, projectDue)}
+                />
+              </label>
+              <label className="inline-flex items-center gap-2">
+                Deadline
+                <input
+                  type="date"
+                  className="field-input"
+                  value={projectDue}
+                  onChange={(e) => onUpdateDates(projectStart, e.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
-            {(["List", "Gantt"] as const).map((v) => (
+            {(["List", "Gantt", "Split"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -129,7 +157,7 @@ export function ProjectSchedule({
               </button>
             ))}
           </div>
-          {view === "List" ? (
+          {view !== "Gantt" ? (
             <button type="button" className="btn btn-primary" onClick={onAddPhase}>
               + Add phase
             </button>
@@ -137,7 +165,7 @@ export function ProjectSchedule({
         </div>
       </div>
 
-      {view === "List" ? (
+      {view === "List" || view === "Split" ? (
         <>
           <input
             className="field-input max-w-sm"
@@ -145,14 +173,18 @@ export function ProjectSchedule({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <div className={view === "Split" ? "plan-split" : undefined}>
           <div className="panel overflow-x-auto">
             <table className="wbs-table">
               <thead>
                 <tr>
-                  <th className="wbs-name">Name</th>
+                  <th className="wbs-name">Milestones and tasks</th>
                   <th className="wbs-num">Dur.</th>
                   <th className="wbs-date">Start</th>
-                  <th className="wbs-date">End</th>
+                  <th className="wbs-date">Due</th>
+                  <th className="wbs-num">Budget</th>
+                  <th className="wbs-num">Time</th>
+                  <th>Dep.</th>
                   <th>Assignee</th>
                   <th>Status</th>
                   <th className="wbs-progress-col">Progress</th>
@@ -186,6 +218,13 @@ export function ProjectSchedule({
                         <td className="wbs-num tabular-nums">{p.roll.duration}</td>
                         <td className="wbs-date tabular-nums">{formatShortDate(p.roll.start)}</td>
                         <td className="wbs-date tabular-nums">{formatShortDate(p.roll.due)}</td>
+                        <td className="wbs-num tabular-nums">
+                          {[...p.groups.flatMap((g) => g.tasks), ...p.orphanTasks].reduce((sum, t) => sum + t.estimateHours, 0)}h
+                        </td>
+                        <td className="wbs-num tabular-nums">
+                          {[...p.groups.flatMap((g) => g.tasks), ...p.orphanTasks].reduce((sum, t) => sum + (hoursByTaskId[t.id] ?? 0), 0)}h
+                        </td>
+                        <td className="text-[var(--color-muted)]">-</td>
                         <td className="text-[var(--color-muted)]">-</td>
                         <td>
                           <span className={statusClass(p.phase.status)}>{p.phase.status}</span>
@@ -228,6 +267,13 @@ export function ProjectSchedule({
                                   <td className="wbs-num tabular-nums">{g.roll.duration}</td>
                                   <td className="wbs-date tabular-nums">{formatShortDate(g.roll.start)}</td>
                                   <td className="wbs-date tabular-nums">{formatShortDate(g.roll.due)}</td>
+                                  <td className="wbs-num tabular-nums">
+                                    {g.tasks.reduce((sum, t) => sum + t.estimateHours, 0)}h
+                                  </td>
+                                  <td className="wbs-num tabular-nums">
+                                    {g.tasks.reduce((sum, t) => sum + (hoursByTaskId[t.id] ?? 0), 0)}h
+                                  </td>
+                                  <td className="text-[var(--color-muted)]">-</td>
                                   <td className="text-[var(--color-muted)]">-</td>
                                   <td>
                                     <span className={statusClass(g.group.status)}>{g.group.status}</span>
@@ -251,6 +297,8 @@ export function ProjectSchedule({
                                       <TaskRow
                                         key={t.id}
                                         task={t}
+                                        tasks={tasks}
+                                        hours={hoursByTaskId[t.id] ?? 0}
                                         indentClass="wbs-indent-2"
                                         onUpdateTask={onUpdateTask}
                                         onDeleteTask={onDeleteTask}
@@ -272,6 +320,8 @@ export function ProjectSchedule({
                             <TaskRow
                               key={t.id}
                               task={t}
+                              tasks={tasks}
+                              hours={hoursByTaskId[t.id] ?? 0}
                               indentClass="wbs-indent-1"
                               onUpdateTask={onUpdateTask}
                               onDeleteTask={onDeleteTask}
@@ -284,13 +334,17 @@ export function ProjectSchedule({
                 })}
                 {!tree.length ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-[var(--color-muted)]">
+                    <td colSpan={12} className="p-8 text-center text-[var(--color-muted)]">
                       No phases yet. Add a phase to start the plan.
                     </td>
                   </tr>
                 ) : null}
               </tbody>
             </table>
+          </div>
+          {view === "Split" ? (
+            <GanttBoard milestones={ganttMilestones} tasks={tasks} onUpdateTask={onUpdateTask} />
+          ) : null}
           </div>
         </>
       ) : (
@@ -427,12 +481,16 @@ function ProgressCell({
 
 function TaskRow({
   task: t,
+  tasks,
+  hours,
   indentClass,
   onUpdateTask,
   onDeleteTask,
   onOpenLinks,
 }: {
   task: Task;
+  tasks: Task[];
+  hours: number;
   indentClass: string;
   onUpdateTask: (id: string, patch: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
@@ -476,6 +534,34 @@ function TaskRow({
           value={t.due}
           onChange={(e) => onUpdateTask(t.id, { due: e.target.value })}
         />
+      </td>
+      <td className="wbs-num">
+        <input
+          type="number"
+          min={0}
+          className="wbs-pct-input"
+          value={t.estimateHours}
+          onChange={(e) => onUpdateTask(t.id, { estimateHours: Number(e.target.value) || 0 })}
+          aria-label="Budget hours"
+        />
+      </td>
+      <td className="wbs-num tabular-nums">{hours}h</td>
+      <td>
+        <select
+          className="wbs-select"
+          value={t.dependsOn ?? ""}
+          onChange={(e) => onUpdateTask(t.id, { dependsOn: e.target.value || undefined })}
+          aria-label="Depends on"
+        >
+          <option value="">None</option>
+          {tasks
+            .filter((other) => other.id !== t.id)
+            .map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+        </select>
       </td>
       <td>
         <select

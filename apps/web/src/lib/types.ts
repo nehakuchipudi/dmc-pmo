@@ -41,6 +41,10 @@ export interface Company {
   industry: string;
   billingTerms: string;
   portalContacts: number;
+  createdAt?: string;
+  address?: string;
+  tags?: string[];
+  favorite?: boolean;
 }
 
 export interface Contact {

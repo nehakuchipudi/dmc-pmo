@@ -73,11 +73,11 @@ export const users: User[] = [
 ];
 
 export const seedCompanies: Company[] = [
-  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 1, openTickets: 0, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 1 },
-  { id: "c-harlow", name: "Harlow & Pine Law", initials: "HP", status: "Prospect", accountManager: "J. Alvarez", openProjects: 0, openTickets: 0, lastActivity: "Aug 1, 2026", industry: "Legal", billingTerms: "Net 15", portalContacts: 0 },
-  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 0, openTickets: 1, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1 },
-  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 2 },
-  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 1, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2 },
+  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 1, openTickets: 0, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 1, createdAt: "2025-03-12", address: "410 Market Street, Chicago, IL", tags: ["Retail", "POS"], favorite: false },
+  { id: "c-harlow", name: "Harlow & Pine Law", initials: "HP", status: "Prospect", accountManager: "J. Alvarez", openProjects: 0, openTickets: 0, lastActivity: "Aug 1, 2026", industry: "Legal", billingTerms: "Net 15", portalContacts: 0, createdAt: "2026-07-18", address: "88 Pine Avenue, Boston, MA", tags: ["Legal"], favorite: false },
+  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 0, openTickets: 1, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1, createdAt: "2024-11-02", address: "1200 Oakton Blvd, Austin, TX", tags: ["Technology", "Support"], favorite: false },
+  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-06-02", address: "250 River Road, Portland, OR", tags: ["Manufacturing", "WMS"], favorite: true },
+  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 1, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-09-20", address: "77 Harbor Way, Seattle, WA", tags: ["Logistics"], favorite: false },
 ];
 
 export const seedContacts: Contact[] = [
@@ -411,6 +411,11 @@ export const seedTimeEntries: TimeEntry[] = [
   { id: "te1", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk1", taskName: "Configure WMS user roles", date: "2026-08-05", hours: 2.5, billable: true, note: "Role matrix draft", status: "Submitted" },
   { id: "te2", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk4", taskName: "Install racking Zone B", date: "2026-08-05", hours: 4, billable: true, note: "Onsite supervision", status: "Approved" },
   { id: "te3", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", taskId: "tk6", taskName: "Client review homepage design", date: "2026-08-06", hours: 1.5, billable: true, note: "Prep review notes", status: "Draft" },
+  { id: "te4", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-05-14", hours: 8, billable: true, note: "Discovery on site", status: "Approved" },
+  { id: "te5", userName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", date: "2026-06-18", hours: 6, billable: true, note: "Intake flow", status: "Approved" },
+  { id: "te6", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-06-22", hours: 5, billable: true, note: "CMS spike", status: "Approved" },
+  { id: "te7", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-07-09", hours: 10, billable: true, note: "Racking layout", status: "Approved" },
+  { id: "te8", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-07-21", hours: 7, billable: true, note: "GPS vendor tests", status: "Approved" },
 ];
 
 export const seedNotifications: NotificationItem[] = [

@@ -162,6 +162,7 @@ type AppState = {
   addActivityNote: (companyId: string, text: string, projectId?: string) => void;
 
   createCompany: (input: CreateCompanyInput) => string;
+  updateCompany: (id: string, patch: Partial<Company>) => void;
   createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
@@ -344,6 +345,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast(`Company ${company.name} created`);
     return id;
+  },
+
+  updateCompany: (id, patch) => {
+    set((s) => ({
+      companies: s.companies.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+    get().pushToast("Company updated");
   },
 
   createContact: (input) => {
