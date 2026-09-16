@@ -3,6 +3,7 @@ import type {
   ActivityType,
   Company,
   CompanyFile,
+  Contact,
   Milestone,
   Project,
   ProjectFile,
@@ -10,6 +11,7 @@ import type {
   Task,
   TimeEntry,
 } from "./types";
+import { contactProjects } from "./contacts";
 
 export const ACTIVITY_TYPES: { id: ActivityType; label: string }[] = [
   { id: "comment", label: "Comments" },
@@ -301,6 +303,65 @@ export function composeActivityFeed({
   }
 
   return [...stored, ...derived].sort((a, b) => activityTime(b) - activityTime(a));
+}
+
+export function composeContactFeed({
+  contact,
+  activities,
+  projects,
+  tasks,
+  timeEntries,
+  milestones,
+  company,
+}: {
+  contact: Contact;
+  activities: ActivityItem[];
+  projects: Project[];
+  tasks: Task[];
+  timeEntries: TimeEntry[];
+  milestones: Milestone[];
+  company?: Company;
+}): ActivityItem[] {
+  const companyFeed = composeActivityFeed({
+    companyId: contact.companyId,
+    activities,
+    projects,
+    tasks,
+    timeEntries,
+    milestones,
+    company,
+  });
+  const linkedIds = new Set(contactProjects(contact, projects).map((p) => p.id));
+  const name = contact.name.toLowerCase();
+  const related = companyFeed.filter((item) => {
+    if (item.entityType === "contact" && item.entityId === contact.id) return true;
+    if (item.projectId && linkedIds.has(item.projectId)) return true;
+    const blob = `${item.actor ?? ""} ${item.action ?? ""} ${item.text} ${item.entityLabel ?? ""}`.toLowerCase();
+    return blob.includes(name);
+  });
+  const notes = (contact.noteItems ?? []).map((note) =>
+    makeActivity({
+      id: `derived-cnote-${note.id}`,
+      type: "comment",
+      actor: note.author,
+      action: note.body,
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: contact.id,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contact.id}`,
+      when: note.createdAt,
+    }),
+  );
+  const covered = new Set<string>();
+  const merged: ActivityItem[] = [];
+  for (const item of [...notes, ...related].sort((a, b) => activityTime(b) - activityTime(a))) {
+    const keys = activityKeys(item);
+    if (keys.some((key) => covered.has(key))) continue;
+    keys.forEach((key) => covered.add(key));
+    merged.push(item);
+  }
+  return merged;
 }
 
 export function composeCompanyFiles(company: Company | undefined): { files: CompanyFile[]; company?: Company } {

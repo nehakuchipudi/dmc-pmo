@@ -1467,6 +1467,20 @@ button, input, select, textarea { font: inherit; }
   gap: 12px;
 }
 
+.contacts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.contacts-toolbar .mb-4 { margin-bottom: 0; }
+.contacts-search { max-width: 280px; flex: 1 1 220px; }
+.contacts-company { max-width: 220px; }
+.contact-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.contacts-phone { white-space: nowrap; }
+.contact-overview { display: grid; gap: 14px; }
+
 .activity-stream { display: grid; gap: 14px; }
 .activity-composer { display: flex; gap: 10px; align-items: flex-end; }
 .activity-filters {
@@ -1639,4 +1653,5 @@ button, input, select, textarea { font: inherit; }
   .files-row > span:nth-child(5) { display: none; }
   .activity-composer { flex-direction: column; align-items: stretch; }
   .activity-date { max-width: none; }
+  .contacts-search, .contacts-company { max-width: none; }
 }

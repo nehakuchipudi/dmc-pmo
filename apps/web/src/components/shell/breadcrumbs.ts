@@ -43,6 +43,7 @@ export function buildAppBreadcrumbs({
   pathname,
   recordId,
   companies,
+  contacts,
   projects,
   tickets,
   invoices,
@@ -53,6 +54,7 @@ export function buildAppBreadcrumbs({
   pathname: string;
   recordId: string | null;
   companies: { id: string; name: string }[];
+  contacts?: { id: string; name: string }[];
   projects: { id: string; name: string; companyId: string; companyName: string }[];
   tickets: { id: string; number: number; subject: string }[];
   invoices: { id: string; number: string }[];
@@ -83,6 +85,12 @@ export function buildAppBreadcrumbs({
   if (section === "companies") {
     const company = companies.find((c) => c.id === id);
     if (company) crumbs.push({ label: company.name });
+    return crumbs;
+  }
+
+  if (section === "contacts") {
+    const contact = contacts?.find((c) => c.id === id);
+    if (contact) crumbs.push({ label: contact.name });
     return crumbs;
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
+import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
@@ -660,6 +661,7 @@ export function CompanyDetail({ id }: { id: string }) {
                   <th>Name</th>
                   <th>Title</th>
                   <th>Email</th>
+                  <th>Phone</th>
                   <th>Portal</th>
                   <th />
                 </tr>
@@ -668,26 +670,44 @@ export function CompanyDetail({ id }: { id: string }) {
                 {companyContacts.map((c) => (
                   <tr key={c.id}>
                     <td className="font-medium">
-                      {c.name}
+                      <Link href={`/app/contacts/view/?id=${c.id}`} className="text-[var(--color-navy)]">
+                        {c.name}
+                      </Link>
                       {primary?.id === c.id ? <span className="ml-2 text-xs text-[var(--color-muted)]">Primary</span> : null}
                     </td>
                     <td>{c.title}</td>
-                    <td>{c.email}</td>
+                    <td>
+                      <a href={`mailto:${c.email}`} className="text-[var(--color-navy)]">
+                        {c.email}
+                      </a>
+                    </td>
+                    <td>
+                      {c.phone ? (
+                        <a href={`tel:${c.phone.replace(/\s+/g, "")}`} className="text-[var(--color-navy)]">
+                          {c.phone}
+                        </a>
+                      ) : (
+                        "None"
+                      )}
+                    </td>
                     <td>
                       <TonePill value={c.portal} />
                     </td>
                     <td className="text-right">
-                      {primary?.id === c.id ? null : (
-                        <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
-                          Set primary
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        <ContactActions contact={c} compact />
+                        {primary?.id === c.id ? null : (
+                          <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
+                            Set primary
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {!companyContacts.length ? (
                   <tr>
-                    <td colSpan={5} className="text-[var(--color-muted)]">
+                    <td colSpan={6} className="text-[var(--color-muted)]">
                       No contacts yet.
                     </td>
                   </tr>

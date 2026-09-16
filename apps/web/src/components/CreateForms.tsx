@@ -321,12 +321,20 @@ function ContactForm({
     companyName: string;
     title: string;
     email: string;
+    phone?: string;
+    notes?: string;
     portal: "Enabled" | "Not Invited";
+    primary?: boolean;
   }) => void;
 }) {
   const [name, setName] = useState("");
   const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
+  const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [portal, setPortal] = useState<"Enabled" | "Not Invited">("Not Invited");
+  const [primary, setPrimary] = useState(false);
   return (
     <form
       onSubmit={(e) => {
@@ -337,17 +345,20 @@ function ContactForm({
           name: name.trim(),
           companyId: company.id,
           companyName: company.name,
-          title: "Stakeholder",
+          title: title.trim() || "Stakeholder",
           email: email || `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-          portal: "Not Invited",
+          phone: phone.trim(),
+          notes: notes.trim(),
+          portal,
+          primary,
         });
       }}
     >
       <Field label="Full name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
+        <TextInput name="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Company">
-        <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+        <TextSelect name="companyId" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -355,9 +366,28 @@ function ContactForm({
           ))}
         </TextSelect>
       </Field>
-      <Field label="Email">
-        <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Field label="Role / title">
+        <TextInput name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VP Operations" />
       </Field>
+      <Field label="Email">
+        <TextInput name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      </Field>
+      <Field label="Phone">
+        <TextInput name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 503 555 0100" />
+      </Field>
+      <Field label="Portal">
+        <TextSelect value={portal} onChange={(e) => setPortal(e.target.value as "Enabled" | "Not Invited")}>
+          <option value="Not Invited">Not Invited</option>
+          <option value="Enabled">Enabled</option>
+        </TextSelect>
+      </Field>
+      <Field label="Notes">
+        <textarea className="field-input min-h-16" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      <label className="mb-3 flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={primary} onChange={(e) => setPrimary(e.target.checked)} />
+        Set as primary contact
+      </label>
       <button type="submit" className="btn btn-primary">
         Create contact
       </button>

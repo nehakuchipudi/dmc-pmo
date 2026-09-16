@@ -174,11 +174,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pathname.includes("/companies/view") && recordId) setFocusCompanyId(recordId);
+    if (pathname.includes("/contacts/view") && recordId) {
+      const contact = contacts.find((c) => c.id === recordId);
+      if (contact) setFocusCompanyId(contact.companyId);
+    }
     if (pathname.includes("/projects/view") && recordId) {
       const project = projects.find((p) => p.id === recordId);
       if (project) setFocusCompanyId(project.companyId);
     }
-  }, [pathname, recordId, projects, setFocusCompanyId]);
+  }, [pathname, recordId, contacts, projects, setFocusCompanyId]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -219,7 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
       ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: "/app/ideas", label: i.name, type: "Idea" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
-      ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: "/app/contacts", label: c.name, type: "Contact" })),
+      ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
     ].slice(0, 8);
   }, [search, companies, projects, tickets, contacts, portfolios, programs, ideas]);
 
@@ -237,7 +241,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? `/app/portfolios/view/?id=${item.id}`
                   : item.type === "program"
                     ? `/app/programs/view/?id=${item.id}`
-                    : "/app/home",
+                    : item.type === "contact"
+                      ? `/app/contacts/view/?id=${item.id}`
+                      : "/app/home",
         label: item.label,
         type: item.type.charAt(0).toUpperCase() + item.type.slice(1),
       })),
@@ -250,6 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         pathname,
         recordId,
         companies,
+        contacts,
         projects,
         tickets,
         invoices,
@@ -257,7 +264,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         portfolios,
         programs,
       }),
-    [pathname, recordId, companies, projects, tickets, invoices, retainers, portfolios, programs],
+    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios, programs],
   );
 
   const companyChoices = useMemo(() => {
