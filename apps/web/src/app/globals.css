@@ -200,7 +200,7 @@ button, input, select, textarea { font: inherit; }
   gap: 10px;
   min-width: 0;
 }
-.topbar-menu { display: none; }
+.icon-btn.topbar-menu { display: none; }
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -1549,7 +1549,7 @@ button, input, select, textarea { font: inherit; }
     z-index: 35;
   }
   .topbar, .topbar-portal { grid-template-columns: auto 1fr auto; }
-  .topbar-menu { display: inline-grid; }
+  .icon-btn.topbar-menu { display: inline-grid; }
   .search-kbd, .context-label { display: none; }
   .context-btn { max-width: 44px; padding-right: 8px; }
   .kanban { grid-template-columns: 1fr 1fr; }
