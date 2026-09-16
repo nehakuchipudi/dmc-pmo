@@ -29,6 +29,28 @@ export interface User {
   avatarUrl?: string;
 }
 
+export type CompanyAssetKind = "License" | "Hardware" | "Subscription" | "Environment";
+export type CompanyAssetStatus = "Active" | "Expiring" | "Retired";
+
+export interface CompanyFile {
+  id: string;
+  folder: string;
+  name: string;
+  kind: "pdf" | "docx" | "pptx" | "img" | "other";
+  sizeKb: number;
+}
+
+export interface CompanyAsset {
+  id: string;
+  companyId: string;
+  name: string;
+  kind: CompanyAssetKind;
+  status: CompanyAssetStatus;
+  owner: string;
+  projectId?: string;
+  note: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -45,6 +67,10 @@ export interface Company {
   address?: string;
   tags?: string[];
   favorite?: boolean;
+  primaryContactId?: string;
+  accountManagers?: string[];
+  notes?: string;
+  files?: CompanyFile[];
 }
 
 export interface Contact {

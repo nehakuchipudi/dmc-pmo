@@ -2,6 +2,7 @@ import type {
   ActivityItem,
   AutomationRule,
   Company,
+  CompanyAsset,
   Contact,
   EmailOutboxItem,
   Expense,
@@ -73,11 +74,20 @@ export const users: User[] = [
 ];
 
 export const seedCompanies: Company[] = [
-  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 1, openTickets: 0, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 1, createdAt: "2025-03-12", address: "410 Market Street, Chicago, IL", tags: ["Retail", "POS"], favorite: false },
-  { id: "c-harlow", name: "Harlow & Pine Law", initials: "HP", status: "Prospect", accountManager: "J. Alvarez", openProjects: 0, openTickets: 0, lastActivity: "Aug 1, 2026", industry: "Legal", billingTerms: "Net 15", portalContacts: 0, createdAt: "2026-07-18", address: "88 Pine Avenue, Boston, MA", tags: ["Legal"], favorite: false },
-  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 0, openTickets: 1, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1, createdAt: "2024-11-02", address: "1200 Oakton Blvd, Austin, TX", tags: ["Technology", "Support"], favorite: false },
-  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-06-02", address: "250 River Road, Portland, OR", tags: ["Manufacturing", "WMS"], favorite: true },
-  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 1, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-09-20", address: "77 Harbor Way, Seattle, WA", tags: ["Logistics"], favorite: false },
+  { id: "c-northridge", name: "Northridge Retail Group", initials: "NR", status: "Active", accountManager: "J. Alvarez", openProjects: 1, openTickets: 0, lastActivity: "Aug 5, 2026", industry: "Retail", billingTerms: "Net 30", portalContacts: 1, createdAt: "2025-03-12", address: "410 Market Street, Chicago, IL", tags: ["Retail", "POS"], favorite: false, primaryContactId: "ct-nina", accountManagers: ["J. Alvarez"], notes: "Retail group standardizing POS and store operations.", files: [{ id: "cf-nr1", folder: "Contracts", name: "Northridge_MSA.pdf", kind: "pdf", sizeKb: 188 }] },
+  { id: "c-harlow", name: "Harlow & Pine Law", initials: "HP", status: "Prospect", accountManager: "J. Alvarez", openProjects: 0, openTickets: 0, lastActivity: "Aug 1, 2026", industry: "Legal", billingTerms: "Net 15", portalContacts: 0, createdAt: "2026-07-18", address: "88 Pine Avenue, Boston, MA", tags: ["Legal"], favorite: false, accountManagers: ["J. Alvarez"], notes: "Prospect for an ERP readiness assessment.", files: [] },
+  { id: "c-oakton", name: "Oakton Technologies", initials: "OT", status: "Overdue Inv.", accountManager: "S. Cho", openProjects: 0, openTickets: 1, lastActivity: "Jul 29, 2026", industry: "Technology", billingTerms: "Net 30", portalContacts: 1, createdAt: "2024-11-02", address: "1200 Oakton Blvd, Austin, TX", tags: ["Technology", "Support"], favorite: false, accountManagers: ["S. Cho"], notes: "Support retainer account with an overdue invoice.", files: [{ id: "cf-ot1", folder: "Billing", name: "Oakton_Retainer.pdf", kind: "pdf", sizeKb: 96 }] },
+  { id: "c-cascade", name: "Cascade Ventures", initials: "CV", status: "Active", accountManager: "M. Doyle", openProjects: 3, openTickets: 1, lastActivity: "Aug 5, 2026", industry: "Manufacturing & Distribution", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-06-02", address: "250 River Road, Portland, OR", tags: ["Manufacturing", "WMS"], favorite: true, primaryContactId: "ct-dana", accountManagers: ["M. Doyle", "J. Kim"], notes: "Strategic manufacturing account. Warehouse, website, and vendor portal work is active.", files: [{ id: "cf1", folder: "Contracts", name: "Cascade_MSA.pdf", kind: "pdf", sizeKb: 420 }, { id: "cf2", folder: "General", name: "Onboarding_Checklist.docx", kind: "docx", sizeKb: 64 }] },
+  { id: "c-bellweather", name: "Bellweather Logistics", initials: "BL", status: "Active", accountManager: "S. Cho", openProjects: 1, openTickets: 0, lastActivity: "Aug 4, 2026", industry: "Logistics", billingTerms: "Net 30", portalContacts: 2, createdAt: "2025-09-20", address: "77 Harbor Way, Seattle, WA", tags: ["Logistics"], favorite: false, accountManagers: ["S. Cho"], notes: "Fleet tracking pilot and logistics operations support.", files: [] },
+];
+
+export const seedCompanyAssets: CompanyAsset[] = [
+  { id: "ca1", companyId: "c-cascade", name: "AWS production account", kind: "Environment", status: "Active", owner: "J. Kim", projectId: "p-warehouse", note: "WMS and portal hosting" },
+  { id: "ca2", companyId: "c-cascade", name: "WMS site license", kind: "License", status: "Active", owner: "M. Doyle", projectId: "p-warehouse", note: "Renews March 2027" },
+  { id: "ca3", companyId: "c-cascade", name: "Handheld scanners", kind: "Hardware", status: "Active", owner: "Dana Kessler", projectId: "p-warehouse", note: "4 units billed on INV-2291" },
+  { id: "ca4", companyId: "c-northridge", name: "POS SaaS tenant", kind: "Subscription", status: "Active", owner: "J. Alvarez", projectId: "p-pos", note: "Store rollout tenant" },
+  { id: "ca5", companyId: "c-oakton", name: "Support mailbox", kind: "Subscription", status: "Expiring", owner: "S. Cho", note: "Tied to overdue retainer" },
+  { id: "ca6", companyId: "c-bellweather", name: "GPS vendor sandbox", kind: "Environment", status: "Active", owner: "S. Cho", projectId: "p-fleet", note: "Pilot telemetry" },
 ];
 
 export const seedContacts: Contact[] = [

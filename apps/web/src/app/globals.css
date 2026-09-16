@@ -1445,6 +1445,27 @@ button, input, select, textarea { font: inherit; }
   gap: 18px;
   align-items: start;
 }
+.company-overview { display: grid; gap: 12px; }
+.company-overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.75fr);
+  gap: 12px;
+}
+.company-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.company-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.company-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
 .record-rail {
   display: grid;
   gap: 12px;
@@ -1555,9 +1576,11 @@ button, input, select, textarea { font: inherit; }
   .kanban { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 960px) {
-  .record-grid, .plan-split { grid-template-columns: 1fr; }
+  .record-grid, .plan-split, .company-overview-hero, .company-split { grid-template-columns: 1fr; }
+  .company-summary-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 720px) {
+  .company-summary-grid, .company-stat-grid { grid-template-columns: 1fr; }
   .kanban { grid-template-columns: 1fr; }
   .content { padding: 16px; }
   .topbar { padding: 10px 12px; }

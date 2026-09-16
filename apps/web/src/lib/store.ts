@@ -6,6 +6,7 @@ import {
   seedActivities,
   seedAutomations,
   seedCompanies,
+  seedCompanyAssets,
   seedContacts,
   seedEmailOutbox,
   seedExpenses,
@@ -40,6 +41,8 @@ import type {
   AutomationRule,
   Benefit,
   Company,
+  CompanyAsset,
+  CompanyFile,
   Contact,
   CrossDependency,
   EmailOutboxItem,
@@ -125,6 +128,7 @@ type Toast = { id: string; message: string; tone?: "success" | "info" | "danger"
 
 type AppState = {
   companies: Company[];
+  companyAssets: CompanyAsset[];
   contacts: Contact[];
   projects: Project[];
   milestones: Milestone[];
@@ -165,6 +169,11 @@ type AppState = {
 
   createCompany: (input: CreateCompanyInput) => string;
   updateCompany: (id: string, patch: Partial<Company>) => void;
+  addCompanyFile: (companyId: string, file: Omit<CompanyFile, "id">) => void;
+  deleteCompanyFile: (companyId: string, fileId: string) => void;
+  createCompanyAsset: (input: Omit<CompanyAsset, "id">) => string;
+  updateCompanyAsset: (id: string, patch: Partial<CompanyAsset>) => void;
+  deleteCompanyAsset: (id: string) => void;
   createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
@@ -259,6 +268,7 @@ function displayNow() {
 
 export const useAppStore = create<AppState>((set, get) => ({
   companies: seedCompanies,
+  companyAssets: seedCompanyAssets,
   contacts: seedContacts,
   projects: seedProjects,
   milestones: seedMilestones,
@@ -345,6 +355,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       industry: input.industry,
       billingTerms: input.billingTerms,
       portalContacts: 0,
+      accountManagers: [input.accountManager],
+      notes: "",
+      files: [],
     };
     set((s) => ({
       companies: [company, ...s.companies],
@@ -362,6 +375,49 @@ export const useAppStore = create<AppState>((set, get) => ({
       companies: s.companies.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
     get().pushToast("Company updated");
+  },
+  addCompanyFile: (companyId, file) => {
+    set((s) => ({
+      companies: s.companies.map((c) =>
+        c.id === companyId ? { ...c, files: [{ id: uid("cf"), ...file }, ...(c.files ?? [])] } : c,
+      ),
+      activities: [
+        { id: uid("a"), companyId, when: displayNow(), text: `Attachment added: ${file.name}.` },
+        ...s.activities,
+      ],
+    }));
+    get().pushToast("Attachment added");
+  },
+  deleteCompanyFile: (companyId, fileId) => {
+    set((s) => ({
+      companies: s.companies.map((c) =>
+        c.id === companyId ? { ...c, files: (c.files ?? []).filter((f) => f.id !== fileId) } : c,
+      ),
+    }));
+    get().pushToast("Attachment removed");
+  },
+  createCompanyAsset: (input) => {
+    const id = uid("ca");
+    const asset: CompanyAsset = { id, ...input };
+    set((s) => ({
+      companyAssets: [asset, ...s.companyAssets],
+      activities: [
+        { id: uid("a"), companyId: input.companyId, when: displayNow(), text: `Asset added: ${asset.name}.` },
+        ...s.activities,
+      ],
+    }));
+    get().pushToast(`Asset ${asset.name} added`);
+    return id;
+  },
+  updateCompanyAsset: (id, patch) => {
+    set((s) => ({
+      companyAssets: s.companyAssets.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+    }));
+  },
+  deleteCompanyAsset: (id) => {
+    const asset = get().companyAssets.find((a) => a.id === id);
+    set((s) => ({ companyAssets: s.companyAssets.filter((a) => a.id !== id) }));
+    if (asset) get().pushToast(`Asset ${asset.name} removed`);
   },
 
   createContact: (input) => {
