@@ -435,10 +435,15 @@ export const seedNotifications: NotificationItem[] = [
 ];
 
 export const seedActivities: ActivityItem[] = [
-  { id: "a1", companyId: "c-cascade", projectId: "p-warehouse", when: "Today, 9:12 AM", text: "M. Doyle logged 2.5h on Q3 Warehouse Rollout." },
-  { id: "a2", companyId: "c-cascade", projectId: "p-warehouse", when: "Yesterday, 4:40 PM", text: "Client approved Milestone: Site Survey Complete." },
-  { id: "a3", companyId: "c-cascade", when: "Aug 3, 2026", text: "Invoice INV-2291 sent ($12,400)." },
-  { id: "a4", companyId: "c-cascade", when: "Aug 1, 2026", text: "New ticket raised: Portal login issue." },
+  { id: "a1", type: "time", actor: "J. Kim", action: "logged 2.5h", entityType: "task", entityId: "te1", entityLabel: "Configure WMS user roles", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Today, 9:12 AM", at: "2026-09-16T09:12:00", text: "J. Kim logged 2.5h on Q3 Warehouse Rollout." },
+  { id: "a2", type: "approval", actor: "Dana Kessler", action: "approved milestone", entityType: "milestone", entityId: "m1", entityLabel: "Phase 1 Discovery", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Yesterday, 4:40 PM", at: "2026-09-15T16:40:00", text: "Client approved Milestone: Site Survey Complete." },
+  { id: "a3", type: "project", actor: "M. Doyle", action: "sent invoice INV-2291", entityType: "invoice", entityId: "inv-2291", entityLabel: "INV-2291", href: "/app/billing/view/?id=inv-2291", companyId: "c-cascade", when: "Aug 3, 2026", at: "2026-08-03T10:00:00", text: "Invoice INV-2291 sent ($12,400)." },
+  { id: "a4", type: "status", actor: "J. Kim", action: "opened ticket #1042", entityType: "ticket", entityId: "t-1042", entityLabel: "Portal login issue", href: "/app/tickets/view/?id=t-1042", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 1, 2026", at: "2026-08-01T11:00:00", text: "New ticket raised: Portal login issue." },
+  { id: "a5", type: "budget", actor: "M. Doyle", action: "set budget to $152,000", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Jul 1, 2026", at: "2026-07-01T09:00:00", text: "M. Doyle set budget to $152,000 on Q3 Warehouse Rollout." },
+  { id: "a6", type: "status", actor: "M. Doyle", action: "moved project to On Track", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Jul 8, 2026", at: "2026-07-08T09:30:00", text: "M. Doyle moved Q3 Warehouse Rollout to On Track." },
+  { id: "a7", type: "file", actor: "J. Kim", action: "uploaded a file", entityType: "file", entityId: "f2", entityLabel: "Status_Update.docx", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 4, 2026", at: "2026-08-04T13:00:00", text: "J. Kim uploaded Status_Update.docx." },
+  { id: "a8", type: "task", actor: "J. Kim", action: "moved task to In Progress", entityType: "task", entityId: "tk1", entityLabel: "Configure WMS user roles", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 5, 2026", at: "2026-08-05T10:20:00", text: "J. Kim moved Configure WMS user roles to In Progress." },
+  { id: "a9", type: "comment", actor: "M. Doyle", action: "Standup: go-live checklist is on track.", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Today, 8:40 AM", at: "2026-09-16T08:40:00", text: "M. Doyle: Standup: go-live checklist is on track." },
 ];
 
 export const seedRetainers: Retainer[] = [

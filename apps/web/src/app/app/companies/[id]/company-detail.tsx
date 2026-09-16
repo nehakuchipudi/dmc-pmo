@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
+import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
 import { RecordFact, RecordMetric, RecordRailBlock, RecordShell, TonePill } from "@/components/records/RecordChrome";
+import { composeActivityFeed } from "@/lib/activity";
 import {
   Avatar,
   Field,
@@ -72,6 +74,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const retainers = useAppStore((s) => s.retainers);
   const activities = useAppStore((s) => s.activities);
   const timeEntries = useAppStore((s) => s.timeEntries);
+  const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
   const team = useAppStore((s) => s.team);
   const expenses = useAppStore((s) => s.expenses);
@@ -114,8 +117,19 @@ export function CompanyDetail({ id }: { id: string }) {
     [retainers, company?.id],
   );
   const activity = useMemo(
-    () => (company ? activities.filter((a) => a.companyId === company.id) : []),
-    [activities, company],
+    () =>
+      company
+        ? composeActivityFeed({
+            companyId: company.id,
+            activities,
+            projects,
+            tasks,
+            timeEntries,
+            milestones,
+            company,
+          })
+        : [],
+    [activities, company, projects, tasks, timeEntries, milestones],
   );
   const projectIds = useMemo(() => new Set(companyProjects.map((p) => p.id)), [companyProjects]);
   const companyTime = useMemo(
@@ -157,7 +171,7 @@ export function CompanyDetail({ id }: { id: string }) {
     () =>
       monthSeries([
         ...companyTime.map((t) => ({ date: t.date, hours: t.hours })),
-        ...activity.map((a) => ({ date: activityDate(a.when), activity: true })),
+        ...activity.map((a) => ({ date: a.at ? a.at.slice(0, 10) : activityDate(a.when), activity: true })),
       ]),
     [companyTime, activity],
   );
@@ -530,15 +544,7 @@ export function CompanyDetail({ id }: { id: string }) {
             <div className="company-split">
               <div className="panel p-4">
                 <SectionHead title="Recent activity" action="Open stream" onAction={() => setTab("Stream")} />
-                <div className="space-y-3">
-                  {activity.slice(0, 5).map((a) => (
-                    <div key={a.id} className="border-b border-[var(--color-border)] pb-2 text-sm last:border-0">
-                      <div className="text-xs text-[var(--color-muted)]">{a.when}</div>
-                      <div>{a.text}</div>
-                    </div>
-                  ))}
-                  {!activity.length ? <p className="text-sm text-[var(--color-muted)]">No activity yet.</p> : null}
-                </div>
+                <ActivityList items={activity.slice(0, 5)} compact />
               </div>
               <div className="panel p-4">
                 <SectionHead title="Billing summary" action="Open billing" onAction={() => setTab("Billing")} />
@@ -632,38 +638,12 @@ export function CompanyDetail({ id }: { id: string }) {
         )}
 
         {tab === "Stream" && (
-          <div className="panel p-4 space-y-3">
-            <div className="flex gap-2">
-              <textarea
-                className="field-input min-h-16"
-                placeholder="Post to the company stream"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <button
-                type="button"
-                className="btn btn-primary self-end"
-                disabled={!comment.trim()}
-                onClick={() => {
-                  addActivityNote(company.id, comment.trim());
-                  setComment("");
-                }}
-              >
-                Post
-              </button>
-            </div>
-            {activity.map((a) => (
-              <div key={a.id} className="border-b border-[var(--color-border)] pb-3 text-sm">
-                <div className="text-xs text-[var(--color-muted)]">{a.when}</div>
-                <div>{a.text}</div>
-                {a.projectId ? (
-                  <Link href={`/app/projects/view/?id=${a.projectId}`} className="text-xs font-semibold text-[var(--color-navy)]">
-                    Open project
-                  </Link>
-                ) : null}
-              </div>
-            ))}
-            {!activity.length ? <p className="text-sm text-[var(--color-muted)]">No stream items yet.</p> : null}
+          <div className="panel p-4">
+            <ActivityStream
+              items={activity}
+              placeholder="Post to the company stream"
+              onPost={(text) => addActivityNote(company.id, text)}
+            />
           </div>
         )}
 

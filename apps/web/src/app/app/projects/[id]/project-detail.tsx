@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
+import { ActivityStream } from "@/components/records/ActivityStream";
+import { composeActivityFeed } from "@/lib/activity";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
 import {
   RecordFact,
@@ -68,7 +70,6 @@ export function ProjectDetail({ id }: { id: string }) {
   const deleteProject = useAppStore((s) => s.deleteProject);
   const addTaskLink = useAppStore((s) => s.addTaskLink);
   const removeTaskLink = useAppStore((s) => s.removeTaskLink);
-  const addActivityNote = useAppStore((s) => s.addActivityNote);
   const createExpense = useAppStore((s) => s.createExpense);
   const approveExpense = useAppStore((s) => s.approveExpense);
   const [tab, setTab] = useState("Overview");
@@ -106,8 +107,19 @@ export function ProjectDetail({ id }: { id: string }) {
     [expenses, project?.id],
   );
   const projectActivity = useMemo(
-    () => activities.filter((a) => a.projectId === project?.id),
-    [activities, project?.id],
+    () =>
+      project
+        ? composeActivityFeed({
+            companyId: project.companyId,
+            projectId: project.id,
+            activities,
+            projects,
+            tasks,
+            timeEntries,
+            milestones,
+          })
+        : [],
+    [activities, milestones, project, projects, tasks, timeEntries],
   );
   const team = useMemo(() => {
     const names = new Set<string>();
@@ -259,7 +271,6 @@ export function ProjectDetail({ id }: { id: string }) {
                 disabled={!comment.trim()}
                 onClick={() => {
                   addProjectNote(project.id, { author: user?.name ?? "Staff", body: comment.trim(), visibility: "internal" });
-                  addActivityNote(project.companyId, comment.trim(), project.id);
                   setComment("");
                 }}
               >
@@ -494,24 +505,14 @@ export function ProjectDetail({ id }: { id: string }) {
         ) : null}
 
         {tab === "Stream" ? (
-          <div className="panel p-4 space-y-3">
-            {project.notes.map((n) => (
-              <div key={n.id} className="border-b border-[var(--color-border)] pb-3 text-sm">
-                <div className="text-xs text-[var(--color-muted)]">
-                  {n.author} · {n.createdAt} · {n.visibility}
-                </div>
-                <div>{n.body}</div>
-              </div>
-            ))}
-            {projectActivity.map((a) => (
-              <div key={a.id} className="border-b border-[var(--color-border)] pb-3 text-sm">
-                <div className="text-xs text-[var(--color-muted)]">{a.when}</div>
-                <div>{a.text}</div>
-              </div>
-            ))}
-            {!project.notes.length && !projectActivity.length ? (
-              <p className="text-sm text-[var(--color-muted)]">No stream items yet.</p>
-            ) : null}
+          <div className="panel p-4">
+            <ActivityStream
+              items={projectActivity}
+              placeholder="Comment on this project"
+              onPost={(text) =>
+                addProjectNote(project.id, { author: user?.name ?? "Staff", body: text, visibility: "internal" })
+              }
+            />
           </div>
         ) : null}
 

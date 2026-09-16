@@ -1466,6 +1466,50 @@ button, input, select, textarea { font: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+
+.activity-stream { display: grid; gap: 14px; }
+.activity-composer { display: flex; gap: 10px; align-items: flex-end; }
+.activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+.activity-date { max-width: 180px; }
+.activity-count {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+.activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.activity-list.is-compact { gap: 6px; }
+.activity-list.is-compact .activity-item { padding: 8px 10px; }
+.activity-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+}
+.activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+.activity-action { margin-top: 2px; font-size: 0.92rem; }
+.activity-entity {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--color-navy);
+}
 .record-rail {
   display: grid;
   gap: 12px;
@@ -1593,4 +1637,6 @@ button, input, select, textarea { font: inherit; }
   .files-row > span:nth-child(3),
   .files-row > span:nth-child(4),
   .files-row > span:nth-child(5) { display: none; }
+  .activity-composer { flex-direction: column; align-items: stretch; }
+  .activity-date { max-width: none; }
 }

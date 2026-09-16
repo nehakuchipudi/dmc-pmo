@@ -23,7 +23,9 @@ import {
   seedTickets,
   seedTimeEntries,
   uid,
+  users,
 } from "./seed";
+import { makeActivity } from "./activity";
 import {
   seedAllocations,
   seedBenefits,
@@ -38,6 +40,7 @@ import {
 } from "./ppm-seed";
 import type {
   ActivityItem,
+  ActivityType,
   AutomationRule,
   Benefit,
   Company,
@@ -166,6 +169,18 @@ type AppState = {
   markAllNotificationsRead: () => void;
   trackView: (type: string, id: string, label: string) => void;
   addActivityNote: (companyId: string, text: string, projectId?: string) => void;
+  logActivity: (input: {
+    companyId?: string;
+    projectId?: string;
+    type: ActivityType;
+    actor?: string;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    entityLabel?: string;
+    href?: string;
+    text?: string;
+  }) => void;
 
   createCompany: (input: CreateCompanyInput) => string;
   updateCompany: (id: string, patch: Partial<Company>) => void;
@@ -266,6 +281,33 @@ function displayNow() {
   });
 }
 
+function currentActor() {
+  if (typeof window === "undefined") return "Staff";
+  const id = window.localStorage.getItem("dmc-pmo-user");
+  return users.find((u) => u.id === id)?.name ?? "Staff";
+}
+
+function activityRecord(
+  input: {
+    companyId?: string;
+    projectId?: string;
+    type: ActivityType;
+    actor?: string;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    entityLabel?: string;
+    href?: string;
+    text?: string;
+  },
+): ActivityItem {
+  return makeActivity({
+    ...input,
+    id: uid("a"),
+    actor: input.actor ?? currentActor(),
+  });
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   companies: seedCompanies,
   companyAssets: seedCompanyAssets,
@@ -329,16 +371,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     })),
 
   addActivityNote: (companyId, text, projectId) => {
-    set((s) => ({
-      activities: [
-        { id: uid("a"), companyId, projectId, when: displayNow(), text },
-        ...s.activities,
-      ],
-      companies: s.companies.map((c) =>
-        c.id === companyId ? { ...c, lastActivity: formatDisplayDate(todayIso()) } : c,
-      ),
-    }));
+    const project = projectId ? get().projects.find((p) => p.id === projectId) : undefined;
+    get().logActivity({
+      type: "comment",
+      action: text,
+      companyId,
+      projectId,
+      entityType: project ? "project" : "company",
+      entityId: projectId ?? companyId,
+      entityLabel: project?.name ?? get().companies.find((c) => c.id === companyId)?.name,
+      href: projectId ? `/app/projects/view/?id=${projectId}` : `/app/companies/view/?id=${companyId}`,
+    });
     get().pushToast("Note saved to activity");
+  },
+  logActivity: (input) => {
+    const event = activityRecord(input);
+    set((s) => ({
+      activities: [event, ...s.activities],
+      companies: event.companyId
+        ? s.companies.map((c) =>
+            c.id === event.companyId ? { ...c, lastActivity: formatDisplayDate(todayIso()) } : c,
+          )
+        : s.companies,
+    }));
   },
 
   createCompany: (input) => {
@@ -362,7 +417,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       companies: [company, ...s.companies],
       activities: [
-        { id: uid("a"), companyId: id, when: displayNow(), text: `Company created: ${company.name}.` },
+        activityRecord({
+          type: "status",
+          actor: input.accountManager,
+          action: "created the company",
+          companyId: id,
+          entityType: "company",
+          entityId: id,
+          entityLabel: company.name,
+          href: `/app/companies/view/?id=${id}`,
+        }),
         ...s.activities,
       ],
     }));
@@ -371,9 +435,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateCompany: (id, patch) => {
+    const prev = get().companies.find((c) => c.id === id);
     set((s) => ({
       companies: s.companies.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
+    if (prev && patch.status && patch.status !== prev.status) {
+      get().logActivity({
+        type: "status",
+        action: `changed company status to ${patch.status}`,
+        companyId: id,
+        entityType: "company",
+        entityId: id,
+        entityLabel: prev.name,
+        href: `/app/companies/view/?id=${id}`,
+      });
+    }
     get().pushToast("Company updated");
   },
   addCompanyFile: (companyId, file) => {
@@ -382,7 +458,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         c.id === companyId ? { ...c, files: [{ id: uid("cf"), ...file }, ...(c.files ?? [])] } : c,
       ),
       activities: [
-        { id: uid("a"), companyId, when: displayNow(), text: `Attachment added: ${file.name}.` },
+        activityRecord({
+          type: "file",
+          action: "uploaded a file",
+          companyId,
+          entityType: "file",
+          entityId: file.name,
+          entityLabel: file.name,
+          href: `/app/companies/view/?id=${companyId}`,
+        }),
         ...s.activities,
       ],
     }));
@@ -402,7 +486,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       companyAssets: [asset, ...s.companyAssets],
       activities: [
-        { id: uid("a"), companyId: input.companyId, when: displayNow(), text: `Asset added: ${asset.name}.` },
+        activityRecord({
+          type: "project",
+          action: "added an asset",
+          companyId: input.companyId,
+          projectId: input.projectId,
+          entityType: "asset",
+          entityId: id,
+          entityLabel: asset.name,
+          href: `/app/companies/view/?id=${input.companyId}`,
+        }),
         ...s.activities,
       ],
     }));
@@ -483,14 +576,68 @@ export const useAppStore = create<AppState>((set, get) => ({
         c.id === company.id ? { ...c, openProjects: c.openProjects + 1, lastActivity: formatDisplayDate(todayIso()) } : c,
       ),
     }));
+    get().logActivity({
+      type: "project",
+      actor: input.manager,
+      action: "created the project",
+      companyId: company.id,
+      projectId: id,
+      entityType: "project",
+      entityId: id,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${id}`,
+    });
     get().pushToast(`Project ${project.name} created`);
     return id;
   },
 
   updateProject: (id, patch) => {
+    const prev = get().projects.find((p) => p.id === id);
     set((s) => ({
       projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)),
     }));
+    if (prev) {
+      if (patch.status && patch.status !== prev.status) {
+        get().logActivity({
+          type: "status",
+          action: `moved project to ${patch.status}`,
+          companyId: prev.companyId,
+          projectId: id,
+          entityType: "project",
+          entityId: id,
+          entityLabel: prev.name,
+          href: `/app/projects/view/?id=${id}`,
+        });
+      } else if (
+        (patch.budgetAmount !== undefined && patch.budgetAmount !== prev.budgetAmount) ||
+        (patch.budgetHours !== undefined && patch.budgetHours !== prev.budgetHours)
+      ) {
+        get().logActivity({
+          type: "budget",
+          action:
+            patch.budgetAmount !== undefined
+              ? `changed budget to $${patch.budgetAmount.toLocaleString()}`
+              : `changed hour budget to ${patch.budgetHours}h`,
+          companyId: prev.companyId,
+          projectId: id,
+          entityType: "project",
+          entityId: id,
+          entityLabel: prev.name,
+          href: `/app/projects/view/?id=${id}`,
+        });
+      } else if (patch.name || patch.due || patch.start || patch.description) {
+        get().logActivity({
+          type: "project",
+          action: "updated project details",
+          companyId: prev.companyId,
+          projectId: id,
+          entityType: "project",
+          entityId: id,
+          entityLabel: patch.name ?? prev.name,
+          href: `/app/projects/view/?id=${id}`,
+        });
+      }
+    }
     get().pushToast("Project updated");
   },
 
@@ -623,11 +770,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       links: [],
     };
     set((s) => ({ tasks: [task, ...s.tasks] }));
+    get().logActivity({
+      type: "task",
+      actor: input.assignee,
+      action: "created a task",
+      companyId: project.companyId,
+      projectId: project.id,
+      entityType: "task",
+      entityId: id,
+      entityLabel: task.name,
+      href: `/app/projects/view/?id=${project.id}`,
+    });
     get().pushToast(`Task created on ${project.name}`);
     return id;
   },
 
   updateTask: (id, patch) => {
+    const prev = get().tasks.find((t) => t.id === id);
     set((s) => {
       const tasks = s.tasks.map((t) => {
         if (t.id !== id) return t;
@@ -647,6 +806,33 @@ export const useAppStore = create<AppState>((set, get) => ({
         projects: s.projects.map((p) => (p.id === task.projectId ? { ...p, progress } : p)),
       };
     });
+    if (prev) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      if (patch.status && patch.status !== prev.status) {
+        get().logActivity({
+          type: "task",
+          actor: prev.assignee,
+          action: `moved task to ${patch.status}`,
+          companyId: project?.companyId,
+          projectId: prev.projectId,
+          entityType: "task",
+          entityId: id,
+          entityLabel: prev.name,
+          href: `/app/projects/view/?id=${prev.projectId}`,
+        });
+      } else if (patch.name || patch.assignee || patch.due) {
+        get().logActivity({
+          type: "task",
+          action: "updated a task",
+          companyId: project?.companyId,
+          projectId: prev.projectId,
+          entityType: "task",
+          entityId: id,
+          entityLabel: patch.name ?? prev.name,
+          href: `/app/projects/view/?id=${prev.projectId}`,
+        });
+      }
+    }
   },
 
   deleteTask: (id) => {
@@ -672,14 +858,39 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...s.milestones,
       ],
     }));
+    const project = get().projects.find((p) => p.id === projectId);
+    get().logActivity({
+      type: "milestone",
+      action: kind === "phase" ? "added a phase" : "added a workstream",
+      companyId: project?.companyId,
+      projectId,
+      entityType: "milestone",
+      entityId: id,
+      entityLabel: name,
+      href: `/app/projects/view/?id=${projectId}`,
+    });
     get().pushToast(kind === "phase" ? "Phase added" : "Workstream added");
     return id;
   },
 
   updateMilestone: (id, patch) => {
+    const prev = get().milestones.find((m) => m.id === id);
     set((s) => ({
       milestones: s.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     }));
+    if (prev && (patch.name || patch.status || patch.due || patch.start)) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      get().logActivity({
+        type: "milestone",
+        action: patch.status && patch.status !== prev.status ? `updated milestone to ${patch.status}` : "updated a milestone",
+        companyId: project?.companyId,
+        projectId: prev.projectId,
+        entityType: "milestone",
+        entityId: id,
+        entityLabel: patch.name ?? prev.name,
+        href: `/app/projects/view/?id=${prev.projectId}`,
+      });
+    }
   },
 
   deleteMilestone: (id) => {
@@ -811,13 +1022,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         p.id === project.id ? { ...p, loggedHours: p.loggedHours + input.hours } : p,
       ),
       activities: [
-        {
-          id: uid("a"),
+        activityRecord({
+          type: "time",
+          actor: input.userName,
+          action: `logged ${input.hours}h`,
           companyId: project.companyId,
           projectId: project.id,
-          when: displayNow(),
+          entityType: task ? "task" : "project",
+          entityId: id,
+          entityLabel: task?.name ?? project.name,
+          href: `/app/projects/view/?id=${project.id}`,
           text: `${input.userName} logged ${input.hours}h on ${project.name}.`,
-        },
+        }),
         ...s.activities,
       ],
     }));
@@ -889,6 +1105,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       expenses: s.expenses.map((e) => (e.id === id ? { ...e, status: "Approved" } : e)),
     }));
+    const expense = get().expenses.find((e) => e.id === id);
+    const project = expense ? get().projects.find((p) => p.id === expense.projectId) : undefined;
+    if (expense) {
+      get().logActivity({
+        type: "approval",
+        action: "approved an expense",
+        companyId: project?.companyId,
+        projectId: expense.projectId,
+        entityType: "expense",
+        entityId: id,
+        entityLabel: `${expense.vendor} · $${expense.amount}`,
+        href: `/app/projects/view/?id=${expense.projectId}`,
+      });
+    }
     get().pushToast("Expense approved");
   },
 
@@ -909,6 +1139,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         projects: s.projects.map((p) => (p.id === task.projectId ? { ...p, progress } : p)),
       };
     });
+    if (task) {
+      const project = get().projects.find((p) => p.id === task.projectId);
+      get().logActivity({
+        type: "task",
+        actor: task.assignee,
+        action: `moved task to ${status}`,
+        companyId: project?.companyId,
+        projectId: task.projectId,
+        entityType: "task",
+        entityId: taskId,
+        entityLabel: task.name,
+        href: `/app/projects/view/?id=${task.projectId}`,
+      });
+    }
   },
 
   updateTicketStatus: (ticketId, status) => {
@@ -958,6 +1202,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       timeEntries: s.timeEntries.map((t) => (t.id === id ? { ...t, status: "Approved" } : t)),
     }));
+    const entry = get().timeEntries.find((t) => t.id === id);
+    const project = entry ? get().projects.find((p) => p.id === entry.projectId) : undefined;
+    if (entry) {
+      get().logActivity({
+        type: "approval",
+        action: "approved time",
+        companyId: project?.companyId,
+        projectId: entry.projectId,
+        entityType: "time",
+        entityId: id,
+        entityLabel: `${entry.hours}h · ${entry.projectName}`,
+        href: "/app/timesheets",
+      });
+    }
     get().pushToast("Time approved");
   },
 
@@ -1126,11 +1384,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addProjectFile: (projectId, file) => {
+    const project = get().projects.find((p) => p.id === projectId);
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, files: [{ id: uid("f"), ...file }, ...p.files] } : p,
       ),
     }));
+    if (project) {
+      get().logActivity({
+        type: "file",
+        action: "uploaded a file",
+        companyId: project.companyId,
+        projectId,
+        entityType: "file",
+        entityId: file.name,
+        entityLabel: file.name,
+        href: `/app/projects/view/?id=${projectId}`,
+      });
+    }
     get().pushToast("File uploaded");
   },
 
@@ -1155,6 +1426,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addProjectNote: (projectId, note) => {
+    const project = get().projects.find((p) => p.id === projectId);
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -1165,6 +1437,19 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p,
       ),
     }));
+    if (project) {
+      get().logActivity({
+        type: "comment",
+        actor: note.author,
+        action: note.body,
+        companyId: project.companyId,
+        projectId,
+        entityType: "project",
+        entityId: projectId,
+        entityLabel: project.name,
+        href: `/app/projects/view/?id=${projectId}`,
+      });
+    }
     get().pushToast("Note added");
   },
 
@@ -1325,15 +1610,41 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...s.emailOutbox,
       ],
     }));
+    if (project) {
+      get().logActivity({
+        type: "approval",
+        action: "requested signoff",
+        companyId: project.companyId,
+        projectId,
+        entityType: "milestone",
+        entityId: milestoneName,
+        entityLabel: milestoneName,
+        href: `/app/projects/view/?id=${projectId}`,
+      });
+    }
     get().pushToast("Signoff requested");
   },
 
   approveSignoff: (milestoneId) => {
+    const milestone = get().milestones.find((m) => m.id === milestoneId);
+    const project = milestone ? get().projects.find((p) => p.id === milestone.projectId) : undefined;
     set((s) => ({
       milestones: s.milestones.map((m) =>
         m.id === milestoneId ? { ...m, status: "Approved" } : m,
       ),
     }));
+    if (milestone && project) {
+      get().logActivity({
+        type: "approval",
+        action: "approved milestone",
+        companyId: project.companyId,
+        projectId: project.id,
+        entityType: "milestone",
+        entityId: milestoneId,
+        entityLabel: milestone.name,
+        href: `/app/projects/view/?id=${project.id}`,
+      });
+    }
     get().pushToast("Signoff approved");
   },
 

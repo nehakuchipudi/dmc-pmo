@@ -254,12 +254,31 @@ export interface NotificationItem {
   href?: string;
 }
 
+export type ActivityType =
+  | "comment"
+  | "status"
+  | "task"
+  | "time"
+  | "approval"
+  | "file"
+  | "budget"
+  | "milestone"
+  | "project";
+
 export interface ActivityItem {
   id: string;
   companyId?: string;
   projectId?: string;
   when: string;
   text: string;
+  type?: ActivityType;
+  actor?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  entityLabel?: string;
+  href?: string;
+  at?: string;
 }
 
 export interface RetainerPeriod {
