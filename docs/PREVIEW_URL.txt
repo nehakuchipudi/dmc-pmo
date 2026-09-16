@@ -1,0 +1,10 @@
+Primary (Vercel production):
+https://dmc-pmo.vercel.app/login
+
+Team alias:
+https://dmc-pmo-nehakuchipudi-5607s-projects.vercel.app/login
+
+Dashboard:
+https://vercel.com/nehakuchipudi-5607s-projects/dmc-pmo
+
+Login roles: Admin (Dillon Morgan), PM (M. Doyle), Staff (J. Kim), Client (Dana Kessler → portal)

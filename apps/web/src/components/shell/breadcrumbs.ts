@@ -1,0 +1,132 @@
+export type Crumb = { href?: string; label: string };
+
+const SEGMENT_LABELS: Record<string, string> = {
+  home: "Home",
+  strategy: "Strategy",
+  ideas: "Ideas",
+  portfolios: "Portfolios",
+  programs: "Programs",
+  projects: "Projects",
+  work: "Work",
+  tickets: "Tickets",
+  timesheets: "Timesheets",
+  companies: "Companies",
+  contacts: "Contacts",
+  sales: "Sales",
+  retainers: "Retainers",
+  resources: "Resources",
+  risks: "Risks",
+  dependencies: "Dependencies",
+  governance: "Governance",
+  billing: "Billing",
+  benefits: "Benefits",
+  reports: "Reports",
+  profitability: "Profitability",
+  ai: "Insights",
+  automations: "Automations",
+  settings: "Settings",
+};
+
+function titleCase(value: string) {
+  return value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function looksLikeId(value: string) {
+  return value.includes("-") || /^\d+$/.test(value);
+}
+
+export function buildAppBreadcrumbs({
+  pathname,
+  recordId,
+  companies,
+  projects,
+  tickets,
+  invoices,
+  retainers,
+  portfolios,
+  programs,
+}: {
+  pathname: string;
+  recordId: string | null;
+  companies: { id: string; name: string }[];
+  projects: { id: string; name: string; companyId: string; companyName: string }[];
+  tickets: { id: string; number: number; subject: string }[];
+  invoices: { id: string; number: string }[];
+  retainers: { id: string; name: string }[];
+  portfolios: { id: string; name: string }[];
+  programs: { id: string; name: string }[];
+}): Crumb[] {
+  const parts = pathname.split("/").filter(Boolean);
+  const appIndex = parts[0] === "app" ? 1 : 0;
+  const segs = parts.slice(appIndex).filter((seg) => seg !== "view");
+  const last = segs[segs.length - 1];
+  const id = recordId ?? (last && looksLikeId(last) ? last : null);
+  const section = segs.find((seg) => SEGMENT_LABELS[seg]) ?? segs[0];
+
+  const crumbs: Crumb[] = [{ href: "/app/home", label: "Home" }];
+  if (!section || section === "home") return crumbs;
+
+  const sectionHref = `/app/${section}`;
+  crumbs.push({ href: sectionHref, label: SEGMENT_LABELS[section] ?? titleCase(section) });
+
+  if (segs.includes("profitability")) {
+    crumbs.push({ label: "Profitability" });
+    return crumbs;
+  }
+
+  if (!id) return crumbs;
+
+  if (section === "companies") {
+    const company = companies.find((c) => c.id === id);
+    if (company) crumbs.push({ label: company.name });
+    return crumbs;
+  }
+
+  if (section === "projects") {
+    const project = projects.find((p) => p.id === id);
+    if (project) {
+      crumbs[crumbs.length - 1] = {
+        href: `/app/companies/view/?id=${project.companyId}`,
+        label: project.companyName,
+      };
+      crumbs.push({ label: project.name });
+    }
+    return crumbs;
+  }
+
+  if (section === "tickets") {
+    const ticket = tickets.find((t) => t.id === id);
+    if (ticket) crumbs.push({ label: `#${ticket.number} ${ticket.subject}` });
+    return crumbs;
+  }
+
+  if (section === "billing") {
+    const invoice = invoices.find((i) => i.id === id);
+    if (invoice) crumbs.push({ label: invoice.number });
+    return crumbs;
+  }
+
+  if (section === "retainers") {
+    const retainer = retainers.find((r) => r.id === id);
+    if (retainer) crumbs.push({ label: retainer.name });
+    return crumbs;
+  }
+
+  if (section === "portfolios") {
+    const portfolio = portfolios.find((p) => p.id === id);
+    if (portfolio) crumbs.push({ label: portfolio.name });
+    return crumbs;
+  }
+
+  if (section === "programs") {
+    const program = programs.find((p) => p.id === id);
+    if (program) crumbs.push({ label: program.name });
+    return crumbs;
+  }
+
+  return crumbs;
+}
