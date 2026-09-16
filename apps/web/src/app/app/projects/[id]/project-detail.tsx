@@ -94,10 +94,13 @@ export function ProjectDetail({ id }: { id: string }) {
     () => tickets.filter((t) => t.projectId === project?.id),
     [tickets, project?.id],
   );
-  const companyContact = useMemo(
-    () => contacts.find((c) => c.companyId === project?.companyId),
-    [contacts, project?.companyId],
-  );
+  const companyContact = useMemo(() => {
+    const company = companies.find((c) => c.id === project?.companyId);
+    return (
+      contacts.find((c) => c.id === company?.primaryContactId) ??
+      contacts.find((c) => c.companyId === project?.companyId)
+    );
+  }, [companies, contacts, project?.companyId]);
   const projectTime = useMemo(
     () => timeEntries.filter((t) => t.projectId === project?.id),
     [timeEntries, project?.id],
@@ -242,6 +245,13 @@ export function ProjectDetail({ id }: { id: string }) {
                     {project.companyName}
                   </Link>
                 </RecordFact>
+                {companyContact ? (
+                  <RecordFact label="Primary contact">
+                    <Link href={`/app/contacts/view/?id=${companyContact.id}`} className="font-semibold text-[var(--color-navy)]">
+                      {companyContact.name}
+                    </Link>
+                  </RecordFact>
+                ) : null}
                 <RecordFact label="Manager">{project.manager}</RecordFact>
                 <RecordFact label="Type">{project.projectType}</RecordFact>
                 <RecordFact label="Start">{formatDisplayDate(project.start)}</RecordFact>

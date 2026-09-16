@@ -73,6 +73,13 @@ export interface Company {
   files?: CompanyFile[];
 }
 
+export interface ContactNote {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
@@ -83,6 +90,10 @@ export interface Contact {
   email: string;
   portal: "Enabled" | "Not Invited";
   lastInteraction: string;
+  phone?: string;
+  notes?: string;
+  noteItems?: ContactNote[];
+  projectIds?: string[];
 }
 
 export interface MaterialLine {

@@ -47,6 +47,7 @@ import type {
   CompanyAsset,
   CompanyFile,
   Contact,
+  ContactNote,
   CrossDependency,
   EmailOutboxItem,
   Expense,
@@ -189,7 +190,12 @@ type AppState = {
   createCompanyAsset: (input: Omit<CompanyAsset, "id">) => string;
   updateCompanyAsset: (id: string, patch: Partial<CompanyAsset>) => void;
   deleteCompanyAsset: (id: string) => void;
-  createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
+  createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction"> & { primary?: boolean }) => string;
+  updateContact: (id: string, patch: Partial<Contact> & { primary?: boolean }) => void;
+  addContactNote: (contactId: string, body: string, author?: string) => void;
+  setPrimaryContact: (contactId: string) => void;
+  linkContactProject: (contactId: string, projectId: string) => void;
+  unlinkContactProject: (contactId: string, projectId: string) => void;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => void;
@@ -515,11 +521,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createContact: (input) => {
     const id = uid("ct");
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const { primary, ...fields } = input;
     const contact: Contact = {
       id,
-      ...input,
+      ...fields,
+      companyName: company?.name ?? input.companyName,
       initials: initialsFromName(input.name),
       lastInteraction: formatDisplayDate(todayIso()),
+      phone: input.phone ?? "",
+      notes: input.notes ?? "",
+      noteItems: input.noteItems ?? [],
+      projectIds: input.projectIds,
     };
     set((s) => ({
       contacts: [contact, ...s.contacts],
@@ -529,12 +542,183 @@ export const useAppStore = create<AppState>((set, get) => ({
               ...c,
               portalContacts: input.portal === "Enabled" ? c.portalContacts + 1 : c.portalContacts,
               lastActivity: formatDisplayDate(todayIso()),
+              primaryContactId: primary || !c.primaryContactId ? id : c.primaryContactId,
             }
           : c,
       ),
     }));
+    get().logActivity({
+      type: "status",
+      action: "created the contact",
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: id,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${id}`,
+    });
     get().pushToast(`Contact ${contact.name} created`);
     return id;
+  },
+
+  updateContact: (id, patch) => {
+    const prev = get().contacts.find((c) => c.id === id);
+    if (!prev) return;
+    const { primary, ...fields } = patch;
+    const nextCompany = fields.companyId ? get().companies.find((c) => c.id === fields.companyId) : undefined;
+    const next: Contact = {
+      ...prev,
+      ...fields,
+      initials: fields.name ? initialsFromName(fields.name) : prev.initials,
+      companyName: nextCompany?.name ?? fields.companyName ?? prev.companyName,
+      lastInteraction: formatDisplayDate(todayIso()),
+    };
+    set((s) => ({
+      contacts: s.contacts.map((c) => (c.id === id ? next : c)),
+      companies: s.companies.map((c) => {
+        if (c.id === prev.companyId && prev.companyId !== next.companyId) {
+          return {
+            ...c,
+            portalContacts:
+              prev.portal === "Enabled" ? Math.max(0, c.portalContacts - 1) : c.portalContacts,
+            primaryContactId: c.primaryContactId === id ? undefined : c.primaryContactId,
+          };
+        }
+        if (c.id === next.companyId) {
+          let portalContacts = c.portalContacts;
+          if (prev.companyId !== next.companyId) {
+            portalContacts = next.portal === "Enabled" ? portalContacts + 1 : portalContacts;
+          } else if (fields.portal && fields.portal !== prev.portal) {
+            portalContacts = fields.portal === "Enabled" ? portalContacts + 1 : Math.max(0, portalContacts - 1);
+          }
+          return {
+            ...c,
+            portalContacts,
+            lastActivity: formatDisplayDate(todayIso()),
+            primaryContactId: primary ? id : primary === false && c.primaryContactId === id ? undefined : c.primaryContactId,
+          };
+        }
+        return c;
+      }),
+    }));
+    if (fields.companyId && fields.companyId !== prev.companyId) {
+      get().logActivity({
+        type: "status",
+        action: `moved contact to ${next.companyName}`,
+        companyId: next.companyId,
+        entityType: "contact",
+        entityId: id,
+        entityLabel: next.name,
+        href: `/app/contacts/view/?id=${id}`,
+      });
+    } else {
+      get().logActivity({
+        type: "status",
+        action: "updated contact details",
+        companyId: next.companyId,
+        entityType: "contact",
+        entityId: id,
+        entityLabel: next.name,
+        href: `/app/contacts/view/?id=${id}`,
+      });
+    }
+    get().pushToast("Contact updated");
+  },
+
+  addContactNote: (contactId, body, author) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    if (!contact || !body.trim()) return;
+    const note: ContactNote = {
+      id: uid("cn"),
+      author: author ?? currentActor(),
+      body: body.trim(),
+      createdAt: formatDisplayDate(todayIso()),
+    };
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, lastInteraction: note.createdAt, noteItems: [note, ...(c.noteItems ?? [])] }
+          : c,
+      ),
+    }));
+    get().logActivity({
+      type: "comment",
+      actor: note.author,
+      action: note.body,
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast("Note saved to contact");
+  },
+
+  setPrimaryContact: (contactId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    if (!contact) return;
+    set((s) => ({
+      companies: s.companies.map((c) =>
+        c.id === contact.companyId ? { ...c, primaryContactId: contactId } : c,
+      ),
+      contacts: s.contacts.map((c) =>
+        c.id === contactId ? { ...c, lastInteraction: formatDisplayDate(todayIso()) } : c,
+      ),
+    }));
+    get().logActivity({
+      type: "status",
+      action: "set as primary contact",
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast(`${contact.name} is now the primary contact`);
+  },
+
+  linkContactProject: (contactId, projectId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!contact || !project) return;
+    const current = contact.projectIds?.length
+      ? contact.projectIds
+      : get().projects.filter((p) => p.companyId === contact.companyId).map((p) => p.id);
+    if (current.includes(projectId)) return;
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, projectIds: [...current, projectId], lastInteraction: formatDisplayDate(todayIso()) }
+          : c,
+      ),
+    }));
+    get().logActivity({
+      type: "project",
+      action: `linked to ${project.name}`,
+      companyId: contact.companyId,
+      projectId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast(`Linked ${project.name}`);
+  },
+
+  unlinkContactProject: (contactId, projectId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!contact) return;
+    const current = contact.projectIds?.length
+      ? contact.projectIds
+      : get().projects.filter((p) => p.companyId === contact.companyId).map((p) => p.id);
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, projectIds: current.filter((id) => id !== projectId), lastInteraction: formatDisplayDate(todayIso()) }
+          : c,
+      ),
+    }));
+    if (project) get().pushToast(`Removed ${project.name}`);
   },
 
   createProject: (input) => {
