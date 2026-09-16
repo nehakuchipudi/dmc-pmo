@@ -144,15 +144,16 @@ export function composeActivityFeed({
     })
     .map(normalizeActivity);
 
-  const covered = new Set(
-    stored.filter((e) => e.entityId && e.type).map((e) => `${e.type}:${e.entityId}:${e.action}`),
-  );
+  const covered = new Set<string>();
+  for (const event of stored) {
+    for (const key of activityKeys(event)) covered.add(key);
+  }
   const derived: ActivityItem[] = [];
 
   function add(item: ActivityItem) {
-    const key = `${item.type}:${item.entityId ?? item.id}:${item.action}`;
-    if (covered.has(key)) return;
-    covered.add(key);
+    const keys = activityKeys(item);
+    if (keys.some((key) => covered.has(key))) return;
+    keys.forEach((key) => covered.add(key));
     derived.push(item);
   }
 
@@ -322,6 +323,14 @@ export function collectCompanyFileEvents(company: Company | undefined): Activity
       at: company.createdAt ? `${company.createdAt}T11:00:00` : undefined,
     }),
   );
+}
+
+function activityKeys(item: ActivityItem) {
+  const keys = [`${item.type}:${item.entityId ?? item.id}:${item.action}`];
+  if (item.type === "comment") {
+    keys.push(`comment:${item.projectId ?? item.companyId ?? ""}:${item.actor}:${item.action}`);
+  }
+  return keys;
 }
 
 function guessActor(text: string) {
