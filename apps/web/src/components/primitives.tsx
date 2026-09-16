@@ -82,12 +82,12 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3 fade-in">
+    <div className="page-header fade-in">
       <div>
         <h1 className="page-title">{title}</h1>
         {subtitle ? <p className="page-sub">{subtitle}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="page-header-actions">{actions}</div> : null}
     </div>
   );
 }
@@ -182,11 +182,14 @@ export function Modal({
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className={clsx("modal-panel fade-in", wide && "modal-wide")}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-[var(--color-ink)]">{title}</h2>
-          <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
@@ -196,24 +199,69 @@ export function Modal({
   );
 }
 
-export function Drawer({
+export function ConfirmModal({
   open,
   title,
+  body,
+  confirmLabel = "Confirm",
+  danger,
+  onConfirm,
   onClose,
-  children,
 }: {
   open: boolean;
   title: string;
+  body: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open={open} title={title} onClose={onClose}>
+      <p className="modal-copy">{body}</p>
+      <div className="confirm-actions">
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className={clsx("btn", danger ? "btn-danger" : "btn-primary")} onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+export function Drawer({
+  open,
+  title,
+  subtitle,
+  onClose,
+  children,
+  wide,
+}: {
+  open: boolean;
+  title: string;
+  subtitle?: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }) {
   if (!open) return null;
   return (
     <div className="drawer-backdrop" onClick={onClose}>
-      <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--color-ink)]">{title}</h2>
-          <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">
+      <aside
+        className={clsx("drawer-panel", wide && "drawer-wide")}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="drawer-head">
+          <div>
+            <h2>{title}</h2>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>

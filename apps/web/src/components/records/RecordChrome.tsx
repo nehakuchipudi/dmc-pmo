@@ -23,7 +23,7 @@ export function RecordShell({
 }) {
   return (
     <div className="fade-in record-page">
-      <div className="record-crumb">{breadcrumb}</div>
+      <div className="record-crumb sr-only">{breadcrumb}</div>
       <div className="record-head">
         <div>
           <h1 className="page-title">{title}</h1>

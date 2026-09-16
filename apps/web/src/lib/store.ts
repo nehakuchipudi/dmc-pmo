@@ -153,8 +153,10 @@ type AppState = {
   allocations: ResourceAllocation[];
   toasts: Toast[];
   recentlyViewed: { type: string; id: string; label: string }[];
+  focusCompanyId: string | null;
 
   pushToast: (message: string, tone?: Toast["tone"]) => void;
+  setFocusCompanyId: (id: string | null) => void;
   dismissToast: (id: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -290,6 +292,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     { type: "company", id: "c-oakton", label: "Oakton Technologies" },
     { type: "company", id: "c-northridge", label: "Northridge Retail Group" },
   ],
+  focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
 
   pushToast: (message, tone = "success") => {
     const id = uid("toast");
@@ -297,6 +300,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.setTimeout(() => get().dismissToast(id), 3200);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  setFocusCompanyId: (id) => {
+    if (typeof window !== "undefined") {
+      if (id) window.localStorage.setItem("dmc-pmo-focus-company", id);
+      else window.localStorage.removeItem("dmc-pmo-focus-company");
+    }
+    set({ focusCompanyId: id });
+  },
   markNotificationRead: (id) =>
     set((s) => ({
       notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),

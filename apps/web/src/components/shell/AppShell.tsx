@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
@@ -9,6 +9,7 @@ import {
   Building2,
   CalendarDays,
   ChartColumn,
+  ChevronDown,
   CircleHelp,
   ClipboardList,
   Clock3,
@@ -19,6 +20,8 @@ import {
   Layers3,
   LayoutDashboard,
   Lightbulb,
+  LogOut,
+  Menu,
   MessageSquare,
   Plus,
   Receipt,
@@ -37,10 +40,12 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { roleLabel, useAuth } from "@/lib/auth";
-import { Avatar, Drawer, Field, Modal, TextSelect, TextTextarea } from "@/components/ui";
+import { Avatar, ConfirmModal, Drawer, Field, Modal, TextSelect, TextTextarea } from "@/components/ui";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
+import { buildAppBreadcrumbs } from "@/components/shell/breadcrumbs";
+import { CommandSearch } from "@/components/shell/CommandSearch";
 
 const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] }[] = [
   {
@@ -99,12 +104,16 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
   },
 ];
 
+type MenuId = "create" | "profile" | "company" | null;
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isInternal, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [menu, setMenu] = useState<MenuId>(null);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{ companyId?: string; projectId?: string; hours?: number }>({});
   const [tasksOpen, setTasksOpen] = useState(false);
@@ -114,11 +123,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [companyQuery, setCompanyQuery] = useState("");
   const [timerRunning, setTimerRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteCompanyId, setNoteCompanyId] = useState("");
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);
@@ -128,9 +139,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const portfolios = useAppStore((s) => s.portfolios);
   const programs = useAppStore((s) => s.programs);
   const ideas = useAppStore((s) => s.ideas);
+  const invoices = useAppStore((s) => s.invoices);
+  const retainers = useAppStore((s) => s.retainers);
   const notifications = useAppStore((s) => s.notifications);
+  const recentlyViewed = useAppStore((s) => s.recentlyViewed);
+  const focusCompanyId = useAppStore((s) => s.focusCompanyId);
+  const setFocusCompanyId = useAppStore((s) => s.setFocusCompanyId);
   const markRead = useAppStore((s) => s.markNotificationRead);
   const markAll = useAppStore((s) => s.markAllNotificationsRead);
+
+  const recordId = searchParams.get("id");
+  const focusCompany = companies.find((c) => c.id === focusCompanyId) ?? null;
+  const focusProject = projects.find((p) => p.companyId === focusCompanyId);
 
   useEffect(() => {
     if (!user) router.replace("/login");
@@ -138,13 +158,54 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [user, isInternal, router]);
 
   useEffect(() => {
+    if (window.localStorage.getItem("dmc-pmo-nav-collapsed") === "1") setCollapsed(true);
+  }, []);
+
+  useEffect(() => {
     if (!timerRunning) return;
     const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => window.clearInterval(id);
   }, [timerRunning]);
 
+  useEffect(() => {
+    setNavOpen(false);
+    setMenu(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname.includes("/companies/view") && recordId) setFocusCompanyId(recordId);
+    if (pathname.includes("/projects/view") && recordId) {
+      const project = projects.find((p) => p.id === recordId);
+      if (project) setFocusCompanyId(project.companyId);
+    }
+  }, [pathname, recordId, projects, setFocusCompanyId]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!menu) return;
+    function onClick(e: MouseEvent) {
+      if (!(e.target as HTMLElement).closest("[data-shell-menu]")) setMenu(null);
+    }
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [menu]);
+
   const myTasks = useMemo(
-    () => tasks.filter((t) => t.assignee.includes(user?.name.split(" ").slice(-1)[0] ?? "Kim") || t.assignee === "J. Kim" || t.assignee === user?.name).filter((t) => t.status !== "Done").slice(0, 12),
+    () =>
+      tasks
+        .filter((t) => t.assignee.includes(user?.name.split(" ").slice(-1)[0] ?? "Kim") || t.assignee === "J. Kim" || t.assignee === user?.name)
+        .filter((t) => t.status !== "Done")
+        .slice(0, 12),
     [tasks, user],
   );
 
@@ -162,28 +223,87 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ].slice(0, 8);
   }, [search, companies, projects, tickets, contacts, portfolios, programs, ideas]);
 
+  const recentHits = useMemo(
+    () =>
+      recentlyViewed.map((item) => ({
+        href:
+          item.type === "project"
+            ? `/app/projects/view/?id=${item.id}`
+            : item.type === "company"
+              ? `/app/companies/view/?id=${item.id}`
+              : item.type === "ticket"
+                ? `/app/tickets/view/?id=${item.id}`
+                : item.type === "portfolio"
+                  ? `/app/portfolios/view/?id=${item.id}`
+                  : item.type === "program"
+                    ? `/app/programs/view/?id=${item.id}`
+                    : "/app/home",
+        label: item.label,
+        type: item.type.charAt(0).toUpperCase() + item.type.slice(1),
+      })),
+    [recentlyViewed],
+  );
+
+  const crumbs = useMemo(
+    () =>
+      buildAppBreadcrumbs({
+        pathname,
+        recordId,
+        companies,
+        projects,
+        tickets,
+        invoices,
+        retainers,
+        portfolios,
+        programs,
+      }),
+    [pathname, recordId, companies, projects, tickets, invoices, retainers, portfolios, programs],
+  );
+
+  const companyChoices = useMemo(() => {
+    const q = companyQuery.trim().toLowerCase();
+    return companies.filter((c) => !q || c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q));
+  }, [companies, companyQuery]);
+
   if (!user || !isInternal) return null;
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
   const unread = notifications.filter((n) => !n.read).length;
 
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      window.localStorage.setItem("dmc-pmo-nav-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
+
+  function contextDefaults(extra: typeof createDefaults = {}) {
+    return {
+      companyId: extra.companyId ?? focusCompanyId ?? undefined,
+      projectId: extra.projectId ?? focusProject?.id,
+      hours: extra.hours,
+    };
+  }
+
   function openCreate(kind: CreateKind, defaults: typeof createDefaults = {}) {
-    setCreateOpen(false);
-    setCreateDefaults(defaults);
+    setMenu(null);
+    setCreateDefaults(contextDefaults(defaults));
     setCreateKind(kind);
   }
 
   return (
-    <div className={clsx("app-shell", collapsed && "collapsed")}>
+    <div className={clsx("app-shell", collapsed && "collapsed", navOpen && "nav-open")}>
+      {navOpen ? <button type="button" className="shell-scrim" aria-label="Close navigation" onClick={() => setNavOpen(false)} /> : null}
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">DMC</div>
           {!collapsed ? (
-            <>
+            <div className="brand-copy">
               <div className="brand-title">Dillon Morgan</div>
               <div className="brand-sub">PMO / PPM</div>
-            </>
+            </div>
           ) : null}
         </div>
         <nav>
@@ -204,7 +324,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="nav-footer space-y-1">
-          <button type="button" className="nav-link w-full" onClick={() => setCollapsed((v) => !v)}>
+          <button type="button" className="nav-link w-full" onClick={toggleCollapsed}>
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             {!collapsed ? <span>Collapse</span> : null}
           </button>
@@ -231,15 +351,96 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="main-col">
         <header className="topbar">
-          <div className="text-sm text-[var(--color-muted)] truncate capitalize">
-            {pathname.replace("/app/", "").split("/").join(" / ") || "Home"}
+          <div className="topbar-lead">
+            <button type="button" className="icon-btn topbar-menu" aria-label="Open navigation" onClick={() => setNavOpen(true)}>
+              <Menu size={18} />
+            </button>
+            <nav className="crumb-bar" aria-label="Breadcrumb">
+              {crumbs.map((crumb, i) => (
+                <span key={`${crumb.label}-${i}`} className="crumb-item">
+                  {i > 0 ? <span className="crumb-sep">/</span> : null}
+                  {crumb.href && i < crumbs.length - 1 ? (
+                    <Link href={crumb.href} className="crumb-link">
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="crumb-current">{crumb.label}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
           </div>
           <button type="button" className="search text-left text-[var(--color-muted)]" onClick={() => setSearchOpen(true)}>
-            <span className="inline-flex items-center gap-2">
-              <Search size={15} /> Search portfolios, projects, companies...
+            <span className="inline-flex items-center gap-2 min-w-0">
+              <Search size={15} />
+              <span className="truncate">Search portfolios, projects, companies...</span>
             </span>
+            <kbd className="search-kbd">⌘K</kbd>
           </button>
-          <div className="relative flex items-center gap-2 justify-end">
+          <div className="topbar-actions">
+            <div className="relative" data-shell-menu>
+              <button
+                type="button"
+                className="context-btn"
+                aria-expanded={menu === "company"}
+                onClick={() => setMenu((v) => (v === "company" ? null : "company"))}
+              >
+                <Building2 size={15} />
+                <span className="context-label truncate">{focusCompany?.name ?? "All companies"}</span>
+                <ChevronDown size={14} />
+              </button>
+              {menu === "company" ? (
+                <div className="menu-popover context-popover fade-in">
+                  <input
+                    className="field-input"
+                    placeholder="Find a company"
+                    value={companyQuery}
+                    onChange={(e) => setCompanyQuery(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={clsx("menu-row", !focusCompanyId && "is-active")}
+                    onClick={() => {
+                      setFocusCompanyId(null);
+                      setMenu(null);
+                      setCompanyQuery("");
+                    }}
+                  >
+                    All companies
+                  </button>
+                  {companyChoices.map((company) => (
+                    <div key={company.id} className={clsx("context-row", focusCompanyId === company.id && "is-active")}>
+                      <button
+                        type="button"
+                        className="menu-row"
+                        onClick={() => {
+                          setFocusCompanyId(company.id);
+                          setMenu(null);
+                          setCompanyQuery("");
+                        }}
+                      >
+                        <span>
+                          <span className="block font-medium">{company.name}</span>
+                          <span className="text-xs text-[var(--color-muted)]">
+                            {company.status} · {company.openProjects} projects
+                          </span>
+                        </span>
+                      </button>
+                      <Link
+                        href={`/app/companies/view/?id=${company.id}`}
+                        className="context-open"
+                        onClick={() => {
+                          setFocusCompanyId(company.id);
+                          setMenu(null);
+                        }}
+                      >
+                        Open
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             {timerRunning ? (
               <button
                 type="button"
@@ -255,30 +456,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {mm}:{ss} Stop & log
               </button>
             ) : null}
-            <div className="relative">
-              <button type="button" className="icon-btn" aria-label="Create" onClick={() => setCreateOpen((v) => !v)}>
+            <div className="relative" data-shell-menu>
+              <button type="button" className="icon-btn icon-btn-primary" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
                 <Plus size={18} />
               </button>
-              {createOpen ? (
-                <div className="absolute right-0 top-12 z-40 w-[380px] panel p-4 fade-in">
+              {menu === "create" ? (
+                <div className="menu-popover create-popover fade-in">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <div className="mb-2 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">Activities</div>
+                      <div className="menu-heading">Activities</div>
                       {[
                         ["time", "Log time"],
                         ["task", "Task"],
                         ["expense", "Expense"],
                       ].map(([k, label]) => (
-                        <button key={k} type="button" className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-fog)]" onClick={() => openCreate(k as CreateKind)}>
+                        <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
                           {label}
                         </button>
                       ))}
                       <button
                         type="button"
-                        className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-fog)]"
+                        className="menu-row"
                         onClick={() => {
-                          setCreateOpen(false);
-                          setNoteCompanyId(companies[0]?.id ?? "");
+                          setMenu(null);
+                          setNoteCompanyId(focusCompanyId ?? companies[0]?.id ?? "");
                           setNoteText("");
                           setNoteOpen(true);
                         }}
@@ -287,7 +488,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       </button>
                     </div>
                     <div>
-                      <div className="mb-2 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">Operations</div>
+                      <div className="menu-heading">Operations</div>
                       {[
                         ["company", "Company"],
                         ["contact", "Contact"],
@@ -297,12 +498,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         ["idea", "Idea"],
                         ["risk", "Risk"],
                       ].map(([k, label]) => (
-                        <button key={k} type="button" className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-fog)]" onClick={() => openCreate(k as CreateKind)}>
+                        <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
                           {label}
                         </button>
                       ))}
                     </div>
                   </div>
+                  {focusCompany ? <p className="create-hint">New records default to {focusCompany.name}.</p> : null}
                 </div>
               ) : null}
             </div>
@@ -326,32 +528,90 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button type="button" className="icon-btn relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
               <Bell size={18} />
               {unread ? (
-                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--color-danger)] px-1 text-[10px] text-white">
+                <span className="notify-dot">
                   {unread}
                 </span>
               ) : null}
             </button>
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white py-1 pl-1 pr-2.5"
-              onClick={logout}
-              title={`${user.name} (${roleLabel(user.role)}). Click to sign out.`}
-            >
-              <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
-              <span className="hidden text-sm font-medium text-[var(--color-ink)] sm:inline">{user.name.split(" ")[0]}</span>
-            </button>
+            <div className="relative" data-shell-menu>
+              <button
+                type="button"
+                className="profile-btn"
+                aria-expanded={menu === "profile"}
+                onClick={() => setMenu((v) => (v === "profile" ? null : "profile"))}
+              >
+                <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
+                <span className="hidden sm:grid text-left leading-tight">
+                  <span className="text-sm font-medium text-[var(--color-ink)]">{user.name.split(" ")[0]}</span>
+                  <span className="text-[11px] text-[var(--color-muted)]">{roleLabel(user.role)}</span>
+                </span>
+                <ChevronDown size={14} className="hidden sm:block text-[var(--color-muted)]" />
+              </button>
+              {menu === "profile" ? (
+                <div className="menu-popover profile-popover fade-in">
+                  <div className="profile-card">
+                    <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} size={40} />
+                    <div>
+                      <div className="font-semibold">{user.name}</div>
+                      <div className="text-xs text-[var(--color-muted)]">{roleLabel(user.role)}</div>
+                      <div className="text-xs text-[var(--color-muted)]">{user.email}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setMenu(null);
+                      setSettingsOpen(true);
+                    }}
+                  >
+                    <Settings size={15} /> Settings
+                  </button>
+                  <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
+                    <Users size={15} /> Users and roles
+                  </Link>
+                  <button
+                    type="button"
+                    className="menu-row menu-row-danger"
+                    onClick={() => {
+                      setMenu(null);
+                      setSignOutOpen(true);
+                    }}
+                  >
+                    <LogOut size={15} /> Sign out
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
         <main className="content">{children}</main>
       </div>
 
       <CreateForms
-        key={`${createKind}-${createDefaults.hours ?? ""}-${createDefaults.projectId ?? ""}`}
+        key={`${createKind}-${createDefaults.hours ?? ""}-${createDefaults.projectId ?? ""}-${createDefaults.companyId ?? ""}`}
         kind={createKind}
         defaults={createDefaults}
         onClose={() => {
           setCreateKind(null);
           setCreateDefaults({});
+        }}
+      />
+
+      <CommandSearch
+        open={searchOpen}
+        query={search}
+        hits={searchHits}
+        recent={recentHits}
+        onQuery={setSearch}
+        onClose={() => {
+          setSearchOpen(false);
+          setSearch("");
+        }}
+        onOpen={(href) => {
+          router.push(href);
+          setSearchOpen(false);
+          setSearch("");
         }}
       />
 
@@ -382,10 +642,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </Modal>
 
-      <Drawer open={tasksOpen} title="My open tasks" onClose={() => setTasksOpen(false)}>
+      <ConfirmModal
+        open={signOutOpen}
+        title="Sign out"
+        body="Sign out of Dillon Morgan PMO on this device? Your workspace data stays in this browser."
+        confirmLabel="Sign out"
+        danger
+        onClose={() => setSignOutOpen(false)}
+        onConfirm={() => {
+          setSignOutOpen(false);
+          logout();
+        }}
+      />
+
+      <Drawer open={tasksOpen} title="My open tasks" subtitle={`${myTasks.length} assigned to you`} onClose={() => setTasksOpen(false)}>
         <div className="space-y-2">
           {myTasks.map((t) => (
-            <div key={t.id} className="panel p-3">
+            <div key={t.id} className="panel panel-hover p-3">
               <div className="font-semibold">{t.name}</div>
               <div className="text-xs text-[var(--color-muted)]">{t.projectName} · due {formatDisplayDate(t.due)}</div>
               <button type="button" className="btn btn-ghost mt-2 text-sm" onClick={() => useAppStore.getState().updateTaskStatus(t.id, "Done")}>
@@ -394,7 +667,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
           {!myTasks.length ? <p className="text-sm text-[var(--color-muted)]">No open tasks.</p> : null}
-          <button type="button" className="btn btn-primary w-full justify-center" onClick={() => { setTasksOpen(false); setCreateKind("task"); }}>
+          <button type="button" className="btn btn-primary w-full justify-center" onClick={() => { setTasksOpen(false); openCreate("task"); }}>
             New task
           </button>
         </div>
@@ -420,10 +693,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </Drawer>
 
-      <Drawer open={notesOpen} title="Notifications" onClose={() => setNotesOpen(false)}>
+      <Drawer open={notesOpen} title="Notifications" subtitle={unread ? `${unread} unread` : "You are caught up"} wide onClose={() => setNotesOpen(false)}>
         <div className="mb-3 flex justify-between">
-          <span className="text-sm text-[var(--color-muted)]">{unread} unread</span>
-          <button type="button" className="text-sm text-[var(--color-navy)]" onClick={markAll}>
+          <span className="text-sm text-[var(--color-muted)]">{notifications.length} updates</span>
+          <button type="button" className="text-sm font-semibold text-[var(--color-navy)]" onClick={markAll}>
             Mark all read
           </button>
         </div>
@@ -432,7 +705,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               key={n.id}
               type="button"
-              className={clsx("panel w-full p-3 text-left", !n.read && "border-[var(--color-navy)]")}
+              className={clsx("notify-item", !n.read && "is-unread")}
               onClick={() => {
                 markRead(n.id);
                 if (n.href) router.push(n.href);
@@ -474,38 +747,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="space-y-3 text-sm text-[var(--color-muted)]">
           <p>Home answers whether the firm is on the right work, with the right people, cost, and risk.</p>
           <p>Create (+) still adds companies, projects, tickets, tasks, ideas, and risks.</p>
+          <p>The company selector sets workspace context for new records. It does not hide other companies.</p>
           <p>Client portal users only see their company projects, tickets, billing, and retainers.</p>
           <Link href="/app/automations" className="btn btn-primary w-full justify-center" onClick={() => setHelpOpen(false)}>
             Open automations
           </Link>
-        </div>
-      </Drawer>
-
-      <Drawer open={searchOpen} title="Search" onClose={() => setSearchOpen(false)}>
-        <input
-          className="field-input mb-3"
-          autoFocus
-          placeholder="Type to search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="space-y-2">
-          {searchHits.map((hit) => (
-            <button
-              key={hit.href + hit.label}
-              type="button"
-              className="panel w-full p-3 text-left"
-              onClick={() => {
-                router.push(hit.href);
-                setSearchOpen(false);
-                setSearch("");
-              }}
-            >
-              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{hit.type}</div>
-              <div className="font-medium">{hit.label}</div>
-            </button>
-          ))}
-          {search && !searchHits.length ? <p className="text-sm text-[var(--color-muted)]">No matches.</p> : null}
         </div>
       </Drawer>
     </div>

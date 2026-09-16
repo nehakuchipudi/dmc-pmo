@@ -1,6 +1,7 @@
 export {
   Avatar,
   avatarUrlFor,
+  ConfirmModal,
   Field,
   FilterChips,
   Modal,
