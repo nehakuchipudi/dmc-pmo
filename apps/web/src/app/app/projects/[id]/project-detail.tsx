@@ -294,6 +294,7 @@ export function ProjectDetail({ id }: { id: string }) {
   return (
     <>
       <RecordShell
+        wide={tab === "Schedule"}
         breadcrumb={
           <>
             <Link href="/app/companies">Companies</Link> /{" "}

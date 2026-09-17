@@ -14,6 +14,41 @@ export function durationDays(start: string, due: string) {
   return Math.max(1, Math.round((toTime(due) - toTime(start)) / 86400000) + 1);
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function ganttDayLabel(iso: string) {
+  const parts = iso.split("-");
+  const month = parts[1];
+  const day = parts[2];
+  return month && day ? `${month}/${day}` : iso;
+}
+
+export function ganttMonthLabel(iso: string) {
+  const parts = iso.split("-");
+  const year = parts[0];
+  const month = MONTHS[Number(parts[1]) - 1];
+  return month && year ? `${month} ${year}` : iso;
+}
+
+export function ganttMonthBands(ticks: string[]) {
+  const bands: { key: string; label: string; count: number }[] = [];
+  ticks.forEach((tick) => {
+    const key = tick.slice(0, 7);
+    const last = bands[bands.length - 1];
+    if (last && last.key === key) {
+      last.count += 1;
+      return;
+    }
+    bands.push({ key, label: ganttMonthLabel(tick), count: 1 });
+  });
+  return bands;
+}
+
+export function isWeekend(iso: string) {
+  const day = new Date(`${iso}T12:00:00`).getDay();
+  return day === 0 || day === 6;
+}
+
 export function sortPlanItems<T extends { sortOrder?: number; name: string }>(items: T[]) {
   return items.slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name));
 }

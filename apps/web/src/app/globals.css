@@ -1535,6 +1535,8 @@ button, input, select, textarea { font: inherit; }
   gap: 18px;
   align-items: start;
 }
+.record-main { min-width: 0; }
+.record-grid.is-wide { grid-template-columns: minmax(0, 1fr); }
 .company-overview { display: grid; gap: 12px; }
 .company-overview-hero {
   display: grid;
@@ -1982,14 +1984,41 @@ button, input, select, textarea { font: inherit; }
   gap: 12px;
   align-items: start;
 }
-.plan-workspace { display: grid; gap: 12px; }
-.plan-board { display: grid; gap: 12px; }
+.plan-workspace { display: grid; gap: 12px; min-width: 0; }
+.plan-board { display: grid; gap: 12px; min-width: 0; }
 .plan-board.is-split {
-  grid-template-columns: minmax(640px, 1.25fr) minmax(280px, 0.9fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
 }
-.plan-table-wrap, .plan-gantt { overflow: auto; }
+.plan-table-wrap, .plan-gantt { overflow: auto; min-width: 0; max-height: min(70vh, 760px); }
+.plan-board.is-split .plan-table-wrap,
+.plan-board.is-split .plan-gantt {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.plan-board.is-split .plan-gantt { border-left: 1px solid var(--color-border); background: #fbfcfe; }
 .plan-table { min-width: 980px; }
+.plan-table.is-compact { min-width: 560px; }
+.plan-board.is-split .plan-table thead th {
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-sizing: border-box;
+}
+.plan-board.is-split .plan-table td {
+  height: 42px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  box-sizing: border-box;
+}
 .plan-row.is-project td { background: #eef3f8; font-weight: 650; }
 .plan-row.is-milestone td { background: #f7f9fc; }
 .plan-row.is-subtask td { background: #fff; }
@@ -2000,35 +2029,78 @@ button, input, select, textarea { font: inherit; }
 .plan-indent-2 { padding-left: 28px; }
 .plan-indent-3 { padding-left: 52px; }
 .wbs-toggle-spacer { width: 22px; flex-shrink: 0; }
-.plan-gantt-inner { min-width: 100%; }
+.plan-gantt-inner { position: relative; min-width: 100%; }
+.plan-gantt-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+  height: 56px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--color-border);
+}
+.plan-gantt-months {
+  display: grid;
+  height: 24px;
+}
+.plan-gantt-month {
+  padding: 4px 8px 0;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--color-navy);
+  border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+}
 .plan-gantt-ticks {
   display: grid;
-  border-bottom: 1px solid var(--color-border);
-  min-height: 36px;
+  height: 32px;
 }
 .plan-gantt-tick {
-  padding: 8px 4px;
+  padding: 4px 2px;
   font-size: 10px;
   color: var(--color-muted);
   border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.plan-gantt-tick.is-weekend { background: #f4f7fa; }
 .plan-gantt-lane {
   position: relative;
-  height: 44px;
+  height: 42px;
   border-bottom: 1px solid #edf2f6;
+  overflow: hidden;
 }
 .plan-gantt-lane.is-project, .plan-gantt-lane.is-milestone { background: #fbfcfe; }
+.plan-gantt-weekend {
+  position: absolute;
+  inset: 0 auto 0 auto;
+  background: #f4f7fa;
+  pointer-events: none;
+}
+.plan-gantt-today {
+  position: absolute;
+  top: 56px;
+  bottom: 0;
+  width: 2px;
+  background: #c45a3a;
+  pointer-events: none;
+  z-index: 2;
+}
 .plan-gantt-bar {
   position: absolute;
-  top: 12px;
+  top: 11px;
   height: 20px;
   border-radius: 999px;
   color: #fff;
   cursor: grab;
   overflow: hidden;
+  min-width: 12px;
+  z-index: 1;
 }
-.plan-gantt-bar.is-project, .plan-gantt-bar.is-milestone { height: 12px; top: 16px; border-radius: 3px; }
-.plan-gantt-bar.is-subtask { height: 14px; top: 15px; opacity: 0.9; }
+.plan-gantt-bar.is-project, .plan-gantt-bar.is-milestone { height: 12px; top: 15px; border-radius: 3px; }
+.plan-gantt-bar.is-subtask { height: 14px; top: 14px; opacity: 0.9; }
 .plan-gantt-label {
   position: absolute;
   left: 8px;
