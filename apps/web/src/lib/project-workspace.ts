@@ -40,10 +40,10 @@ export function projectHealth(input: {
 }): ProjectHealth {
   const hoursPct = input.budgetHours ? (input.loggedHours / input.budgetHours) * 100 : 0;
   const costPct = input.budgetAmount ? (input.actualCost / input.budgetAmount) * 100 : 0;
-  if (input.status === "Overdue" || input.loggedHours > input.budgetHours || input.actualCost > input.budgetAmount) {
+  if (input.loggedHours > input.budgetHours || input.actualCost > input.budgetAmount) {
     return "Critical";
   }
-  if (input.status === "At Risk") return "Watch";
+  if (input.status === "At Risk" || input.status === "On Hold" || input.status === "Cancelled") return "Watch";
   if (hoursPct - input.progress > 15 || costPct - input.progress > 15) return "Watch";
   return "Healthy";
 }

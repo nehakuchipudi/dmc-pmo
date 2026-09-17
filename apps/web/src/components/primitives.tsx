@@ -20,13 +20,13 @@ export function statusTone(status: string): "success" | "warning" | "danger" | "
   if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent", "completed", "opened", "invoiced", "healthy", "achieved", "converted"].includes(s)) {
     return "success";
   }
-  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "watch", "scoring", "mitigating", "in review", "lagging"].includes(s)) {
+  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "planning", "watch", "scoring", "mitigating", "in review", "lagging"].includes(s)) {
     return "warning";
   }
-  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked"].includes(s)) {
+  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked", "cancelled"].includes(s)) {
     return "danger";
   }
-  if (["open", "high", "medium", "queued", "upcoming", "deferred"].includes(s)) return "info";
+  if (["open", "high", "medium", "queued", "upcoming", "deferred", "on hold"].includes(s)) return "info";
   return "neutral";
 }
 

@@ -15,8 +15,8 @@ export function riskScore(probability: string, impact: string) {
 
 export function portfolioHealth(projects: Project[]): "Healthy" | "Watch" | "Critical" {
   if (!projects.length) return "Watch";
-  const critical = projects.filter((p) => p.status === "Overdue").length;
-  const watch = projects.filter((p) => p.status === "At Risk").length;
+  const critical = projects.filter((p) => p.status === "At Risk").length;
+  const watch = projects.filter((p) => p.status === "On Hold").length;
   if (critical > 0 || watch >= 2) return "Critical";
   if (watch > 0) return "Watch";
   return "Healthy";
@@ -45,7 +45,7 @@ export function portfolioMetrics(portfolio: Portfolio, projects: Project[]) {
     hoursBudget,
     margin,
     health: portfolioHealth(items),
-    atRisk: items.filter((p) => p.status !== "On Track" && p.status !== "Completed" && p.status !== "Planned").length,
+    atRisk: items.filter((p) => p.status === "At Risk" || p.status === "On Hold").length,
   };
 }
 

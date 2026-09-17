@@ -9,12 +9,12 @@ import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHo
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
 import { composeActivityFeed } from "@/lib/activity";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
+import { ProjectLifecycleBar, ProjectStatusHistory } from "@/components/records/ProjectLifecycle";
 import {
   RecordFact,
   RecordMetric,
   RecordRailBlock,
   RecordShell,
-  StatusStepper,
   TonePill,
 } from "@/components/records/RecordChrome";
 import {
@@ -31,7 +31,7 @@ import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
-import type { CompanyAssetKind, CompanyAssetStatus, ProjectHealth, ProjectStatus } from "@/lib/types";
+import type { CompanyAssetKind, CompanyAssetStatus, ProjectHealth } from "@/lib/types";
 
 const TABS = [
   "Overview",
@@ -46,7 +46,6 @@ const TABS = [
   "Assets",
   "Details",
 ];
-const STATUS_STEPS: ProjectStatus[] = ["Planned", "On Track", "At Risk", "Completed"];
 const PROJECT_TYPES = ["Client Work", "Internal", "Retainer", "Fixed Fee"];
 
 function activityDate(when: string) {
@@ -137,6 +136,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const updateProject = useAppStore((s) => s.updateProject);
   const updateProjectScope = useAppStore((s) => s.updateProjectScope);
   const setProjectRate = useAppStore((s) => s.setProjectRate);
+  const setProjectStatus = useAppStore((s) => s.setProjectStatus);
+  const projectWorkflow = useAppStore((s) => s.projectWorkflow);
   const deleteProject = useAppStore((s) => s.deleteProject);
   const addTaskLink = useAppStore((s) => s.addTaskLink);
   const removeTaskLink = useAppStore((s) => s.removeTaskLink);
@@ -278,7 +279,6 @@ export function ProjectDetail({ id }: { id: string }) {
   }
 
   const scope = project.scope;
-  const stepValue = STATUS_STEPS.includes(project.status) ? project.status : "On Track";
   const { remainingHours, earned, actualCost, health, hoursPct, expenseTotal, materialsSale, laborCost, blend } =
     metrics;
   const billed = projectInvoices.reduce((sum, row) => sum + row.amount, 0);
@@ -351,10 +351,11 @@ export function ProjectDetail({ id }: { id: string }) {
           </>
         }
         stepper={
-          <StatusStepper
-            steps={STATUS_STEPS}
-            value={stepValue}
-            onChange={(next) => updateProject(project.id, { status: next })}
+          <ProjectLifecycleBar
+            status={project.status}
+            workflow={projectWorkflow}
+            role={user?.role}
+            onChange={(next) => setProjectStatus(project.id, next)}
           />
         }
         banner={
@@ -552,11 +553,16 @@ export function ProjectDetail({ id }: { id: string }) {
 
             <div className="company-split">
               <div className="panel p-4">
+                <SectionHead title="Status history" action="Open activity" onAction={() => goTab("Activity")} />
+                <ProjectStatusHistory items={project.statusHistory ?? []} />
+              </div>
+              <div className="panel p-4">
                 <SectionHead title="Recent activity" action="Open activity" onAction={() => goTab("Activity")} />
                 <ActivityList items={projectActivity.slice(0, 5)} compact />
               </div>
-              <div className="panel p-4">
-                <SectionHead title="Billing snapshot" action="Open billing" onAction={() => goTab("Billing")} />
+            </div>
+            <div className="panel p-4">
+              <SectionHead title="Billing snapshot" action="Open billing" onAction={() => goTab("Billing")} />
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt>Budget</dt>
@@ -579,7 +585,6 @@ export function ProjectDetail({ id }: { id: string }) {
                     <dd className="tabular-nums font-semibold">{money(billed)}</dd>
                   </div>
                 </dl>
-              </div>
             </div>
           </div>
         ) : null}
@@ -1139,6 +1144,10 @@ export function ProjectDetail({ id }: { id: string }) {
               <p className="text-sm text-[var(--color-muted)]">{project.description || "No description yet."}</p>
               <div className="project-facts mt-4">
                 <div>
+                  <div className="metric-label">Lifecycle</div>
+                  <div className="text-sm font-medium">{project.status}</div>
+                </div>
+                <div>
                   <div className="metric-label">Type</div>
                   <div className="text-sm font-medium">{project.projectType}</div>
                 </div>
@@ -1198,6 +1207,10 @@ export function ProjectDetail({ id }: { id: string }) {
                 />
               </Field>
             </div>
+            <div className="panel p-5">
+              <SectionHead title="Status history" />
+              <ProjectStatusHistory items={project.statusHistory ?? []} />
+            </div>
           </div>
         ) : null}
       </RecordShell>
@@ -1220,7 +1233,6 @@ export function ProjectDetail({ id }: { id: string }) {
             updateProject(project.id, {
               name: String(fd.get("name") || project.name),
               manager: String(fd.get("manager") || project.manager),
-              status: String(fd.get("status") || project.status) as ProjectStatus,
               due: String(fd.get("due") || project.due),
               start: String(fd.get("start") || project.start),
               description: String(fd.get("description") || ""),
@@ -1258,13 +1270,9 @@ export function ProjectDetail({ id }: { id: string }) {
             </TextSelect>
           </Field>
           <Field label="Status">
-            <TextSelect name="status" defaultValue={project.status}>
-              {["Planned", "On Track", "At Risk", "Overdue", "Completed"].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </TextSelect>
+            <p className="text-sm">
+              {project.status}. Change it from the lifecycle control in the header.
+            </p>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start">

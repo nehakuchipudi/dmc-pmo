@@ -176,7 +176,7 @@ export const seedProjects: Project[] = [
     companyName: "Cascade Ventures",
     manager: "M. Doyle",
     progress: 70,
-    status: "On Track",
+    status: "Active",
     due: "2026-08-22",
     start: "2026-07-01",
     budgetHours: 420,
@@ -200,6 +200,10 @@ export const seedProjects: Project[] = [
       deliverables: ["As-built layout", "WMS role matrix", "Training deck", "Go-live checklist"],
       assumptions: ["Client provides site access within 48h of request", "Existing network meets WMS latency requirements"],
     },
+    statusHistory: [
+      { id: "sh-wh-1", from: "Draft", to: "Planning", actor: "M. Doyle", at: "2026-07-01T09:00:00", when: "Jul 1, 2026, 9:00 AM" },
+      { id: "sh-wh-2", from: "Planning", to: "Active", actor: "M. Doyle", at: "2026-07-08T09:30:00", when: "Jul 8, 2026, 9:30 AM" },
+    ],
   },
   {
     id: "p-website",
@@ -230,6 +234,10 @@ export const seedProjects: Project[] = [
       deliverables: ["Design system", "Migrated pages"],
       assumptions: ["Content freeze during cutover weekend"],
     },
+    statusHistory: [
+      { id: "sh-ws-1", from: "Planning", to: "Active", actor: "M. Doyle", at: "2026-07-20T10:00:00", when: "Jul 20, 2026, 10:00 AM" },
+      { id: "sh-ws-2", from: "Active", to: "At Risk", actor: "M. Doyle", at: "2026-08-12T11:15:00", when: "Aug 12, 2026, 11:15 AM" },
+    ],
   },
   {
     id: "p-vendor",
@@ -238,7 +246,7 @@ export const seedProjects: Project[] = [
     companyName: "Cascade Ventures",
     manager: "S. Cho",
     progress: 90,
-    status: "On Track",
+    status: "Active",
     due: "2026-08-12",
     start: "2026-06-20",
     budgetHours: 120,
@@ -253,6 +261,9 @@ export const seedProjects: Project[] = [
     files: [],
     notes: [],
     scope: emptyScope(),
+    statusHistory: [
+      { id: "sh-vn-1", from: "Planning", to: "Active", actor: "S. Cho", at: "2026-06-22T09:00:00", when: "Jun 22, 2026, 9:00 AM" },
+    ],
   },
   {
     id: "p-fleet",
@@ -261,7 +272,7 @@ export const seedProjects: Project[] = [
     companyName: "Bellweather Logistics",
     manager: "S. Cho",
     progress: 15,
-    status: "Overdue",
+    status: "At Risk",
     due: "2026-07-30",
     start: "2026-06-01",
     budgetHours: 200,
@@ -276,6 +287,9 @@ export const seedProjects: Project[] = [
     files: [],
     notes: [],
     scope: emptyScope(),
+    statusHistory: [
+      { id: "sh-fl-1", from: "Active", to: "At Risk", actor: "S. Cho", at: "2026-07-31T16:00:00", when: "Jul 31, 2026, 4:00 PM" },
+    ],
   },
   {
     id: "p-pos",
@@ -284,7 +298,7 @@ export const seedProjects: Project[] = [
     companyName: "Northridge Retail Group",
     manager: "J. Alvarez",
     progress: 55,
-    status: "On Track",
+    status: "Active",
     due: "2026-08-28",
     start: "2026-07-10",
     budgetHours: 160,
@@ -299,6 +313,9 @@ export const seedProjects: Project[] = [
     files: [defaultFiles[1]],
     notes: [],
     scope: emptyScope(),
+    statusHistory: [
+      { id: "sh-pos-1", from: "Planning", to: "Active", actor: "J. Alvarez", at: "2026-07-12T09:00:00", when: "Jul 12, 2026, 9:00 AM" },
+    ],
   },
 ];
 
@@ -512,7 +529,7 @@ export const seedActivities: ActivityItem[] = [
   { id: "a3", type: "project", actor: "M. Doyle", action: "sent invoice INV-2291", entityType: "invoice", entityId: "inv-2291", entityLabel: "INV-2291", href: "/app/billing/view/?id=inv-2291", companyId: "c-cascade", when: "Aug 3, 2026", at: "2026-08-03T10:00:00", text: "Invoice INV-2291 sent ($12,400)." },
   { id: "a4", type: "status", actor: "J. Kim", action: "opened ticket #1042", entityType: "ticket", entityId: "t-1042", entityLabel: "Portal login issue", href: "/app/tickets/view/?id=t-1042", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 1, 2026", at: "2026-08-01T11:00:00", text: "New ticket raised: Portal login issue." },
   { id: "a5", type: "budget", actor: "M. Doyle", action: "set budget to $152,000", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Jul 1, 2026", at: "2026-07-01T09:00:00", text: "M. Doyle set budget to $152,000 on Q3 Warehouse Rollout." },
-  { id: "a6", type: "status", actor: "M. Doyle", action: "moved project to On Track", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Jul 8, 2026", at: "2026-07-08T09:30:00", text: "M. Doyle moved Q3 Warehouse Rollout to On Track." },
+  { id: "a6", type: "status", actor: "M. Doyle", action: "moved status from Planning to Active", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Jul 8, 2026", at: "2026-07-08T09:30:00", text: "M. Doyle moved status from Planning to Active on Q3 Warehouse Rollout." },
   { id: "a7", type: "file", actor: "J. Kim", action: "uploaded a file", entityType: "file", entityId: "f2", entityLabel: "Status_Update.docx", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 4, 2026", at: "2026-08-04T13:00:00", text: "J. Kim uploaded Status_Update.docx." },
   { id: "a8", type: "task", actor: "J. Kim", action: "moved task to In Progress", entityType: "task", entityId: "tk1", entityLabel: "Configure WMS user roles", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Aug 5, 2026", at: "2026-08-05T10:20:00", text: "J. Kim moved Configure WMS user roles to In Progress." },
   { id: "a9", type: "comment", actor: "M. Doyle", action: "Standup: go-live checklist is on track.", entityType: "project", entityId: "p-warehouse", entityLabel: "Q3 Warehouse Rollout", href: "/app/projects/view/?id=p-warehouse", companyId: "c-cascade", projectId: "p-warehouse", when: "Today, 8:40 AM", at: "2026-09-16T08:40:00", text: "M. Doyle: Standup: go-live checklist is on track." },

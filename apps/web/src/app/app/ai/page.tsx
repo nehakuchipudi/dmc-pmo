@@ -35,13 +35,13 @@ export default function InsightsPage() {
         tag: "Portfolio",
       });
     }
-    for (const project of projects.filter((p) => p.status === "At Risk" || p.status === "Overdue")) {
+    for (const project of projects.filter((p) => p.status === "At Risk" || p.status === "On Hold")) {
       rows.push({
         id: `p-${project.id}`,
         title: `${project.name} is ${project.status.toLowerCase()}`,
         body: `${project.progress}% complete, ${project.loggedHours}/${project.budgetHours} hours, margin ${project.marginPct}%. Manager ${project.manager}.`,
         href: `/app/projects/view/?id=${project.id}`,
-        severity: project.status === "Overdue" ? "Critical" : "Watch",
+        severity: project.status === "At Risk" ? "Critical" : "Watch",
         tag: "Delivery",
       });
     }

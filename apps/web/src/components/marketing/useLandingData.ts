@@ -56,10 +56,10 @@ export function useLandingData() {
       blocked: blockedDependencies(dependencies),
       pendingGates: gates.filter((g) => g.status === "In Review" || g.status === "Upcoming"),
       statusCounts: {
-        onTrack: projects.filter((p) => p.status === "On Track").length,
+        onTrack: projects.filter((p) => p.status === "Active").length,
         atRisk: projects.filter((p) => p.status === "At Risk").length,
-        overdue: projects.filter((p) => p.status === "Overdue").length,
-        planned: projects.filter((p) => p.status === "Planned").length,
+        overdue: projects.filter((p) => p.status === "On Hold").length,
+        planned: projects.filter((p) => p.status === "Draft" || p.status === "Planning").length,
         completed: projects.filter((p) => p.status === "Completed").length,
       },
       money,

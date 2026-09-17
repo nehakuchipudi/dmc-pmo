@@ -42,7 +42,7 @@ export default function ReportsPage() {
 
   const insights = useMemo(() => {
     const openTickets = tickets.filter((t) => t.status !== "Resolved").length;
-    const atRisk = projects.filter((p) => p.status !== "On Track").length;
+    const atRisk = projects.filter((p) => p.status === "At Risk" || p.status === "On Hold").length;
     const hours = timeEntries.reduce((s, e) => s + e.hours, 0);
     const billed = invoices.filter((i) => i.status !== "Draft").reduce((s, i) => s + i.amount, 0);
     const util = projects.length
