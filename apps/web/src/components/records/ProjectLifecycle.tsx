@@ -42,8 +42,8 @@ export function ProjectLifecycleBar({
               className={clsx(
                 "lifecycle-step",
                 current && "is-current",
-                valid && !current && "is-allowed",
-                !valid && !current && "is-blocked",
+                clickable && "is-allowed",
+                !clickable && !current && "is-blocked",
               )}
               disabled={!clickable}
               title={

@@ -303,6 +303,27 @@ function displayNow() {
   });
 }
 
+const WORKFLOW_KEY = "dmc-pmo-project-workflow";
+
+function loadProjectWorkflow() {
+  if (typeof window === "undefined") return DEFAULT_PROJECT_WORKFLOW;
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_KEY);
+    if (!raw) return DEFAULT_PROJECT_WORKFLOW;
+    const parsed = JSON.parse(raw) as ProjectWorkflow;
+    if (!parsed?.transitions || !parsed?.changerRoles) return DEFAULT_PROJECT_WORKFLOW;
+    return parsed;
+  } catch {
+    return DEFAULT_PROJECT_WORKFLOW;
+  }
+}
+
+function persistProjectWorkflow(workflow: ProjectWorkflow) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(WORKFLOW_KEY, JSON.stringify(workflow));
+  }
+}
+
 function currentUser() {
   if (typeof window === "undefined") return undefined;
   const id = window.localStorage.getItem("dmc-pmo-user");
@@ -371,7 +392,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     { type: "company", id: "c-northridge", label: "Northridge Retail Group" },
   ],
   focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
-  projectWorkflow: DEFAULT_PROJECT_WORKFLOW,
+  projectWorkflow: loadProjectWorkflow(),
 
   pushToast: (message, tone = "success") => {
     const id = uid("toast");
@@ -846,11 +867,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     return true;
   },
   setProjectWorkflowTransition: (from, to, allowed) => {
-    set((s) => ({ projectWorkflow: toggleWorkflowTransition(s.projectWorkflow, from, to, allowed) }));
+    const projectWorkflow = toggleWorkflowTransition(get().projectWorkflow, from, to, allowed);
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
     get().pushToast(allowed ? `Allowed ${from} to ${to}` : `Blocked ${from} to ${to}`);
   },
   setProjectWorkflowRoles: (roles) => {
-    set((s) => ({ projectWorkflow: { ...s.projectWorkflow, changerRoles: roles } }));
+    const projectWorkflow = { ...get().projectWorkflow, changerRoles: roles };
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
     get().pushToast("Lifecycle roles updated");
   },
 
