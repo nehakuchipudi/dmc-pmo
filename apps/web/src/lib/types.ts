@@ -516,4 +516,6 @@ export interface ResourceAllocation {
   hoursPerWeek: number;
   start: string;
   end: string;
+  projectRole?: string;
+  responsibility?: string;
 }

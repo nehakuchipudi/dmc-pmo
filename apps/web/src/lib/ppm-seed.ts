@@ -341,13 +341,13 @@ export const seedGates: GovernanceGate[] = [
 ];
 
 export const seedAllocations: ResourceAllocation[] = [
-  { id: "al-1", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 50, hoursPerWeek: 20, start: "2026-07-01", end: "2026-08-22" },
-  { id: "al-2", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-website", projectName: "Website Replatform", allocationPct: 30, hoursPerWeek: 12, start: "2026-07-15", end: "2026-09-10" },
-  { id: "al-3", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 40, hoursPerWeek: 16, start: "2026-07-20", end: "2026-08-22" },
-  { id: "al-4", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", allocationPct: 45, hoursPerWeek: 18, start: "2026-08-01", end: "2026-09-10" },
-  { id: "al-5", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", allocationPct: 35, hoursPerWeek: 14, start: "2026-06-20", end: "2026-08-12" },
-  { id: "al-6", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", allocationPct: 55, hoursPerWeek: 22, start: "2026-06-01", end: "2026-08-30" },
-  { id: "al-7", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-pos", projectName: "POS Integration", allocationPct: 25, hoursPerWeek: 10, start: "2026-07-10", end: "2026-08-28" },
-  { id: "al-8", memberId: "tm-sa", memberName: "S. Ahmed", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 60, hoursPerWeek: 24, start: "2026-08-01", end: "2026-08-22" },
-  { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28" },
+  { id: "al-1", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 50, hoursPerWeek: 20, start: "2026-07-01", end: "2026-08-22", projectRole: "Project Manager", responsibility: "Delivery and client" },
+  { id: "al-2", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-website", projectName: "Website Replatform", allocationPct: 30, hoursPerWeek: 12, start: "2026-07-15", end: "2026-09-10", projectRole: "Project Manager", responsibility: "Scope and reviews" },
+  { id: "al-3", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 40, hoursPerWeek: 16, start: "2026-07-20", end: "2026-08-22", projectRole: "Tech Lead", responsibility: "WMS roles and portal" },
+  { id: "al-4", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", allocationPct: 45, hoursPerWeek: 18, start: "2026-08-01", end: "2026-09-10", projectRole: "Tech Lead", responsibility: "CMS migration" },
+  { id: "al-5", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", allocationPct: 35, hoursPerWeek: 14, start: "2026-06-20", end: "2026-08-12", projectRole: "Project Manager", responsibility: "Intake workflows" },
+  { id: "al-6", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", allocationPct: 55, hoursPerWeek: 22, start: "2026-06-01", end: "2026-08-30", projectRole: "Project Manager", responsibility: "GPS vendor tests" },
+  { id: "al-7", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-pos", projectName: "POS Integration", allocationPct: 25, hoursPerWeek: 10, start: "2026-07-10", end: "2026-08-28", projectRole: "Analyst", responsibility: "Store rollout support" },
+  { id: "al-8", memberId: "tm-sa", memberName: "S. Ahmed", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 60, hoursPerWeek: 24, start: "2026-08-01", end: "2026-08-22", projectRole: "Developer", responsibility: "Racking and go-live" },
+  { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28", projectRole: "Project Manager", responsibility: "ERP sync" },
 ];
