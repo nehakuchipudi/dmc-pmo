@@ -473,19 +473,19 @@ export const seedTasks: Task[] = [
 ];
 
 export const seedTeam: TeamMember[] = [
-  { id: "tm-dm", name: "Dillon Morgan", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan" },
-  { id: "tm-md", name: "M. Doyle", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, avatarUrl: "https://i.pravatar.cc/128?u=m-doyle" },
-  { id: "tm-jk", name: "J. Kim", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, avatarUrl: "https://i.pravatar.cc/128?u=j-kim" },
-  { id: "tm-sc", name: "S. Cho", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
-  { id: "tm-sa", name: "S. Ahmed", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
-  { id: "tm-ja", name: "J. Alvarez", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
+  { id: "tm-dm", name: "Dillon Morgan", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, billRate: 225, avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan" },
+  { id: "tm-md", name: "M. Doyle", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, billRate: 185, avatarUrl: "https://i.pravatar.cc/128?u=m-doyle" },
+  { id: "tm-jk", name: "J. Kim", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, billRate: 145, avatarUrl: "https://i.pravatar.cc/128?u=j-kim" },
+  { id: "tm-sc", name: "S. Cho", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
+  { id: "tm-sa", name: "S. Ahmed", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
+  { id: "tm-ja", name: "J. Alvarez", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
 ];
 
 export const seedInvoices: Invoice[] = [
-  { id: "inv-2291", number: "INV-2291", companyId: "c-cascade", companyName: "Cascade Ventures", amount: 12400, terms: "Net 30", due: "2026-08-03", status: "Overdue", lineItems: [{ description: "Q3 Warehouse Rollout (Jul)", amount: 9800 }, { description: "Materials", amount: 2600 }] },
-  { id: "inv-2298", number: "INV-2298", companyId: "c-northridge", companyName: "Northridge Retail Group", amount: 8900, terms: "Net 30", due: "2026-08-18", status: "Sent", lineItems: [{ description: "POS Integration progress billing", amount: 8900 }] },
-  { id: "inv-2301", number: "INV-2301", companyId: "c-bellweather", companyName: "Bellweather Logistics", amount: 15600, terms: "Net 15", due: "2026-09-01", status: "Sent", lineItems: [{ description: "Fleet Tracking Pilot", amount: 15600 }] },
-  { id: "inv-2265", number: "INV-2265", companyId: "c-cascade", companyName: "Cascade Ventures", amount: 6900, terms: "Net 30", due: "2026-07-20", status: "Paid", lineItems: [{ description: "Website discovery", amount: 6900 }] },
+  { id: "inv-2291", number: "INV-2291", companyId: "c-cascade", companyName: "Cascade Ventures", amount: 12400, terms: "Net 30", due: "2026-08-03", status: "Overdue", projectId: "p-warehouse", lineItems: [{ description: "Q3 Warehouse Rollout (Jul)", amount: 9800 }, { description: "Materials", amount: 2600 }] },
+  { id: "inv-2298", number: "INV-2298", companyId: "c-northridge", companyName: "Northridge Retail Group", amount: 8900, terms: "Net 30", due: "2026-08-18", status: "Sent", projectId: "p-pos", lineItems: [{ description: "POS Integration progress billing", amount: 8900 }] },
+  { id: "inv-2301", number: "INV-2301", companyId: "c-bellweather", companyName: "Bellweather Logistics", amount: 15600, terms: "Net 15", due: "2026-09-01", status: "Sent", projectId: "p-fleet", lineItems: [{ description: "Fleet Tracking Pilot", amount: 15600 }] },
+  { id: "inv-2265", number: "INV-2265", companyId: "c-cascade", companyName: "Cascade Ventures", amount: 6900, terms: "Net 30", due: "2026-07-20", status: "Paid", projectId: "p-website", lineItems: [{ description: "Website discovery", amount: 6900 }] },
   { id: "inv-2288", number: "INV-2288", companyId: "c-oakton", companyName: "Oakton Technologies", amount: 11200, terms: "Net 30", due: "2026-07-29", status: "Overdue", lineItems: [{ description: "Support retainer Jul", amount: 11200 }] },
 ];
 

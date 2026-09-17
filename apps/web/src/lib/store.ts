@@ -198,6 +198,7 @@ type AppState = {
   unlinkContactProject: (contactId: string, projectId: string) => void;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
+  setProjectRate: (projectId: string, memberName: string, hourlyRate: number) => void;
   deleteProject: (id: string) => void;
   duplicateProject: (id: string) => string;
   deleteProjectFile: (projectId: string, fileId: string) => void;
@@ -746,6 +747,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       materials: [],
       files: [],
       notes: [],
+      rates: [],
       scope: {
         objectives: "",
         inScope: [],
@@ -1154,6 +1156,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Scope updated");
   },
 
+  setProjectRate: (projectId, memberName, hourlyRate) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project) return;
+    const rates = [
+      ...(project.rates ?? []).filter((row) => row.memberName !== memberName),
+      { memberName, hourlyRate },
+    ];
+    set((s) => ({
+      projects: s.projects.map((p) => (p.id === projectId ? { ...p, rates } : p)),
+    }));
+    get().logActivity({
+      type: "budget",
+      action: `set ${memberName} rate to $${hourlyRate}/h`,
+      companyId: project.companyId,
+      projectId,
+      entityType: "project",
+      entityId: projectId,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${projectId}`,
+    });
+    get().pushToast(`Rate updated for ${memberName}`);
+  },
+
   addTeamMember: (input) => {
     const id = uid("tm");
     const member: TeamMember = {
@@ -1163,6 +1188,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       role: input.role,
       initials: initialsFromName(input.name),
       active: input.active ?? true,
+      billRate: input.billRate,
       avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
     };
     set((s) => ({ team: [member, ...s.team] }));
