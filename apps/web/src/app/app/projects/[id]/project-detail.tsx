@@ -10,6 +10,7 @@ import { ActivityList, ActivityStream } from "@/components/records/ActivityStrea
 import { composeActivityFeed } from "@/lib/activity";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
 import { ProjectLifecycleBar, ProjectStatusHistory } from "@/components/records/ProjectLifecycle";
+import { ProjectTeamPanel, ProjectTeamPreview, ProjectTeamRail } from "@/components/records/ProjectTeamPanel";
 import {
   RecordFact,
   RecordMetric,
@@ -18,7 +19,6 @@ import {
   TonePill,
 } from "@/components/records/RecordChrome";
 import {
-  Avatar,
   Field,
   Modal,
   ProgressBar,
@@ -35,6 +35,7 @@ import type { CompanyAssetKind, CompanyAssetStatus, ProjectHealth } from "@/lib/
 
 const TABS = [
   "Overview",
+  "Team",
   "Schedule",
   "Insights",
   "Tasks",
@@ -397,14 +398,7 @@ export function ProjectDetail({ id }: { id: string }) {
               </dl>
             </RecordRailBlock>
             <RecordRailBlock title="Team">
-              <div className="flex flex-wrap gap-2">
-                {team.map((name) => (
-                  <span key={name} className="inline-flex items-center gap-1 text-sm">
-                    <Avatar initials={name.split(" ").map((p) => p[0]).join("").slice(0, 2)} name={name} size={26} />
-                    {name}
-                  </span>
-                ))}
-              </div>
+              <ProjectTeamRail projectId={project.id} onManage={() => goTab("Team")} />
             </RecordRailBlock>
             <RecordRailBlock title="Comments">
               <textarea
@@ -487,6 +481,8 @@ export function ProjectDetail({ id }: { id: string }) {
                 <RecordMetric label="Billed" value={money(billed)} hint={`${projectInvoices.length} invoices`} />
               </div>
             </div>
+
+            <ProjectTeamPreview projectId={project.id} onManage={() => goTab("Team")} />
 
             <div className="company-split">
               <div className="panel p-4">
@@ -587,6 +583,10 @@ export function ProjectDetail({ id }: { id: string }) {
                 </dl>
             </div>
           </div>
+        ) : null}
+
+        {tab === "Team" ? (
+          <ProjectTeamPanel projectId={project.id} managerName={project.manager} />
         ) : null}
 
         {tab === "Schedule" ? (

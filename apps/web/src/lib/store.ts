@@ -33,6 +33,7 @@ import {
   normalizeProjectStatus,
   toggleWorkflowTransition,
 } from "./project-lifecycle";
+import { weeklyHoursFromAllocation } from "./project-team";
 import {
   seedAllocations,
   seedBenefits,
@@ -240,6 +241,18 @@ type AppState = {
   addTeamMember: (input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean }) => string;
   updateTeamMember: (id: string, patch: Partial<TeamMember>) => void;
   setTeamMemberActive: (id: string, active: boolean) => void;
+  addProjectMember: (input: {
+    projectId: string;
+    memberId: string;
+    projectRole: string;
+    responsibility: string;
+    allocationPct: number;
+  }) => string;
+  updateProjectMember: (
+    id: string,
+    patch: Partial<Pick<ResourceAllocation, "projectRole" | "responsibility" | "allocationPct" | "hoursPerWeek" | "start" | "end">>,
+  ) => void;
+  removeProjectMember: (id: string) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
   createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
@@ -1304,6 +1317,85 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTeamMemberActive: (id, active) => {
     set((s) => ({ team: s.team.map((m) => (m.id === id ? { ...m, active } : m)) }));
     get().pushToast(active ? "Member reactivated" : "Member deactivated", active ? "success" : "danger");
+  },
+  addProjectMember: (input) => {
+    const project = get().projects.find((p) => p.id === input.projectId);
+    const member = get().team.find((m) => m.id === input.memberId);
+    if (!project || !member) return "";
+    if (get().allocations.some((row) => row.projectId === project.id && row.memberId === member.id)) {
+      get().pushToast(`${member.name} is already on this team`, "info");
+      return "";
+    }
+    const id = uid("al");
+    const allocationPct = Math.max(0, input.allocationPct);
+    const allocation: ResourceAllocation = {
+      id,
+      memberId: member.id,
+      memberName: member.name,
+      projectId: project.id,
+      projectName: project.name,
+      allocationPct,
+      hoursPerWeek: weeklyHoursFromAllocation(allocationPct),
+      start: project.start,
+      end: project.due,
+      projectRole: input.projectRole,
+      responsibility: input.responsibility,
+    };
+    set((s) => ({ allocations: [allocation, ...s.allocations] }));
+    get().logActivity({
+      type: "project",
+      action: `added ${member.name} to the team`,
+      companyId: project.companyId,
+      projectId: project.id,
+      entityType: "project",
+      entityId: project.id,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${project.id}`,
+    });
+    get().pushToast(`${member.name} added to the team`);
+    return id;
+  },
+  updateProjectMember: (id, patch) => {
+    const prev = get().allocations.find((row) => row.id === id);
+    const nextPatch = { ...patch };
+    if (nextPatch.allocationPct !== undefined) {
+      nextPatch.hoursPerWeek = weeklyHoursFromAllocation(nextPatch.allocationPct);
+    }
+    set((s) => ({
+      allocations: s.allocations.map((row) => (row.id === id ? { ...row, ...nextPatch } : row)),
+    }));
+    if (prev) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      get().logActivity({
+        type: "project",
+        action: `updated ${prev.memberName} on the team`,
+        companyId: project?.companyId,
+        projectId: prev.projectId,
+        entityType: "project",
+        entityId: prev.projectId,
+        entityLabel: project?.name ?? prev.projectName,
+        href: `/app/projects/view/?id=${prev.projectId}`,
+      });
+    }
+    get().pushToast("Team assignment updated");
+  },
+  removeProjectMember: (id) => {
+    const prev = get().allocations.find((row) => row.id === id);
+    set((s) => ({ allocations: s.allocations.filter((row) => row.id !== id) }));
+    if (prev) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      get().logActivity({
+        type: "project",
+        action: `removed ${prev.memberName} from the team`,
+        companyId: project?.companyId,
+        projectId: prev.projectId,
+        entityType: "project",
+        entityId: prev.projectId,
+        entityLabel: project?.name ?? prev.projectName,
+        href: `/app/projects/view/?id=${prev.projectId}`,
+      });
+      get().pushToast(`${prev.memberName} removed from the team`);
+    }
   },
 
   createTimeEntry: (input) => {
