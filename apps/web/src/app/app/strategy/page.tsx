@@ -11,10 +11,10 @@ import { useAuth } from "@/lib/auth";
 export default function StrategyPage() {
   const { user } = useAuth();
   const objectives = useAppStore((s) => s.objectives);
-  const programs = useAppStore((s) => s.programs);
+  const portfolios = useAppStore((s) => s.portfolios);
   const projects = useAppStore((s) => s.projects);
   const createObjective = useAppStore((s) => s.createObjective);
-  const coverage = objectiveCoverage(objectives, projects, programs);
+  const coverage = objectiveCoverage(objectives, projects, portfolios);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
@@ -25,7 +25,7 @@ export default function StrategyPage() {
     <div className="fade-in">
       <PageHeader
         title="Strategy"
-        subtitle="Objectives the portfolio must move. Programs and projects attach here so leadership can see alignment, not just activity."
+        subtitle="Objectives the portfolio must move. Portfolios and projects attach here so leadership can see alignment, not just activity."
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
             <Plus size={16} /> New objective
@@ -37,7 +37,7 @@ export default function StrategyPage() {
         <MetricCard
           label="Covered"
           value={coverage.filter((c) => c.linked.length).length}
-          hint="Objectives with at least one program"
+          hint="Objectives with at least one portfolio"
         />
         <MetricCard
           label="At risk"
@@ -49,12 +49,12 @@ export default function StrategyPage() {
           label="Avg progress"
           value={`${objectives.length ? Math.round(objectives.reduce((s, o) => s + o.progress, 0) / objectives.length) : 0}%`}
         />
-        <MetricCard label="Programs" value={programs.length} hint="Execution vehicles" />
+        <MetricCard label="Portfolios" value={portfolios.length} hint="Investment books" />
       </MetricGrid>
       <div className="panel p-5">
         <DataTable
           columns={["Code", "Objective", "Owner", "Horizon", "Status", "Progress", "Linked work"]}
-          rows={coverage.map(({ objective, linked, programs: linkedPrograms }) => [
+          rows={coverage.map(({ objective, linked, portfolios: linkedPortfolios }) => [
             objective.code,
             <div key={objective.id}>
               <div className="font-semibold">{objective.name}</div>
@@ -64,9 +64,9 @@ export default function StrategyPage() {
             objective.horizon,
             <Pill key={`${objective.id}-s`} value={objective.status} />,
             <ProgressLine key={`${objective.id}-p`} value={objective.progress} />,
-            linkedPrograms.length
-              ? `${linkedPrograms.map((p) => p.name).join(", ")} (${linked.length} projects)`
-              : "No program yet",
+            linkedPortfolios.length
+              ? `${linkedPortfolios.map((p) => p.name).join(", ")} (${linked.length} projects)`
+              : "No portfolio yet",
           ])}
         />
       </div>

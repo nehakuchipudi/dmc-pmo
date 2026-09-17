@@ -8,7 +8,6 @@ import { useAppStore } from "@/lib/store";
 export function useLandingData() {
   const projects = useAppStore((s) => s.projects);
   const portfolios = useAppStore((s) => s.portfolios);
-  const programs = useAppStore((s) => s.programs);
   const objectives = useAppStore((s) => s.objectives);
   const risks = useAppStore((s) => s.risks);
   const issues = useAppStore((s) => s.issues);
@@ -22,7 +21,7 @@ export function useLandingData() {
   return useMemo(() => {
     const delivery = portfolios.find((p) => p.id === "pf-delivery");
     const metrics = delivery ? portfolioMetrics(delivery, projects) : null;
-    const mapped = new Set(programs.flatMap((p) => p.projectIds));
+    const mapped = new Set(portfolios.flatMap((p) => p.projectIds));
     const aligned = projects.filter((p) => mapped.has(p.id)).length;
     const capacity = allocationByMember(allocations);
     const overloaded = capacity.filter((c) => c.pct > 100);
@@ -35,7 +34,6 @@ export function useLandingData() {
     return {
       projects,
       portfolios,
-      programs,
       objectives,
       risks,
       issues,
@@ -67,7 +65,6 @@ export function useLandingData() {
   }, [
     projects,
     portfolios,
-    programs,
     objectives,
     risks,
     issues,

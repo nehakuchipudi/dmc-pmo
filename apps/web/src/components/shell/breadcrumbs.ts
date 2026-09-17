@@ -5,7 +5,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   strategy: "Strategy",
   ideas: "Ideas",
   portfolios: "Portfolios",
-  programs: "Programs",
   projects: "Projects",
   work: "Work",
   tickets: "Tickets",
@@ -49,7 +48,6 @@ export function buildAppBreadcrumbs({
   invoices,
   retainers,
   portfolios,
-  programs,
 }: {
   pathname: string;
   recordId: string | null;
@@ -60,7 +58,6 @@ export function buildAppBreadcrumbs({
   invoices: { id: string; number: string }[];
   retainers: { id: string; name: string }[];
   portfolios: { id: string; name: string }[];
-  programs: { id: string; name: string }[];
 }): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
   const appIndex = parts[0] === "app" ? 1 : 0;
@@ -127,12 +124,6 @@ export function buildAppBreadcrumbs({
   if (section === "portfolios") {
     const portfolio = portfolios.find((p) => p.id === id);
     if (portfolio) crumbs.push({ label: portfolio.name });
-    return crumbs;
-  }
-
-  if (section === "programs") {
-    const program = programs.find((p) => p.id === id);
-    if (program) crumbs.push({ label: program.name });
     return crumbs;
   }
 
