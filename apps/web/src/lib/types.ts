@@ -238,7 +238,10 @@ export interface Task {
   dueLabel?: string;
   clientEditable: boolean;
   estimateHours: number;
+  budgetAmount?: number;
   dependsOn?: string;
+  parentTaskId?: string;
+  sortOrder?: number;
   links: TaskLink[];
 }
 
