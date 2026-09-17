@@ -10,6 +10,7 @@ import { ActivityList, ActivityStream } from "@/components/records/ActivityStrea
 import { composeActivityFeed } from "@/lib/activity";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
 import { ProjectLifecycleBar, ProjectStatusHistory } from "@/components/records/ProjectLifecycle";
+import { ProjectInsights } from "@/components/records/ProjectInsights";
 import { ProjectTeamPanel, ProjectTeamPreview, ProjectTeamRail } from "@/components/records/ProjectTeamPanel";
 import {
   RecordFact,
@@ -116,6 +117,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const activities = useAppStore((s) => s.activities);
   const allocations = useAppStore((s) => s.allocations);
   const teamMembers = useAppStore((s) => s.team);
+  const risks = useAppStore((s) => s.risks);
   const createMilestone = useAppStore((s) => s.createMilestone);
   const createTask = useAppStore((s) => s.createTask);
   const updateTask = useAppStore((s) => s.updateTask);
@@ -621,62 +623,21 @@ export function ProjectDetail({ id }: { id: string }) {
         ) : null}
 
         {tab === "Insights" ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-4">
+            <ProjectInsights
+              project={project}
+              tasks={projectTasks}
+              milestones={ms}
+              timeEntries={projectTime}
+              expenses={projectExpenses}
+              allocations={allocations}
+              team={teamMembers}
+              risks={risks}
+              memberNames={team}
+              onOpenTasks={() => goTab("Tasks")}
+              onOpenSchedule={() => goTab("Schedule")}
+            />
             <div className="panel p-4">
-              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Delivery</h2>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt>Health</dt>
-                  <dd>
-                    <TonePill value={health} />
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Progress</dt>
-                  <dd>{project.progress}%</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Open tickets</dt>
-                  <dd>{projectTickets.length}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Tasks done</dt>
-                  <dd>
-                    {projectTasks.filter((t) => t.status === "Done").length} / {projectTasks.length}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Hours remaining</dt>
-                  <dd>{remainingHours}h</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="panel p-4">
-              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Financials</h2>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt>Budget</dt>
-                  <dd>{money(project.budgetAmount)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Actual cost</dt>
-                  <dd>{money(actualCost)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Earned value</dt>
-                  <dd>{money(earned)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Expenses</dt>
-                  <dd>{money(expenseTotal)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Margin</dt>
-                  <dd>{project.marginPct}%</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="panel p-4 md:col-span-2">
               <SectionHead title="Activity vs hours" />
               <ActivityHoursChart points={chartPoints} />
             </div>
