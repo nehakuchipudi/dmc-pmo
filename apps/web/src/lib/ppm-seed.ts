@@ -5,7 +5,6 @@ import type {
   Idea,
   IssueItem,
   Portfolio,
-  Program,
   ResourceAllocation,
   RiskItem,
   StrategicObjective,
@@ -21,7 +20,7 @@ export const seedObjectives: StrategicObjective[] = [
     status: "On Track",
     target: "3 go-lives with on-time delivery",
     progress: 68,
-    description: "Warehouse, vendor, and logistics programs that raise client operating reliability.",
+    description: "Warehouse, vendor, and logistics work that raises client operating reliability.",
   },
   {
     id: "so-rev",
@@ -127,35 +126,11 @@ export const seedPortfolios: Portfolio[] = [
   },
 ];
 
-export const seedPrograms: Program[] = [
-  {
-    id: "pg-cascade",
-    name: "Cascade Operations Modernization",
-    portfolioId: "pf-delivery",
-    owner: "M. Doyle",
-    status: "At Risk",
-    projectIds: ["p-warehouse", "p-vendor", "p-website"],
-    objectiveId: "so-ops",
-    description: "One client program: warehouse go-live, vendor intake, and the public site that explains the change.",
-  },
-  {
-    id: "pg-commerce",
-    name: "Commerce and Logistics",
-    portfolioId: "pf-delivery",
-    owner: "S. Cho",
-    status: "Overdue",
-    projectIds: ["p-fleet", "p-pos"],
-    objectiveId: "so-exp",
-    description: "Retail POS sync and fleet tracking. Shared integration patterns, separate companies.",
-  },
-];
-
 export const seedRisks: RiskItem[] = [
   {
     id: "rk-1",
     title: "Homepage review may slip cutover",
     projectId: "p-website",
-    programId: "pg-cascade",
     owner: "J. Kim",
     probability: "High",
     impact: "High",
@@ -167,7 +142,6 @@ export const seedRisks: RiskItem[] = [
     id: "rk-2",
     title: "Fleet GPS vendor latency",
     projectId: "p-fleet",
-    programId: "pg-commerce",
     owner: "S. Cho",
     probability: "Medium",
     impact: "Critical",

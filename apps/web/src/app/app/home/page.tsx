@@ -11,7 +11,6 @@ import { useAppStore } from "@/lib/store";
 export default function HomePage() {
   const projects = useAppStore((s) => s.projects);
   const portfolios = useAppStore((s) => s.portfolios);
-  const programs = useAppStore((s) => s.programs);
   const objectives = useAppStore((s) => s.objectives);
   const risks = useAppStore((s) => s.risks);
   const gates = useAppStore((s) => s.gates);
@@ -23,7 +22,7 @@ export default function HomePage() {
   const snapshot = useMemo(() => {
     const delivery = portfolios.find((p) => p.id === "pf-delivery");
     const metrics = delivery ? portfolioMetrics(delivery, projects) : null;
-    const mapped = new Set(programs.flatMap((p) => p.projectIds));
+    const mapped = new Set(portfolios.flatMap((p) => p.projectIds));
     const aligned = projects.filter((p) => mapped.has(p.id)).length;
     const capacity = allocationByMember(allocations);
     const overloaded = capacity.filter((c) => c.pct > 100);
@@ -42,7 +41,7 @@ export default function HomePage() {
       blocked: blockedDependencies(dependencies),
       pendingGates: gates.filter((g) => g.status === "In Review" || g.status === "Upcoming"),
     };
-  }, [portfolios, projects, programs, allocations, risks, benefits, invoices, dependencies, gates]);
+  }, [portfolios, projects, allocations, risks, benefits, invoices, dependencies, gates]);
 
   return (
     <div className="fade-in">
@@ -54,7 +53,7 @@ export default function HomePage() {
         <MetricCard
           label="Right work"
           value={`${snapshot.alignedPct}%`}
-          hint="Active projects mapped to a program and objective"
+          hint="Active projects mapped to a portfolio and objective"
           tone={snapshot.alignedPct >= 80 ? "good" : "warn"}
         />
         <MetricCard
@@ -85,18 +84,18 @@ export default function HomePage() {
 
       <div className="split-2">
         <div className="panel p-5">
-          <h2 className="section-title">Programs in flight</h2>
+          <h2 className="section-title">Portfolios in flight</h2>
           <DataTable
-            columns={["Program", "Owner", "Health", "Progress", "Projects"]}
-            rows={programs.map((program) => {
-              const m = portfolioMetrics({ ...program, theme: "", budget: 0, objectiveIds: [] }, projects);
+            columns={["Portfolio", "Owner", "Health", "Progress", "Projects"]}
+            rows={portfolios.map((portfolio) => {
+              const m = portfolioMetrics(portfolio, projects);
               return [
-                <Link key={program.id} href={`/app/programs/view/?id=${program.id}`} className="font-semibold text-[var(--color-navy)]">
-                  {program.name}
+                <Link key={portfolio.id} href={`/app/portfolios/view/?id=${portfolio.id}`} className="font-semibold text-[var(--color-navy)]">
+                  {portfolio.name}
                 </Link>,
-                program.owner,
-                <Pill key={`${program.id}-h`} value={m.health} />,
-                <ProgressLine key={`${program.id}-p`} value={m.progress} />,
+                portfolio.owner,
+                <Pill key={`${portfolio.id}-h`} value={m.health} />,
+                <ProgressLine key={`${portfolio.id}-p`} value={m.progress} />,
                 String(m.items.length),
               ];
             })}

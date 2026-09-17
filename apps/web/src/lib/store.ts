@@ -43,7 +43,6 @@ import {
   seedIssues,
   seedObjectives,
   seedPortfolios,
-  seedPrograms,
   seedRisks,
 } from "./ppm-seed";
 import type {
@@ -69,7 +68,6 @@ import type {
   NotificationItem,
   Opportunity,
   Portfolio,
-  Program,
   Project,
   ProjectFile,
   ProjectNote,
@@ -167,7 +165,6 @@ type AppState = {
   objectives: StrategicObjective[];
   ideas: Idea[];
   portfolios: Portfolio[];
-  programs: Program[];
   risks: RiskItem[];
   issues: IssueItem[];
   dependencies: CrossDependency[];
@@ -395,7 +392,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   objectives: seedObjectives,
   ideas: seedIdeas,
   portfolios: seedPortfolios,
-  programs: seedPrograms,
   risks: seedRisks,
   issues: seedIssues,
   dependencies: seedDependencies,

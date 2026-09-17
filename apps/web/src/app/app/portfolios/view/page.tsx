@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { money } from "@/lib/seed";
@@ -13,12 +13,7 @@ function PortfolioView() {
   const id = useSearchParams().get("id");
   const portfolio = useAppStore((s) => s.portfolios.find((p) => p.id === id));
   const projects = useAppStore((s) => s.projects);
-  const allPrograms = useAppStore((s) => s.programs);
   const objectives = useAppStore((s) => s.objectives);
-  const programs = useMemo(
-    () => allPrograms.filter((p) => p.portfolioId === id),
-    [allPrograms, id],
-  );
 
   if (!portfolio) {
     return (
@@ -70,18 +65,6 @@ function PortfolioView() {
           />
         </div>
         <div className="space-y-4">
-          <div className="panel p-5">
-            <h2 className="section-title">Programs</h2>
-            {programs.map((program) => (
-              <Link key={program.id} href={`/app/programs/view/?id=${program.id}`} className="insight-card block">
-                <div className="font-semibold">{program.name}</div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {program.owner} · {program.projectIds.length} projects
-                </div>
-              </Link>
-            ))}
-            {!programs.length ? <p className="text-sm text-[var(--color-muted)]">No programs in this portfolio.</p> : null}
-          </div>
           <div className="panel p-5">
             <h2 className="section-title">Objectives served</h2>
             {linkedObjectives.map((o) => (

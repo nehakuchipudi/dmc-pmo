@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import {
   Briefcase,
-  FolderKanban,
   LayoutDashboard,
   Layers3,
   Scale,
@@ -18,7 +17,6 @@ const SIDE_ITEMS = [
   { label: "Home", icon: LayoutDashboard, key: "home" },
   { label: "Strategy", icon: Target, key: "strategy" },
   { label: "Portfolios", icon: Layers3, key: "portfolio" },
-  { label: "Programs", icon: FolderKanban, key: "programs" },
   { label: "Projects", icon: Briefcase, key: "projects" },
   { label: "Resources", icon: Users, key: "resources" },
   { label: "Risks", icon: ShieldAlert, key: "risks" },
@@ -53,15 +51,15 @@ export function ProductFrame({
             <SideLink key={item.key} item={item} active={active} />
           ))}
           <div className="mkt-product-group">Align</div>
-          {SIDE_ITEMS.slice(1, 4).map((item) => (
+          {SIDE_ITEMS.slice(1, 3).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
           <div className="mkt-product-group">Deliver</div>
-          {SIDE_ITEMS.slice(4, 5).map((item) => (
+          {SIDE_ITEMS.slice(3, 4).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
           <div className="mkt-product-group">Govern</div>
-          {SIDE_ITEMS.slice(5).map((item) => (
+          {SIDE_ITEMS.slice(4).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
         </nav>

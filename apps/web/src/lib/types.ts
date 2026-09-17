@@ -15,8 +15,6 @@ export type ProjectStatus =
   | "At Risk"
   | "Completed"
   | "Cancelled";
-export type ProgramStatus = "On Track" | "At Risk" | "Overdue" | "Planned" | "Completed";
-
 export interface ProjectStatusChange {
   id: string;
   from: ProjectStatus;
@@ -439,24 +437,12 @@ export interface Portfolio {
   description: string;
 }
 
-export interface Program {
-  id: string;
-  name: string;
-  portfolioId: string;
-  owner: string;
-  status: ProgramStatus;
-  projectIds: string[];
-  objectiveId?: string;
-  description: string;
-}
-
 export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
 export type RiskStatus = "Open" | "Mitigating" | "Closed";
 export interface RiskItem {
   id: string;
   title: string;
   projectId?: string;
-  programId?: string;
   owner: string;
   probability: RiskLevel;
   impact: RiskLevel;

@@ -1,7 +1,6 @@
 import type {
   CrossDependency,
   Portfolio,
-  Program,
   Project,
   ResourceAllocation,
   RiskItem,
@@ -49,22 +48,6 @@ export function portfolioMetrics(portfolio: Portfolio, projects: Project[]) {
   };
 }
 
-export function programMetrics(program: Program, projects: Project[]) {
-  return portfolioMetrics(
-    {
-      id: program.id,
-      name: program.name,
-      owner: program.owner,
-      theme: "",
-      budget: 0,
-      projectIds: program.projectIds,
-      objectiveIds: program.objectiveId ? [program.objectiveId] : [],
-      description: program.description,
-    },
-    projects,
-  );
-}
-
 export function allocationByMember(allocations: ResourceAllocation[]) {
   const map = new Map<string, { name: string; pct: number; hours: number; count: number }>();
   for (const row of allocations) {
@@ -85,12 +68,12 @@ export function blockedDependencies(deps: CrossDependency[]) {
   return deps.filter((d) => d.status !== "On Track");
 }
 
-export function objectiveCoverage(objectives: StrategicObjective[], projects: Project[], programs: Program[]) {
+export function objectiveCoverage(objectives: StrategicObjective[], projects: Project[], portfolios: Portfolio[]) {
   return objectives.map((objective) => {
-    const linkedPrograms = programs.filter((p) => p.objectiveId === objective.id);
-    const projectIds = new Set(linkedPrograms.flatMap((p) => p.projectIds));
+    const linkedPortfolios = portfolios.filter((p) => p.objectiveIds.includes(objective.id));
+    const projectIds = new Set(linkedPortfolios.flatMap((p) => p.projectIds));
     const linked = projects.filter((p) => projectIds.has(p.id));
-    return { objective, linked, programs: linkedPrograms };
+    return { objective, linked, portfolios: linkedPortfolios };
   });
 }
 

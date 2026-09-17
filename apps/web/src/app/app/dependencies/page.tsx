@@ -26,7 +26,7 @@ export default function DependenciesPage() {
     <div className="fade-in">
       <PageHeader
         title="Dependencies"
-        subtitle="Cross-project holds. Task-level predecessors stay on the project Gantt. This view is for program and portfolio coordination."
+        subtitle="Cross-project holds. Task-level predecessors stay on the project Gantt. This view is for portfolio coordination."
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
             <Plus size={16} /> Record dependency

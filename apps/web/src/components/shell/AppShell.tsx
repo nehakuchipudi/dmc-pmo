@@ -14,7 +14,6 @@ import {
   ClipboardList,
   Clock3,
   FileText,
-  FolderKanban,
   GitBranch,
   Landmark,
   Layers3,
@@ -58,7 +57,6 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/strategy", label: "Strategy", icon: Target },
       { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
       { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
-      { href: "/app/programs", label: "Programs", icon: FolderKanban },
     ],
   },
   {
@@ -137,7 +135,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const tickets = useAppStore((s) => s.tickets);
   const contacts = useAppStore((s) => s.contacts);
   const portfolios = useAppStore((s) => s.portfolios);
-  const programs = useAppStore((s) => s.programs);
   const ideas = useAppStore((s) => s.ideas);
   const invoices = useAppStore((s) => s.invoices);
   const retainers = useAppStore((s) => s.retainers);
@@ -218,14 +215,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!q) return [];
     return [
       ...portfolios.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/portfolios/view/?id=${p.id}`, label: p.name, type: "Portfolio" })),
-      ...programs.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/programs/view/?id=${p.id}`, label: p.name, type: "Program" })),
       ...projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/projects/view/?id=${p.id}`, label: p.name, type: "Project" })),
       ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
       ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: "/app/ideas", label: i.name, type: "Idea" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
     ].slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, programs, ideas]);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas]);
 
   const recentHits = useMemo(
     () =>
@@ -239,9 +235,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ? `/app/tickets/view/?id=${item.id}`
                 : item.type === "portfolio"
                   ? `/app/portfolios/view/?id=${item.id}`
-                  : item.type === "program"
-                    ? `/app/programs/view/?id=${item.id}`
-                    : item.type === "contact"
+                  : item.type === "contact"
                       ? `/app/contacts/view/?id=${item.id}`
                       : "/app/home",
         label: item.label,
@@ -262,9 +256,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         invoices,
         retainers,
         portfolios,
-        programs,
       }),
-    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios, programs],
+    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios],
   );
 
   const companyChoices = useMemo(() => {

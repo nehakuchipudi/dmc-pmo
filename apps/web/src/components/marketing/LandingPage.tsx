@@ -27,7 +27,7 @@ const TABS = [
 ] as const;
 
 const FEATURES = [
-  { title: "Portfolio Management", icon: Layers3, body: "One book for every program, with health and spend in the same view." },
+  { title: "Portfolio Management", icon: Layers3, body: "One book for the work you fund, with health and spend in the same view." },
   { title: "Project Management", icon: Briefcase, body: "Plans, tickets, and status on the same project record." },
   { title: "Resource Management", icon: Users, body: "See who is over capacity before you start more work." },
   { title: "Financial Management", icon: Wallet, body: "Budget, hours, invoices, and margin stay connected." },
@@ -195,27 +195,6 @@ function portfolioScenes(data: LandingData): FilmScene[] {
             <BigStat label="Budget" value={data.metrics ? data.money(data.metrics.invested) : "-"} />
             <BigStat label="Aligned" value={`${data.alignedPct}%`} />
             <BigStat label="Margin" value={`${data.metrics?.margin ?? 0}%`} />
-          </div>
-        </ProductFrame>
-      ),
-    },
-    {
-      id: "programs",
-      title: "Programs",
-      caption: "Programs keep related projects in one story.",
-      durationMs: 5200,
-      render: () => (
-        <ProductFrame title="portfolio / programs" active="programs" compact>
-          <div className="mkt-mini">
-            {data.programs.map((program) => (
-              <div key={program.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{program.name}</strong>
-                  <Pill value={program.status} />
-                </div>
-                <p>{program.description}</p>
-              </div>
-            ))}
           </div>
         </ProductFrame>
       ),
