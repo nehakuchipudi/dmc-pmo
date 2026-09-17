@@ -1,11 +1,22 @@
 "use client";
 
-import { startTransition, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  startTransition,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type UIEvent,
+} from "react";
 import { GanttBoard } from "@/components/Gantt";
 import {
   addDays,
   buildPlanRows,
   durationDays,
+  ganttDayLabel,
+  ganttMonthBands,
+  isWeekend,
   type PlanRow,
 } from "@/lib/project-plan";
 import { formatShortDate, money } from "@/lib/seed";
@@ -84,8 +95,12 @@ export function ProjectSchedule({
   const [linkFileId, setLinkFileId] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [scale, setScale] = useState<"Days" | "Weeks">("Days");
-  const [zoom, setZoom] = useState(36);
+  const [scale, setScale] = useState<"Days" | "Weeks">("Weeks");
+  const [paneWidth, setPaneWidth] = useState(0);
+  const zoom = 36;
+  const tableRef = useRef<HTMLDivElement>(null);
+  const ganttRef = useRef<HTMLDivElement>(null);
+  const syncingScroll = useRef(false);
   const dragRef = useRef<{ id: string; mode: "move" | "start" | "end"; startX: number; start: string; due: string } | null>(
     null,
   );
@@ -131,14 +146,46 @@ export function ProjectSchedule({
   const dayCount = Math.max(Math.ceil((Date.parse(`${bounds.end}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`)) / 86400000) + 1, 14);
   const tickStep = scale === "Days" ? 1 : 7;
   const ticks = Array.from({ length: Math.ceil(dayCount / tickStep) }, (_, i) => addDays(bounds.start, i * tickStep));
-  const timelineWidth = Math.max(ticks.length * zoom, 520);
+  const monthBands = ganttMonthBands(ticks);
+  const minZoom = scale === "Days" ? 8 : 22;
+  const fittedZoom = paneWidth > 0 ? Math.floor((paneWidth - 2) / Math.max(ticks.length, 1)) : 0;
+  const cellWidth = view === "Split" ? Math.max(minZoom, fittedZoom || zoom) : zoom;
+  const timelineWidth = Math.max(ticks.length * cellWidth, paneWidth || 520);
   const span = Math.max(Date.parse(`${bounds.end}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`), 1);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayOffset = Date.parse(`${today}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`);
+  const todayPct = todayOffset >= 0 && todayOffset <= span ? (todayOffset / span) * 100 : null;
+  const compact = view === "Split";
+
+  useLayoutEffect(() => {
+    const pane = ganttRef.current;
+    if (!pane || view !== "Split") return;
+    const measure = () => setPaneWidth(pane.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, [view]);
 
   function pctLeft(iso: string) {
-    return ((Date.parse(`${iso}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`)) / span) * 100;
+    const left = ((Date.parse(`${iso}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`)) / span) * 100;
+    return Math.max(0, Math.min(100, left));
   }
   function pctWidth(start: string, due: string) {
-    return Math.max(((Date.parse(`${due}T12:00:00`) - Date.parse(`${start}T12:00:00`)) / span) * 100, 1.6);
+    const a = Date.parse(`${start}T12:00:00`);
+    const b = Date.parse(`${due}T12:00:00`);
+    return Math.max(((Math.max(a, b) - Math.min(a, b)) / span) * 100, 1.8);
+  }
+
+  function syncScroll(source: "table" | "gantt") {
+    return (event: UIEvent<HTMLDivElement>) => {
+      if (syncingScroll.current) return;
+      const other = source === "table" ? ganttRef.current : tableRef.current;
+      if (!other) return;
+      syncingScroll.current = true;
+      other.scrollTop = event.currentTarget.scrollTop;
+      syncingScroll.current = false;
+    };
   }
 
   function toggle(id: string) {
@@ -285,20 +332,20 @@ export function ProjectSchedule({
           </div>
 
           <div className={`plan-board ${view === "Split" ? "is-split" : ""}`}>
-            <div className="plan-table-wrap panel">
-              <table className="wbs-table plan-table">
+            <div className="plan-table-wrap panel" ref={tableRef} onScroll={syncScroll("table")}>
+              <table className={`wbs-table plan-table ${compact ? "is-compact" : ""}`}>
                 <thead>
                   <tr>
                     <th className="wbs-name">Task</th>
                     <th>Assignee</th>
-                    <th className="wbs-num">Duration</th>
+                    {compact ? null : <th className="wbs-num">Duration</th>}
                     <th className="wbs-date">Start</th>
                     <th className="wbs-date">Due</th>
                     <th>Status</th>
-                    <th className="wbs-num">Budget</th>
-                    <th className="wbs-num">Estimated Hours</th>
-                    <th className="wbs-num">Actual Hours</th>
-                    <th>Dependency</th>
+                    {compact ? null : <th className="wbs-num">Budget</th>}
+                    {compact ? null : <th className="wbs-num">Estimated Hours</th>}
+                    {compact ? null : <th className="wbs-num">Actual Hours</th>}
+                    {compact ? null : <th>Dependency</th>}
                     <th />
                   </tr>
                 </thead>
@@ -364,7 +411,7 @@ export function ProjectSchedule({
                             <span className="text-[var(--color-muted)]">-</span>
                           )}
                         </td>
-                        <td className="wbs-num tabular-nums">{row.duration}d</td>
+                        {compact ? null : <td className="wbs-num tabular-nums">{row.duration}d</td>}
                         <td className="wbs-date">
                           {editable ? (
                             <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateTask(row.id, { start: e.target.value })} />
@@ -396,43 +443,47 @@ export function ProjectSchedule({
                             <span className={statusClass(row.status)}>{row.status}</span>
                           )}
                         </td>
-                        <td className="wbs-num tabular-nums">{money(row.budget)}</td>
-                        <td className="wbs-num">
-                          {editable ? (
-                            <input
-                              type="number"
-                              min={0}
-                              className="wbs-pct-input"
-                              value={row.task?.estimateHours ?? row.estimateHours}
-                              aria-label="Estimated hours"
-                              onChange={(e) => onUpdateTask(row.id, { estimateHours: Number(e.target.value) || 0 })}
-                            />
-                          ) : (
-                            <span className="tabular-nums">{row.estimateHours}h</span>
-                          )}
-                        </td>
-                        <td className="wbs-num tabular-nums">{row.actualHours}h</td>
-                        <td>
-                          {editable ? (
-                            <select
-                              className="wbs-select"
-                              value={row.dependsOn ?? ""}
-                              aria-label="Dependency"
-                              onChange={(e) => onUpdateTask(row.id, { dependsOn: e.target.value || undefined })}
-                            >
-                              <option value="">None</option>
-                              {tasks
-                                .filter((item) => item.id !== row.id)
-                                .map((item) => (
-                                  <option key={item.id} value={item.id}>
-                                    {item.name}
-                                  </option>
-                                ))}
-                            </select>
-                          ) : (
-                            <span className="text-[var(--color-muted)]">-</span>
-                          )}
-                        </td>
+                        {compact ? null : <td className="wbs-num tabular-nums">{money(row.budget)}</td>}
+                        {compact ? null : (
+                          <td className="wbs-num">
+                            {editable ? (
+                              <input
+                                type="number"
+                                min={0}
+                                className="wbs-pct-input"
+                                value={row.task?.estimateHours ?? row.estimateHours}
+                                aria-label="Estimated hours"
+                                onChange={(e) => onUpdateTask(row.id, { estimateHours: Number(e.target.value) || 0 })}
+                              />
+                            ) : (
+                              <span className="tabular-nums">{row.estimateHours}h</span>
+                            )}
+                          </td>
+                        )}
+                        {compact ? null : <td className="wbs-num tabular-nums">{row.actualHours}h</td>}
+                        {compact ? null : (
+                          <td>
+                            {editable ? (
+                              <select
+                                className="wbs-select"
+                                value={row.dependsOn ?? ""}
+                                aria-label="Dependency"
+                                onChange={(e) => onUpdateTask(row.id, { dependsOn: e.target.value || undefined })}
+                              >
+                                <option value="">None</option>
+                                {tasks
+                                  .filter((item) => item.id !== row.id)
+                                  .map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {item.name}
+                                    </option>
+                                  ))}
+                              </select>
+                            ) : (
+                              <span className="text-[var(--color-muted)]">-</span>
+                            )}
+                          </td>
+                        )}
                         <td className="text-right">
                           {row.kind === "milestone" ? (
                             <button type="button" className="btn btn-ghost text-sm" onClick={() => onAddTask(row.id)}>
@@ -463,7 +514,7 @@ export function ProjectSchedule({
                   })}
                   {!visibleRows.length ? (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center text-[var(--color-muted)]">
+                      <td colSpan={compact ? 6 : 11} className="p-8 text-center text-[var(--color-muted)]">
                         No milestones yet. Add a milestone to start the plan.
                       </td>
                     </tr>
@@ -473,19 +524,43 @@ export function ProjectSchedule({
             </div>
 
             {view === "Split" ? (
-              <div className="plan-gantt panel">
+              <div className="plan-gantt panel" ref={ganttRef} onScroll={syncScroll("gantt")}>
                 <div className="plan-gantt-inner" style={{ width: timelineWidth }}>
-                  <div className="plan-gantt-ticks" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(${zoom}px, 1fr))` }}>
-                    {ticks.map((tick) => (
-                      <div key={tick} className="plan-gantt-tick">
-                        {tick.slice(5).replace("-", "/")}
-                      </div>
-                    ))}
+                  <div className="plan-gantt-head">
+                    <div
+                      className="plan-gantt-months"
+                      style={{ gridTemplateColumns: monthBands.map((band) => `${band.count * cellWidth}px`).join(" ") }}
+                    >
+                      {monthBands.map((band) => (
+                        <div key={band.key} className="plan-gantt-month">
+                          {band.label}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="plan-gantt-ticks" style={{ gridTemplateColumns: `repeat(${ticks.length}, ${cellWidth}px)` }}>
+                      {ticks.map((tick) => (
+                        <div key={tick} className={`plan-gantt-tick ${isWeekend(tick) ? "is-weekend" : ""}`}>
+                          {ganttDayLabel(tick)}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {visibleRows.map((row) => {
                     const color = rowColor(row, milestoneIndex);
                     return (
                       <div key={`g-${row.id}`} className={`plan-gantt-lane is-${row.kind}`}>
+                        {ticks.map((tick) =>
+                          isWeekend(tick) ? (
+                            <span
+                              key={`${row.id}-${tick}`}
+                              className="plan-gantt-weekend"
+                              style={{
+                                left: `${pctLeft(tick)}%`,
+                                width: `${Math.max((tickStep / dayCount) * 100, 0.8)}%`,
+                              }}
+                            />
+                          ) : null,
+                        )}
                         <div
                           className={`plan-gantt-bar is-${row.kind}`}
                           style={{
@@ -512,6 +587,7 @@ export function ProjectSchedule({
                       </div>
                     );
                   })}
+                  {todayPct != null ? <div className="plan-gantt-today" style={{ left: `${todayPct}%` }} aria-hidden /> : null}
                 </div>
               </div>
             ) : null}
