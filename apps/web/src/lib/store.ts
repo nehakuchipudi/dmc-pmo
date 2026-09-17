@@ -127,6 +127,9 @@ type CreateTaskInput = {
   start?: string;
   status?: TaskStatus;
   milestoneId?: string;
+  parentTaskId?: string;
+  estimateHours?: number;
+  budgetAmount?: number;
   priority?: TaskPriority;
 };
 
@@ -225,6 +228,7 @@ type AppState = {
   createTask: (input: CreateTaskInput) => string;
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  reorderTasks: (orderedIds: string[]) => void;
   createMilestone: (
     projectId: string,
     name: string,
@@ -1063,7 +1067,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       due: input.due,
       start: input.start ?? todayIso(),
       clientEditable: false,
-      estimateHours: 4,
+      estimateHours: input.estimateHours ?? 4,
+      budgetAmount: input.budgetAmount,
+      parentTaskId: input.parentTaskId,
+      sortOrder: get().tasks.filter((t) =>
+        input.parentTaskId
+          ? t.parentTaskId === input.parentTaskId
+          : t.projectId === project.id && t.milestoneId === input.milestoneId && !t.parentTaskId,
+      ).length,
       links: [],
     };
     set((s) => ({ tasks: [task, ...s.tasks] }));
@@ -1133,8 +1144,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteTask: (id) => {
-    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    set((s) => {
+      const remove = new Set([id, ...s.tasks.filter((t) => t.parentTaskId === id).map((t) => t.id)]);
+      return { tasks: s.tasks.filter((t) => !remove.has(t.id)) };
+    });
     get().pushToast("Task deleted", "danger");
+  },
+
+  reorderTasks: (orderedIds) => {
+    set((s) => ({
+      tasks: s.tasks.map((task) => {
+        const index = orderedIds.indexOf(task.id);
+        return index >= 0 ? { ...task, sortOrder: index } : task;
+      }),
+    }));
   },
 
   createMilestone: (projectId, name, due, opts) => {

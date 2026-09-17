@@ -120,6 +120,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const risks = useAppStore((s) => s.risks);
   const createMilestone = useAppStore((s) => s.createMilestone);
   const createTask = useAppStore((s) => s.createTask);
+  const reorderTasks = useAppStore((s) => s.reorderTasks);
   const updateTask = useAppStore((s) => s.updateTask);
   const updateMilestone = useAppStore((s) => s.updateMilestone);
   const deleteTask = useAppStore((s) => s.deleteTask);
@@ -593,30 +594,51 @@ export function ProjectDetail({ id }: { id: string }) {
 
         {tab === "Schedule" ? (
           <ProjectSchedule
+            projectId={project.id}
+            projectName={project.name}
+            projectStatus={project.status}
             milestones={ms}
             tasks={projectTasks}
             projectFiles={project.files.map((f) => ({ id: f.id, name: f.name }))}
             projectStart={project.start}
             projectDue={project.due}
             hoursByTaskId={hoursByTask}
+            assignees={team}
+            rateFor={(name) => memberRate(name, project, teamMembers)}
             onUpdateDates={(start, due) => updateProject(project.id, { start, due })}
-            onAddPhase={() => createMilestone(project.id, "New phase", project.due, { kind: "phase" })}
+            onAddPhase={() => createMilestone(project.id, "New milestone", project.due, { kind: "phase" })}
             onAddGroup={(phaseId) =>
               createMilestone(project.id, "New workstream", project.due, { kind: "group", parentId: phaseId })
             }
-            onAddTask={(groupId) =>
+            onAddTask={(milestoneId) => {
+              const group = ms.find((row) => row.parentId === milestoneId);
               createTask({
                 name: "New task",
                 projectId: project.id,
                 assignee: project.manager,
                 due: project.due,
-                milestoneId: groupId,
-              })
-            }
+                start: project.start,
+                milestoneId: group?.id ?? milestoneId,
+              });
+            }}
+            onAddSubtask={(taskId) => {
+              const parent = projectTasks.find((task) => task.id === taskId);
+              createTask({
+                name: "New subtask",
+                projectId: project.id,
+                assignee: parent?.assignee ?? project.manager,
+                due: parent?.due ?? project.due,
+                start: parent?.start ?? project.start,
+                milestoneId: parent?.milestoneId,
+                parentTaskId: taskId,
+                estimateHours: 2,
+              });
+            }}
             onUpdateTask={updateTask}
             onUpdateMilestone={updateMilestone}
             onDeleteTask={deleteTask}
             onDeleteMilestone={deleteMilestone}
+            onReorderTasks={reorderTasks}
             onAddTaskLink={addTaskLink}
             onRemoveTaskLink={removeTaskLink}
           />
