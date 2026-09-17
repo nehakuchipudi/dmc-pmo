@@ -27,6 +27,13 @@ import {
 } from "./seed";
 import { makeActivity } from "./activity";
 import {
+  DEFAULT_PROJECT_WORKFLOW,
+  canChangeProjectStatus,
+  isValidProjectTransition,
+  normalizeProjectStatus,
+  toggleWorkflowTransition,
+} from "./project-lifecycle";
+import {
   seedAllocations,
   seedBenefits,
   seedDependencies,
@@ -66,6 +73,10 @@ import type {
   ProjectFile,
   ProjectNote,
   ProjectScope,
+  ProjectStatus,
+  ProjectStatusChange,
+  ProjectWorkflow,
+  Role,
   ResourceAllocation,
   Retainer,
   RetainerPeriod,
@@ -162,6 +173,7 @@ type AppState = {
   toasts: Toast[];
   recentlyViewed: { type: string; id: string; label: string }[];
   focusCompanyId: string | null;
+  projectWorkflow: ProjectWorkflow;
 
   pushToast: (message: string, tone?: Toast["tone"]) => void;
   setFocusCompanyId: (id: string | null) => void;
@@ -198,6 +210,9 @@ type AppState = {
   unlinkContactProject: (contactId: string, projectId: string) => void;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
+  setProjectStatus: (projectId: string, next: ProjectStatus) => boolean;
+  setProjectWorkflowTransition: (from: ProjectStatus, to: ProjectStatus, allowed: boolean) => void;
+  setProjectWorkflowRoles: (roles: Role[]) => void;
   setProjectRate: (projectId: string, memberName: string, hourlyRate: number) => void;
   deleteProject: (id: string) => void;
   duplicateProject: (id: string) => string;
@@ -288,10 +303,35 @@ function displayNow() {
   });
 }
 
-function currentActor() {
-  if (typeof window === "undefined") return "Staff";
+const WORKFLOW_KEY = "dmc-pmo-project-workflow";
+
+function loadProjectWorkflow() {
+  if (typeof window === "undefined") return DEFAULT_PROJECT_WORKFLOW;
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_KEY);
+    if (!raw) return DEFAULT_PROJECT_WORKFLOW;
+    const parsed = JSON.parse(raw) as ProjectWorkflow;
+    if (!parsed?.transitions || !parsed?.changerRoles) return DEFAULT_PROJECT_WORKFLOW;
+    return parsed;
+  } catch {
+    return DEFAULT_PROJECT_WORKFLOW;
+  }
+}
+
+function persistProjectWorkflow(workflow: ProjectWorkflow) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(WORKFLOW_KEY, JSON.stringify(workflow));
+  }
+}
+
+function currentUser() {
+  if (typeof window === "undefined") return undefined;
   const id = window.localStorage.getItem("dmc-pmo-user");
-  return users.find((u) => u.id === id)?.name ?? "Staff";
+  return users.find((u) => u.id === id);
+}
+
+function currentActor() {
+  return currentUser()?.name ?? "Staff";
 }
 
 function activityRecord(
@@ -352,6 +392,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     { type: "company", id: "c-northridge", label: "Northridge Retail Group" },
   ],
   focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
+  projectWorkflow: loadProjectWorkflow(),
 
   pushToast: (message, tone = "success") => {
     const id = uid("toast");
@@ -733,7 +774,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyName: company.name,
       manager: input.manager,
       progress: 0,
-      status: "Planned",
+      status: "Draft",
       due: input.due,
       start: todayIso(),
       budgetHours: input.budgetHours,
@@ -748,6 +789,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       files: [],
       notes: [],
       rates: [],
+      statusHistory: [],
       scope: {
         objectives: "",
         inScope: [],
@@ -777,24 +819,79 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
 
+  setProjectStatus: (projectId, nextRaw) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project) return false;
+    const from = normalizeProjectStatus(project.status);
+    const next = normalizeProjectStatus(nextRaw);
+    if (from === next) return true;
+    const user = currentUser();
+    if (!canChangeProjectStatus(user?.role, get().projectWorkflow)) {
+      get().pushToast("You are not allowed to change project status", "danger");
+      return false;
+    }
+    if (!isValidProjectTransition(from, next, get().projectWorkflow)) {
+      get().pushToast(`Cannot move from ${from} to ${next}`, "danger");
+      return false;
+    }
+    const actor = user?.name ?? currentActor();
+    const at = new Date().toISOString();
+    const when = displayNow();
+    const change: ProjectStatusChange = {
+      id: uid("sh"),
+      from,
+      to: next,
+      actor,
+      at,
+      when,
+    };
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, status: next, statusHistory: [...(p.statusHistory ?? []), change] }
+          : p,
+      ),
+    }));
+    get().logActivity({
+      type: "status",
+      actor,
+      action: `moved status from ${from} to ${next}`,
+      companyId: project.companyId,
+      projectId,
+      entityType: "project",
+      entityId: projectId,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${projectId}`,
+    });
+    get().pushToast(`Status moved to ${next}`);
+    return true;
+  },
+  setProjectWorkflowTransition: (from, to, allowed) => {
+    const projectWorkflow = toggleWorkflowTransition(get().projectWorkflow, from, to, allowed);
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
+    get().pushToast(allowed ? `Allowed ${from} to ${to}` : `Blocked ${from} to ${to}`);
+  },
+  setProjectWorkflowRoles: (roles) => {
+    const projectWorkflow = { ...get().projectWorkflow, changerRoles: roles };
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
+    get().pushToast("Lifecycle roles updated");
+  },
+
   updateProject: (id, patch) => {
     const prev = get().projects.find((p) => p.id === id);
+    const { status: nextStatus, ...rest } = patch;
+    if (nextStatus && prev && normalizeProjectStatus(nextStatus) !== normalizeProjectStatus(prev.status)) {
+      if (!get().setProjectStatus(id, nextStatus)) {
+        if (!Object.keys(rest).length) return;
+      }
+    }
     set((s) => ({
-      projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      projects: s.projects.map((p) => (p.id === id ? { ...p, ...rest } : p)),
     }));
     if (prev) {
-      if (patch.status && patch.status !== prev.status) {
-        get().logActivity({
-          type: "status",
-          action: `moved project to ${patch.status}`,
-          companyId: prev.companyId,
-          projectId: id,
-          entityType: "project",
-          entityId: id,
-          entityLabel: prev.name,
-          href: `/app/projects/view/?id=${id}`,
-        });
-      } else if (
+      if (
         (patch.budgetAmount !== undefined && patch.budgetAmount !== prev.budgetAmount) ||
         (patch.budgetHours !== undefined && patch.budgetHours !== prev.budgetHours)
       ) {
@@ -876,11 +973,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: newId,
       name: `${source.name} (copy)`,
       progress: 0,
-      status: "Planned",
+      status: "Draft",
       loggedHours: 0,
       materials: source.materials.map((m) => ({ ...m, id: uid("mat") })),
       files: [],
       notes: [],
+      statusHistory: [],
       scope: { ...source.scope, inScope: [...source.scope.inScope], outOfScope: [...source.scope.outOfScope], deliverables: [...source.scope.deliverables], assumptions: [...source.scope.assumptions] },
     };
     set((s) => ({

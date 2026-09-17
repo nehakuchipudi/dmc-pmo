@@ -742,7 +742,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <input type="checkbox" defaultChecked />
           </label>
           <Link href="/app/settings" className="btn btn-primary w-full justify-center" onClick={() => setSettingsOpen(false)}>
-            Users & roles
+            Users and lifecycle
           </Link>
           <Link href="/app/automations" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
             Manage automations

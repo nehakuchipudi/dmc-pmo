@@ -1,20 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, Field, Modal, PageHeader, StatusPill, TextInput, TextSelect } from "@/components/ui";
+import { Avatar, Field, Modal, PageHeader, StatusPill, Tabs, TextInput, TextSelect } from "@/components/ui";
+import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
+import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 import type { Role } from "@/lib/types";
 
 const ROLES: Role[] = ["admin", "pm", "staff", "finance", "leadership", "client"];
+const SETTINGS_TABS = ["Users", "Lifecycle"];
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const team = useAppStore((s) => s.team);
   const addTeamMember = useAppStore((s) => s.addTeamMember);
   const updateTeamMember = useAppStore((s) => s.updateTeamMember);
   const setTeamMemberActive = useAppStore((s) => s.setTeamMemberActive);
+  const projectWorkflow = useAppStore((s) => s.projectWorkflow);
+  const setProjectWorkflowTransition = useAppStore((s) => s.setProjectWorkflowTransition);
+  const setProjectWorkflowRoles = useAppStore((s) => s.setProjectWorkflowRoles);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [tab, setTab] = useState("Users");
+  const canConfigure = user?.role === "admin";
 
   const rows = useMemo(
     () => team.filter((m) => showInactive || m.active),
@@ -25,9 +34,10 @@ export default function SettingsPage() {
   return (
     <div className="fade-in">
       <PageHeader
-        title="Users & roles"
-        subtitle="Manage team access for the PMO. Permissions are role-based (demo store)."
+        title="Settings"
+        subtitle="Manage team access and the project lifecycle workflow."
         actions={
+          tab === "Users" ? (
           <>
             <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
@@ -37,9 +47,14 @@ export default function SettingsPage() {
               + Add user
             </button>
           </>
+          ) : undefined
         }
       />
 
+      <Tabs tabs={SETTINGS_TABS} active={tab} onChange={setTab} />
+
+      {tab === "Users" ? (
+      <div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <RoleCard title="Admin" body="Full project, billing, and user management." />
         <RoleCard title="PM" body="Own projects: schedule, files, invoices, signoffs." />
@@ -88,6 +103,81 @@ export default function SettingsPage() {
           </tbody>
         </table>
       </div>
+      </div>
+      ) : null}
+
+      {tab === "Lifecycle" ? (
+        <div className="space-y-4">
+          <div className="panel p-4">
+            <h2 className="section-title">Who can change status</h2>
+            <p className="mb-3 text-sm text-[var(--color-muted)]">
+              Authorized roles can move a project from the header. Invalid transitions stay blocked.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {ROLES.filter((role) => role !== "client").map((role) => {
+                const checked = projectWorkflow.changerRoles.includes(role);
+                return (
+                  <label key={role} className="flex items-center gap-2 text-sm capitalize">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!canConfigure}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...projectWorkflow.changerRoles, role]
+                          : projectWorkflow.changerRoles.filter((item) => item !== role);
+                        setProjectWorkflowRoles(next);
+                      }}
+                    />
+                    {role}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div className="panel overflow-x-auto p-4">
+            <h2 className="section-title">Allowed transitions</h2>
+            <p className="mb-3 text-sm text-[var(--color-muted)]">
+              Check a cell to allow moving from the row status to the column status.
+            </p>
+            <table className="lifecycle-matrix">
+              <thead>
+                <tr>
+                  <th>From</th>
+                  {PROJECT_LIFECYCLE_STATUSES.map((status) => (
+                    <th key={status}>{status}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PROJECT_LIFECYCLE_STATUSES.map((from) => (
+                  <tr key={from}>
+                    <td className="font-medium">{from}</td>
+                    {PROJECT_LIFECYCLE_STATUSES.map((to) => {
+                      const allowed = (projectWorkflow.transitions[from] ?? []).includes(to);
+                      return (
+                        <td key={`${from}-${to}`}>
+                          {from === to ? (
+                            <span className="text-[var(--color-muted)]">Current</span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              aria-label={`Allow ${from} to ${to}`}
+                              checked={allowed}
+                              disabled={!canConfigure}
+                              onChange={(e) => setProjectWorkflowTransition(from, to, e.target.checked)}
+                            />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <Modal open={open} title="Add user" onClose={() => setOpen(false)}>
         <form

@@ -7,7 +7,29 @@ export type Role =
   | "client";
 
 export type CompanyStatus = "Active" | "Prospect" | "Overdue Inv.";
-export type ProjectStatus = "On Track" | "At Risk" | "Overdue" | "Planned" | "Completed";
+export type ProjectStatus =
+  | "Draft"
+  | "Planning"
+  | "Active"
+  | "On Hold"
+  | "At Risk"
+  | "Completed"
+  | "Cancelled";
+export type ProgramStatus = "On Track" | "At Risk" | "Overdue" | "Planned" | "Completed";
+
+export interface ProjectStatusChange {
+  id: string;
+  from: ProjectStatus;
+  to: ProjectStatus;
+  actor: string;
+  at: string;
+  when: string;
+}
+
+export interface ProjectWorkflow {
+  transitions: Record<ProjectStatus, ProjectStatus[]>;
+  changerRoles: Role[];
+}
 export type TicketPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TicketStatus = "Open" | "In Progress" | "Resolved";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue";
@@ -161,6 +183,7 @@ export interface Project {
   notes: ProjectNote[];
   scope: ProjectScope;
   rates?: ProjectRate[];
+  statusHistory?: ProjectStatusChange[];
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */
@@ -418,7 +441,7 @@ export interface Program {
   name: string;
   portfolioId: string;
   owner: string;
-  status: ProjectStatus;
+  status: ProgramStatus;
   projectIds: string[];
   objectiveId?: string;
   description: string;

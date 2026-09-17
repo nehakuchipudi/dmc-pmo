@@ -10,7 +10,7 @@ import { initialsFromName } from "@/lib/seed";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
-import type { ProjectStatus } from "@/lib/types";
+import { isOpenProjectStatus, isWatchLifecycle } from "@/lib/project-lifecycle";
 
 const FILTERS = ["All open projects", "My projects", "At risk", "Recently created"];
 
@@ -31,9 +31,9 @@ export default function ProjectsPage() {
 
   const rows = useMemo(() => {
     if (filter === "My projects") return projects.filter((p) => p.manager === "M. Doyle");
-    if (filter === "At risk") return projects.filter((p) => p.status === "At Risk" || p.status === "Overdue");
+    if (filter === "At risk") return projects.filter((p) => isWatchLifecycle(p.status));
     if (filter === "Recently created") return [...projects];
-    return projects.filter((p) => p.status !== "Completed");
+    return projects.filter((p) => isOpenProjectStatus(p.status));
   }, [filter, projects]);
 
   const editing = projects.find((p) => p.id === editId);
@@ -199,7 +199,6 @@ export default function ProjectsPage() {
               updateProject(editing.id, {
                 name: String(fd.get("name") || editing.name),
                 manager: String(fd.get("manager") || editing.manager),
-                status: String(fd.get("status") || editing.status) as ProjectStatus,
                 due: String(fd.get("due") || editing.due),
                 description: String(fd.get("description") || ""),
                 companyId: String(fd.get("companyId") || editing.companyId),
@@ -225,13 +224,9 @@ export default function ProjectsPage() {
               <TextInput name="manager" defaultValue={editing.manager} />
             </Field>
             <Field label="Status">
-              <TextSelect name="status" defaultValue={editing.status}>
-                {["Planned", "On Track", "At Risk", "Overdue", "Completed"].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </TextSelect>
+              <p className="text-sm">
+                {editing.status}. Open the project to change lifecycle status.
+              </p>
             </Field>
             <Field label="Due">
               <TextInput type="date" name="due" defaultValue={editing.due} />
