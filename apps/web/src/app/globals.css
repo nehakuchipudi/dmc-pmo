@@ -1466,6 +1466,51 @@ button, input, select, textarea { font: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+.project-health-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.project-health-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-soft);
+  min-width: 0;
+}
+.project-health-card.is-healthy { box-shadow: inset 3px 0 0 #2f8f5b; }
+.project-health-card.is-watch { box-shadow: inset 3px 0 0 #c48a1a; }
+.project-health-card.is-critical { box-shadow: inset 3px 0 0 #c4473a; }
+.project-health-value {
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-health-label {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.project-health-hint {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+.project-overview { display: grid; gap: 12px; }
+.project-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.rate-input { max-width: 110px; }
 
 .contacts-toolbar {
   display: flex;
@@ -1632,13 +1677,15 @@ button, input, select, textarea { font: inherit; }
   .search-kbd, .context-label { display: none; }
   .context-btn { max-width: 44px; padding-right: 8px; }
   .kanban { grid-template-columns: 1fr 1fr; }
+  .project-health-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 960px) {
   .record-grid, .plan-split, .company-overview-hero, .company-split { grid-template-columns: 1fr; }
-  .company-summary-grid { grid-template-columns: 1fr 1fr; }
+  .company-summary-grid, .project-health-strip { grid-template-columns: 1fr 1fr; }
+  .project-facts { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 720px) {
-  .company-summary-grid, .company-stat-grid { grid-template-columns: 1fr; }
+  .company-summary-grid, .company-stat-grid, .project-health-strip, .project-facts { grid-template-columns: 1fr; }
   .kanban { grid-template-columns: 1fr; }
   .content { padding: 16px; }
   .topbar { padding: 10px 12px; }

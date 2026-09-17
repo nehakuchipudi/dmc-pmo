@@ -160,6 +160,7 @@ export interface Project {
   files: ProjectFile[];
   notes: ProjectNote[];
   scope: ProjectScope;
+  rates?: ProjectRate[];
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */
@@ -226,6 +227,12 @@ export interface TeamMember {
   role: Role;
   active: boolean;
   avatarUrl?: string;
+  billRate?: number;
+}
+
+export interface ProjectRate {
+  memberName: string;
+  hourlyRate: number;
 }
 
 export interface Invoice {
@@ -394,6 +401,7 @@ export interface Idea {
 }
 
 export type PortfolioHealth = "Healthy" | "Watch" | "Critical";
+export type ProjectHealth = PortfolioHealth;
 export interface Portfolio {
   id: string;
   name: string;

@@ -10,6 +10,7 @@ export function RecordShell({
   subtitle,
   actions,
   stepper,
+  banner,
   rail,
   children,
 }: {
@@ -18,6 +19,7 @@ export function RecordShell({
   subtitle?: ReactNode;
   actions?: ReactNode;
   stepper?: ReactNode;
+  banner?: ReactNode;
   rail: ReactNode;
   children: ReactNode;
 }) {
@@ -32,6 +34,7 @@ export function RecordShell({
         {actions ? <div className="record-actions">{actions}</div> : null}
       </div>
       {stepper}
+      {banner}
       <div className="record-grid">
         <aside className="record-rail">{rail}</aside>
         <div className="record-main">{children}</div>
