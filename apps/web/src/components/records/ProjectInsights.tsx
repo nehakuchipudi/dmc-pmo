@@ -130,7 +130,7 @@ export function ProjectInsights({
         <HealthCard
           label="Overall"
           value={insights.overall}
-          hint={`${insights.overdueTasks.length} overdue tasks, ${insights.openRisks.length} open risks`}
+          hint={`${insights.overdueTasks.length} overdue ${insights.overdueTasks.length === 1 ? "task" : "tasks"}, ${insights.openRisks.length} open ${insights.openRisks.length === 1 ? "risk" : "risks"}`}
         />
         <HealthCard
           label="Schedule"
@@ -167,7 +167,7 @@ export function ProjectInsights({
           <div className="insight-kpi-label">Progress</div>
           <div className="insight-kpi-value">{insights.progress}%</div>
           <div className="insight-kpi-hint">
-            {tasks.filter((task) => task.status === "Done").length} of {tasks.length} tasks done
+            {tasks.filter((task) => task.status === "Done").length} of {tasks.length} {tasks.length === 1 ? "task" : "tasks"} done
           </div>
           <div className="insight-meter">
             <span style={{ width: `${Math.min(100, insights.progress)}%` }} />
@@ -251,7 +251,7 @@ export function ProjectInsights({
                   <div>
                     <div className="font-medium">{row.name}</div>
                     <div className="text-xs text-[var(--color-muted)]">
-                      Due {formatDisplayDate(row.due)} · {row.taskCount} tasks
+                      Due {formatDisplayDate(row.due)} · {row.taskCount} {row.taskCount === 1 ? "task" : "tasks"}
                     </div>
                   </div>
                   <TonePill value={row.status} />
