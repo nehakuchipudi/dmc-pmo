@@ -747,7 +747,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="space-y-3 text-sm text-[var(--color-muted)]">
           <p>Home answers whether the firm is on the right work, with the right people, cost, and risk.</p>
           <p>Create (+) still adds companies, projects, tickets, tasks, ideas, and risks.</p>
-          <p>The company selector sets workspace context for new records. It does not hide other companies.</p>
+          <p>The company selector scopes Home to that company and defaults new records to it.</p>
           <p>Client portal users only see their company projects, tickets, billing, and retainers.</p>
           <Link href="/app/automations" className="btn btn-primary w-full justify-center" onClick={() => setHelpOpen(false)}>
             Open automations
