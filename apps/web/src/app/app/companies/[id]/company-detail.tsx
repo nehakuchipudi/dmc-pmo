@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
 import { RecordFact, RecordMetric, RecordRailBlock, RecordShell, TonePill } from "@/components/records/RecordChrome";
@@ -66,6 +68,7 @@ function SectionHead({
 }
 
 export function CompanyDetail({ id }: { id: string }) {
+  const router = useRouter();
   const companies = useAppStore((s) => s.companies);
   const companyAssets = useAppStore((s) => s.companyAssets);
   const projects = useAppStore((s) => s.projects);
@@ -95,6 +98,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const [addressDraft, setAddressDraft] = useState("");
   const [fileOpen, setFileOpen] = useState(false);
   const [assetOpen, setAssetOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const company = companies.find((c) => c.id === id);
   const companyProjects = useMemo(
@@ -1040,7 +1044,7 @@ export function CompanyDetail({ id }: { id: string }) {
               <RecordMetric label="Expenses" value={money(companyExpenses.reduce((s, e) => s + e.amount, 0))} />
             </div>
             <div className="panel overflow-hidden">
-              <div className="flex justify-end p-3">
+              <div className="flex justify-end gap-2 p-3">
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -1057,6 +1061,9 @@ export function CompanyDetail({ id }: { id: string }) {
                   }
                 >
                   Export CSV
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => setInvoiceOpen(true)}>
+                  New invoice
                 </button>
               </div>
               <table className="table">
@@ -1091,6 +1098,17 @@ export function CompanyDetail({ id }: { id: string }) {
       </RecordShell>
 
       <CreateForms kind={createKind} onClose={() => setCreateKind(null)} defaults={{ companyId: company.id, projectId: companyProjects[0]?.id }} />
+      <Modal open={invoiceOpen} title={`Create invoice: ${company.name}`} onClose={() => setInvoiceOpen(false)} xl>
+        <InvoiceCreateForm
+          defaultCompanyId={company.id}
+          defaultProjectId={companyProjects[0]?.id}
+          onCancel={() => setInvoiceOpen(false)}
+          onCreated={(invoiceId) => {
+            setInvoiceOpen(false);
+            router.push(`/app/billing/view/?id=${invoiceId}`);
+          }}
+        />
+      </Modal>
 
       <Modal open={editOpen} title="Edit company" onClose={() => setEditOpen(false)}>
         <form
