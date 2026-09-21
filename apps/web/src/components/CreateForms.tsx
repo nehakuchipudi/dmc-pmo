@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -31,8 +33,10 @@ export function CreateForms({
   const companies = useAppStore((s) => s.companies);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const router = useRouter();
   const createCompany = useAppStore((s) => s.createCompany);
   const createContact = useAppStore((s) => s.createContact);
+  const updateContact = useAppStore((s) => s.updateContact);
   const createProject = useAppStore((s) => s.createProject);
   const createTicket = useAppStore((s) => s.createTicket);
   const createTask = useAppStore((s) => s.createTask);
@@ -73,12 +77,24 @@ export function CreateForms({
   if (!kind) return null;
 
   return (
-    <Modal open={!!kind} title={title} onClose={onClose}>
+    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"}>
       {kind === "company" && (
-        <CompanyForm
-          onSubmit={(v) => {
-            createCompany(v);
+        <CompanyCreateForm
+          onCancel={onClose}
+          onSubmit={(payload) => {
+            const id = createCompany(payload.company);
+            payload.newContacts.forEach((contact) => {
+              createContact({
+                ...contact,
+                companyId: id,
+                companyName: payload.company.name,
+              });
+            });
+            payload.linkedContactIds.forEach((contactId) => {
+              updateContact(contactId, { companyId: id, companyName: payload.company.name });
+            });
             onClose();
+            router.push(`/app/companies/view/?id=${id}`);
           }}
         />
       )}
@@ -265,46 +281,6 @@ export function CreateForms({
         </form>
       )}
     </Modal>
-  );
-}
-
-function CompanyForm({
-  onSubmit,
-}: {
-  onSubmit: (v: {
-    name: string;
-    status: "Active" | "Prospect" | "Overdue Inv.";
-    accountManager: string;
-    industry: string;
-    billingTerms: string;
-  }) => void;
-}) {
-  const [name, setName] = useState("");
-  const [industry, setIndustry] = useState("Professional Services");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        onSubmit({
-          name: name.trim(),
-          status: "Prospect",
-          accountManager: "M. Doyle",
-          industry: industry.trim() || "Professional Services",
-          billingTerms: "Net 30",
-        });
-      }}
-    >
-      <Field label="Company name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
-      </Field>
-      <Field label="Industry">
-        <TextInput value={industry} onChange={(e) => setIndustry(e.target.value)} />
-      </Field>
-      <button type="submit" className="btn btn-primary">
-        Create company
-      </button>
-    </form>
   );
 }
 

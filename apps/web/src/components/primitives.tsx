@@ -170,18 +170,20 @@ export function Modal({
   onClose,
   children,
   wide,
+  xl,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
+  xl?: boolean;
 }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className={clsx("modal-panel fade-in", wide && "modal-wide")}
+        className={clsx("modal-panel fade-in", wide && "modal-wide", xl && "modal-xl")}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -293,13 +295,18 @@ export function ToastHost() {
 export function Field({
   label,
   children,
+  required,
 }: {
   label: string;
   children: ReactNode;
+  required?: boolean;
 }) {
   return (
     <label className="mb-3 block text-sm">
-      <span className="mb-1 block text-[var(--color-muted)]">{label}</span>
+      <span className="mb-1 flex items-center justify-between gap-2 text-[var(--color-muted)]">
+        <span>{label}</span>
+        {required ? <span className="field-required">Required</span> : null}
+      </span>
       {children}
     </label>
   );

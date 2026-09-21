@@ -97,8 +97,19 @@ type CreateCompanyInput = {
   name: string;
   status: Company["status"];
   accountManager: string;
+  accountManagers?: string[];
   industry: string;
   billingTerms: string;
+  website?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  address?: string;
+  addresses?: Company["addresses"];
+  tags?: string[];
+  privacy?: Company["privacy"];
+  customFields?: Company["customFields"];
+  notes?: string;
 };
 
 type CreateProjectInput = {
@@ -459,21 +470,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createCompany: (input) => {
     const id = uid("c");
+    const managers = input.accountManagers?.filter(Boolean).length
+      ? input.accountManagers.filter(Boolean)
+      : [input.accountManager];
     const company: Company = {
       id,
       name: input.name,
       initials: initialsFromName(input.name),
       status: input.status,
-      accountManager: input.accountManager,
+      accountManager: managers[0] ?? input.accountManager,
       openProjects: 0,
       openTickets: 0,
       lastActivity: formatDisplayDate(todayIso()),
       industry: input.industry,
       billingTerms: input.billingTerms,
       portalContacts: 0,
-      accountManagers: [input.accountManager],
-      notes: "",
+      accountManagers: managers,
+      website: input.website ?? "",
+      phone: input.phone ?? "",
+      fax: input.fax ?? "",
+      email: input.email ?? "",
+      address: input.address ?? "",
+      addresses: input.addresses ?? [],
+      tags: input.tags ?? (input.industry ? [input.industry] : []),
+      privacy: input.privacy ?? "Standard",
+      customFields: input.customFields ?? [],
+      notes: input.notes ?? "",
       files: [],
+      createdAt: todayIso(),
     };
     set((s) => ({
       companies: [company, ...s.companies],

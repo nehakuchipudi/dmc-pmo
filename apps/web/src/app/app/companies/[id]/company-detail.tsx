@@ -355,6 +355,32 @@ export function CompanyDetail({ id }: { id: string }) {
                 </RecordFact>
                 <RecordFact label="Portal">{company.portalContacts} enabled contacts</RecordFact>
                 <RecordFact label="Billing terms">{company.billingTerms}</RecordFact>
+                <RecordFact label="Website">
+                  {company.website ? (
+                    <a href={company.website} className="text-[var(--color-navy)]" target="_blank" rel="noreferrer">
+                      {company.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  ) : (
+                    "None"
+                  )}
+                </RecordFact>
+                <RecordFact label="Phone">{company.phone || "None"}</RecordFact>
+                <RecordFact label="Email">
+                  {company.email ? (
+                    <a href={`mailto:${company.email}`} className="text-[var(--color-navy)]">
+                      {company.email}
+                    </a>
+                  ) : (
+                    "None"
+                  )}
+                </RecordFact>
+                {company.fax ? <RecordFact label="Fax">{company.fax}</RecordFact> : null}
+                <RecordFact label="Privacy">{company.privacy ?? "Standard"}</RecordFact>
+                {(company.customFields ?? []).map((field) => (
+                  <RecordFact key={field.id} label={field.label}>
+                    {field.value || "Empty"}
+                  </RecordFact>
+                ))}
                 <RecordFact label="Address">
                   <div className="flex gap-2">
                     <input
@@ -425,6 +451,10 @@ export function CompanyDetail({ id }: { id: string }) {
                 <div>
                   <div className="metric-label">Industry</div>
                   <div className="text-sm font-medium">{company.industry}</div>
+                </div>
+                <div>
+                  <div className="metric-label">Website</div>
+                  <div className="text-sm font-medium">{company.website ? company.website.replace(/^https?:\/\//, "") : "None"}</div>
                 </div>
                 <div>
                   <div className="metric-label">Last activity</div>
@@ -1075,6 +1105,11 @@ export function CompanyDetail({ id }: { id: string }) {
               industry: String(fd.get("industry") || company.industry),
               billingTerms: String(fd.get("billingTerms") || company.billingTerms),
               address: String(fd.get("address") || company.address || ""),
+              website: String(fd.get("website") ?? company.website ?? ""),
+              phone: String(fd.get("phone") ?? company.phone ?? ""),
+              fax: String(fd.get("fax") ?? company.fax ?? ""),
+              email: String(fd.get("email") ?? company.email ?? ""),
+              privacy: (String(fd.get("privacy") || company.privacy || "Standard") as "Standard" | "Confidential"),
               notes: String(fd.get("notes") ?? company.notes ?? ""),
               status: String(fd.get("status") || company.status) as CompanyStatus,
             });
@@ -1101,6 +1136,24 @@ export function CompanyDetail({ id }: { id: string }) {
           </Field>
           <Field label="Billing terms">
             <TextInput name="billingTerms" defaultValue={company.billingTerms} />
+          </Field>
+          <Field label="Website">
+            <TextInput name="website" defaultValue={company.website ?? ""} />
+          </Field>
+          <Field label="Phone">
+            <TextInput name="phone" defaultValue={company.phone ?? ""} />
+          </Field>
+          <Field label="Fax">
+            <TextInput name="fax" defaultValue={company.fax ?? ""} />
+          </Field>
+          <Field label="Email">
+            <TextInput name="email" type="email" defaultValue={company.email ?? ""} />
+          </Field>
+          <Field label="Privacy">
+            <TextSelect name="privacy" defaultValue={company.privacy ?? "Standard"}>
+              <option>Standard</option>
+              <option>Confidential</option>
+            </TextSelect>
           </Field>
           <Field label="Address">
             <TextInput name="address" defaultValue={company.address ?? ""} />
