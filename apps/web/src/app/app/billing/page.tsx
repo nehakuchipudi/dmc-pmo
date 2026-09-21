@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Field, FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, TextSelect, statusTone } from "@/components/ui";
+import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
+import { FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -16,12 +17,10 @@ export default function BillingPage() {
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
   const expenses = useAppStore((s) => s.expenses);
-  const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
   const approveExpense = useAppStore((s) => s.approveExpense);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [tab, setTab] = useState("Invoices");
   const [newOpen, setNewOpen] = useState(false);
-  const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
 
   const rows = useMemo(() => {
     if (filter === "Overdue") return invoices.filter((i) => i.status === "Overdue");
@@ -185,27 +184,15 @@ export default function BillingPage() {
         </div>
       ) : null}
 
-      <Modal open={newOpen} title="New invoice draft" onClose={() => setNewOpen(false)}>
-        <Field label="Company">
-          <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </TextSelect>
-        </Field>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => {
-            const id = createInvoiceDraft(companyId);
+      <Modal open={newOpen} title="Create invoice" onClose={() => setNewOpen(false)} xl>
+        <InvoiceCreateForm
+          defaultCompanyId={companies[0]?.id}
+          onCancel={() => setNewOpen(false)}
+          onCreated={(id) => {
             setNewOpen(false);
-            if (id) router.push(`/app/billing/view/?id=${id}`);
+            router.push(`/app/billing/view/?id=${id}`);
           }}
-        >
-          Create draft
-        </button>
+        />
       </Modal>
     </div>
   );

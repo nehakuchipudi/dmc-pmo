@@ -10,17 +10,24 @@ export function exportInvoicePdf(invoice: Invoice) {
   doc.text("Dillon Morgan Consulting", 14, 20);
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text(`Invoice ${invoice.number}`, 14, 30);
-  doc.text(`Bill to: ${invoice.companyName}`, 14, 38);
-  doc.text(`Terms: ${invoice.terms}`, 14, 46);
-  doc.text(`Due: ${formatDisplayDate(invoice.due)}`, 14, 54);
-  doc.text(`Status: ${invoice.status}`, 14, 62);
+  doc.text(invoice.title || `Invoice ${invoice.number}`, 14, 30);
+  doc.text(`Invoice ${invoice.number}`, 14, 38);
+  doc.text(`Bill to: ${invoice.billToName || invoice.companyName}`, 14, 46);
+  doc.text(`Terms: ${invoice.terms}  |  Currency: ${invoice.currency || "USD"}`, 14, 54);
+  doc.text(
+    `Raised: ${invoice.raised ? formatDisplayDate(invoice.raised) : "n/a"}  |  Due: ${formatDisplayDate(invoice.due)}`,
+    14,
+    62,
+  );
+  if (invoice.poNumber) doc.text(`PO: ${invoice.poNumber}`, 14, 70);
+  if (invoice.description) doc.text(invoice.description, 14, invoice.poNumber ? 78 : 70);
 
+  const lines = invoice.lineItems.filter((l) => l.includeInPdf !== false);
   autoTable(doc, {
-    startY: 72,
-    head: [["Description", "Amount"]],
-    body: invoice.lineItems.map((l) => [l.description, money(l.amount)]),
-    foot: [["Total", money(invoice.amount)]],
+    startY: invoice.description || invoice.poNumber ? 86 : 78,
+    head: [["Type", "Description", "Qty/Hrs", "Amount"]],
+    body: lines.map((l) => [l.kind, l.description, String(l.hours ?? l.quantity ?? ""), money(l.amount)]),
+    foot: [["", "Total", "", money(invoice.amount)]],
   });
 
   doc.save(`${invoice.number}.pdf`);

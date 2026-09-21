@@ -1418,7 +1418,7 @@ button, input, select, textarea { font: inherit; }
 }
 .modal-wide { width: min(720px, 100%); }
 .modal-xl {
-  width: min(1120px, 100%);
+  width: min(1180px, 100%);
   max-height: min(92vh, 920px);
   overflow: auto;
 }
@@ -1534,6 +1534,142 @@ button, input, select, textarea { font: inherit; }
 .company-create-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
 @media (max-width: 980px) {
   .company-create-grid, .company-create-row, .company-create-row-3 { grid-template-columns: 1fr; }
+}
+
+.invoice-create { display: grid; gap: 16px; }
+.invoice-create-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 16px;
+  align-items: start;
+}
+.invoice-create-main { display: grid; gap: 16px; }
+.invoice-create-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.invoice-create-grid-2 { grid-template-columns: 1fr 1fr; }
+.invoice-create-rail { display: grid; gap: 12px; }
+.invoice-create-totals,
+.invoice-create-template {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--color-fog);
+}
+.invoice-create-totals h3,
+.invoice-create-template h3,
+.invoice-lines h3 {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  color: var(--color-navy);
+}
+.invoice-create-template p,
+.invoice-lines header p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.invoice-create-totals dl { margin: 10px 0 0; display: grid; gap: 8px; }
+.invoice-create-totals dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 0.86rem; }
+.invoice-create-totals dt { color: var(--color-muted); }
+.invoice-create-totals dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.invoice-create-totals .is-total { padding-top: 8px; border-top: 1px solid var(--color-border); font-size: 1rem; }
+.invoice-create-template-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.invoice-create-template-edit { margin-top: 10px; }
+.invoice-lines {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.invoice-lines header { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.invoice-lines-body { display: grid; gap: 8px; }
+.invoice-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 80px 80px 88px 64px 48px 32px;
+  gap: 8px;
+  align-items: center;
+}
+.invoice-line-amt {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-navy);
+}
+.invoice-line-pdf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+.invoice-lines-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  color: var(--color-navy);
+  font-weight: 600;
+  font-size: 0.84rem;
+  padding: 0;
+  cursor: pointer;
+}
+.invoice-create-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.invoice-create-actions-end { display: flex; gap: 8px; flex-wrap: wrap; }
+.invoice-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.invoice-detail-meta div {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.invoice-detail-meta span { display: block; color: var(--color-muted); font-size: 0.72rem; margin-bottom: 4px; }
+.invoice-detail-meta strong { font-size: 0.92rem; color: var(--color-navy); }
+.timesheet-week {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) repeat(7, minmax(56px, 1fr)) 72px;
+  gap: 0;
+  min-width: 760px;
+}
+.timesheet-week-head,
+.timesheet-week-row {
+  display: contents;
+}
+.timesheet-week-head > *,
+.timesheet-week-row > * {
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 6px;
+  font-size: 0.8rem;
+}
+.timesheet-week-head > * {
+  color: var(--color-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.timesheet-cell { text-align: center; font-variant-numeric: tabular-nums; }
+.timesheet-day-list { display: grid; gap: 10px; }
+@media (max-width: 900px) {
+  .invoice-create-layout,
+  .invoice-create-grid,
+  .invoice-create-grid-2,
+  .invoice-detail-meta { grid-template-columns: 1fr; }
+  .invoice-line { grid-template-columns: 1fr 1fr; }
 }
 .modal-head, .drawer-head {
   display: flex;

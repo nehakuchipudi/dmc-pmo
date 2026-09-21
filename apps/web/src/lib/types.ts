@@ -289,6 +289,37 @@ export interface ProjectRate {
   hourlyRate: number;
 }
 
+export type InvoiceLineKind = "service" | "material" | "expense";
+
+export interface InvoiceLineItem {
+  id: string;
+  kind: InvoiceLineKind;
+  description: string;
+  hours?: number;
+  rate?: number;
+  quantity?: number;
+  amount: number;
+  taxPct?: number;
+  includeInPdf?: boolean;
+}
+
+export type InvoiceTemplateKind = "time_materials" | "progress" | "retainer" | "fixed_fee" | "expense";
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  summary: string;
+  kind: InvoiceTemplateKind;
+  titlePattern: string;
+  terms: string;
+  currency: string;
+  taxPct: number;
+  description: string;
+  internalDescription: string;
+  invoiceFor: "Work completed" | "Retainer period" | "Milestone" | "Expenses";
+  defaultLines: Omit<InvoiceLineItem, "id">[];
+}
+
 export interface Invoice {
   id: string;
   number: string;
@@ -298,9 +329,21 @@ export interface Invoice {
   terms: string;
   due: string;
   status: InvoiceStatus;
-  lineItems: { description: string; amount: number }[];
+  lineItems: InvoiceLineItem[];
   projectId?: string;
   retainerId?: string;
+  title?: string;
+  owner?: string;
+  billToContactId?: string;
+  billToName?: string;
+  currency?: string;
+  raised?: string;
+  billingThrough?: string;
+  poNumber?: string;
+  description?: string;
+  internalDescription?: string;
+  templateId?: string;
+  taxAmount?: number;
 }
 
 export interface TimeEntry {

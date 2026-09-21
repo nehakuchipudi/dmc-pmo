@@ -11,6 +11,7 @@ import {
   seedEmailOutbox,
   seedExpenses,
   seedInvoices,
+  seedInvoiceTemplates,
   seedMilestones,
   seedNotifications,
   seedOpportunities,
@@ -63,6 +64,8 @@ import type {
   Idea,
   IdeaStage,
   Invoice,
+  InvoiceLineItem,
+  InvoiceTemplate,
   IssueItem,
   Milestone,
   NotificationItem,
@@ -92,6 +95,7 @@ import type {
   TicketMessage,
   TimeEntry,
 } from "./types";
+import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
 
 type CreateCompanyInput = {
   name: string;
@@ -152,6 +156,28 @@ type CreateTimeInput = {
   note: string;
 };
 
+export type CreateInvoiceInput = {
+  projectId?: string;
+  retainerId?: string;
+  amount?: number;
+  description?: string;
+  title?: string;
+  owner?: string;
+  billToContactId?: string;
+  billToName?: string;
+  currency?: string;
+  raised?: string;
+  due?: string;
+  billingThrough?: string;
+  poNumber?: string;
+  internalDescription?: string;
+  templateId?: string;
+  terms?: string;
+  number?: string;
+  lineItems?: InvoiceLineItem[];
+  send?: boolean;
+};
+
 type Toast = { id: string; message: string; tone?: "success" | "info" | "danger" };
 
 type AppState = {
@@ -164,6 +190,7 @@ type AppState = {
   ticketMessages: TicketMessage[];
   tasks: Task[];
   invoices: Invoice[];
+  invoiceTemplates: InvoiceTemplate[];
   timeEntries: TimeEntry[];
   notifications: NotificationItem[];
   activities: ActivityItem[];
@@ -289,7 +316,10 @@ type AppState = {
   updateRetainer: (id: string, patch: Partial<Retainer>) => void;
   deleteRetainer: (id: string) => void;
   addRetainerPeriod: (retainerId: string, start: string, end: string, budgetHours: number) => string;
-  createInvoiceDraft: (companyId: string, opts?: { projectId?: string; retainerId?: string; amount?: number; description?: string }) => string;
+  createInvoiceDraft: (companyId: string, opts?: CreateInvoiceInput) => string;
+  updateInvoice: (id: string, patch: Partial<Invoice>) => void;
+  createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
+  updateInvoiceTemplate: (id: string, patch: Partial<InvoiceTemplate>) => void;
   generateProjectInvoice: (projectId: string) => string;
   generatePeriodInvoice: (periodId: string) => string;
   addProjectFile: (projectId: string, file: Omit<ProjectFile, "id">) => void;
@@ -391,6 +421,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tasks: seedTasks,
   team: seedTeam,
   invoices: seedInvoices,
+  invoiceTemplates: seedInvoiceTemplates,
   timeEntries: seedTimeEntries,
   notifications: seedNotifications,
   activities: seedActivities,
@@ -1688,37 +1719,105 @@ export const useAppStore = create<AppState>((set, get) => ({
   createInvoiceDraft: (companyId, opts) => {
     const company = get().companies.find((c) => c.id === companyId);
     if (!company) return "";
+    const project = opts?.projectId ? get().projects.find((p) => p.id === opts.projectId) : undefined;
+    const retainer = opts?.retainerId ? get().retainers.find((r) => r.id === opts.retainerId) : undefined;
+    const contact = opts?.billToContactId ? get().contacts.find((c) => c.id === opts.billToContactId) : undefined;
     const id = uid("inv");
-    const amount = opts?.amount ?? 2500;
-    const number = `INV-${2302 + get().invoices.length}`;
+    const raised = opts?.raised ?? todayIso();
+    const terms = opts?.terms ?? company.billingTerms;
+    const lineItems =
+      opts?.lineItems?.map((line) => ({
+        ...line,
+        id: line.id || uid("il"),
+        amount: computeLineAmount(line),
+      })) ?? [emptyInvoiceLine("service", { description: opts?.description ?? "Professional services", amount: opts?.amount ?? 2500 })];
+    const totals = invoiceTotals(lineItems);
+    const amount = opts?.amount ?? totals.total;
+    const number = opts?.number?.trim() || nextInvoiceNumber(get().invoices.length);
     const invoice: Invoice = {
       id,
       number,
       companyId: company.id,
       companyName: company.name,
       amount,
-      terms: company.billingTerms,
-      due: todayIso(),
+      terms,
+      due: opts?.due ?? dueFromTerms(raised, terms),
       status: "Draft",
-      lineItems: [{ description: opts?.description ?? "Professional services", amount }],
-      projectId: opts?.projectId,
-      retainerId: opts?.retainerId,
+      lineItems,
+      projectId: project?.id,
+      retainerId: retainer?.id,
+      title: opts?.title ?? opts?.description ?? (project ? `${project.name} invoice` : `Invoice for ${company.name}`),
+      owner: opts?.owner,
+      billToContactId: contact?.id ?? opts?.billToContactId,
+      billToName: contact?.name ?? opts?.billToName,
+      currency: opts?.currency ?? "USD",
+      raised,
+      billingThrough: opts?.billingThrough,
+      poNumber: opts?.poNumber,
+      description: opts?.description,
+      internalDescription: opts?.internalDescription,
+      templateId: opts?.templateId,
+      taxAmount: totals.tax,
     };
     set((s) => ({ invoices: [invoice, ...s.invoices] }));
     get().pushToast(`${number} draft created`);
+    if (opts?.send) get().sendInvoice(id);
     return id;
+  },
+
+  updateInvoice: (id, patch) => {
+    set((s) => ({
+      invoices: s.invoices.map((invoice) => {
+        if (invoice.id !== id) return invoice;
+        const next = { ...invoice, ...patch };
+        if (patch.lineItems) {
+          const totals = invoiceTotals(patch.lineItems);
+          next.amount = totals.total;
+          next.taxAmount = totals.tax;
+        }
+        return next;
+      }),
+    }));
+  },
+
+  createInvoiceTemplate: (input) => {
+    const id = uid("tpl");
+    const template: InvoiceTemplate = { ...input, id };
+    set((s) => ({ invoiceTemplates: [template, ...s.invoiceTemplates] }));
+    get().pushToast(`${template.name} saved as a template`);
+    return id;
+  },
+
+  updateInvoiceTemplate: (id, patch) => {
+    set((s) => ({
+      invoiceTemplates: s.invoiceTemplates.map((template) => (template.id === id ? { ...template, ...patch } : template)),
+    }));
+    get().pushToast("Invoice template updated");
   },
 
   generateProjectInvoice: (projectId) => {
     const project = get().projects.find((p) => p.id === projectId);
     if (!project) return "";
-    const materials = project.materials.reduce((s, m) => s + m.salePrice * m.qty, 0);
+    const materialLines = project.materials.map((m) =>
+      emptyInvoiceLine("material", {
+        description: m.title,
+        quantity: m.qty,
+        rate: m.salePrice,
+        amount: m.salePrice * m.qty,
+      }),
+    );
+    const materials = materialLines.reduce((sum, line) => sum + line.amount, 0);
     const services = Math.max(project.budgetAmount - materials, project.loggedHours * 180);
-    const amount = services + materials;
+    const serviceLine = emptyInvoiceLine("service", {
+      description: `${project.name} progress billing`,
+      amount: services,
+    });
     return get().createInvoiceDraft(project.companyId, {
       projectId,
-      amount,
+      title: `${project.name} progress billing`,
       description: `${project.name} progress billing`,
+      templateId: "tpl-progress",
+      lineItems: [serviceLine, ...materialLines],
     });
   },
 
@@ -1726,11 +1825,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const period = get().retainerPeriods.find((p) => p.id === periodId);
     const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
     if (!period || !retainer) return "";
-    const amount = Math.round(period.usedHours * 175);
+    const hours = period.usedHours;
+    const rate = 175;
+    const serviceLine = emptyInvoiceLine("service", {
+      description: `${retainer.name} (${period.start} to ${period.end})`,
+      hours,
+      rate,
+      amount: Math.round(hours * rate),
+    });
     const invId = get().createInvoiceDraft(retainer.companyId, {
       retainerId: retainer.id,
-      amount,
+      title: `${retainer.name} period invoice`,
       description: `${retainer.name} (${period.start} to ${period.end})`,
+      templateId: "tpl-retainer",
+      lineItems: [serviceLine],
     });
     set((s) => ({
       retainerPeriods: s.retainerPeriods.map((p) =>
@@ -1973,7 +2081,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           id: uid("e"),
           to: "billing@client.com",
           subject: `Invoice ${inv.number}`,
-          body: `Please find invoice ${inv.number} for ${inv.amount}.`,
+          body: `Please find invoice ${inv.number}${inv.title ? ` (${inv.title})` : ""} for ${inv.companyName}.`,
           sentAt: displayNow(),
           status: "Sent",
         },
