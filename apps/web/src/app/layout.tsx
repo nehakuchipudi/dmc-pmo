@@ -19,7 +19,7 @@ const display = Poppins({
 export const metadata: Metadata = {
   title: "DMC PMO | Turn Projects Into Business Outcomes",
   description:
-    "DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire project portfolio.",
+    "Watch short tours of the live DMC PMO workspace, then request a demo of portfolio, company, team, insights, and project plan.",
 };
 
 export default function RootLayout({

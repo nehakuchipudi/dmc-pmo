@@ -1,49 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import {
-  Brain,
   Briefcase,
+  Building2,
+  ChartColumn,
   Layers3,
-  Scale,
   ShieldAlert,
   Target,
   Users,
   Wallet,
 } from "lucide-react";
-import { Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { useAuth } from "@/lib/auth";
-import { ProductFilm, type FilmScene } from "./ProductFilm";
-import { ProductFrame } from "./ProductFrame";
-import { useLandingData, type LandingData } from "./useLandingData";
-
-const TABS = [
-  { id: "portfolio", label: "Portfolio" },
-  { id: "projects", label: "Projects" },
-  { id: "resources", label: "Resources" },
-  { id: "risks", label: "Risks" },
-  { id: "ai", label: "Intelligence" },
-] as const;
+import { DemoRequestForm } from "./DemoRequestForm";
+import { TourPlayer } from "./TourPlayer";
+import { useLandingData } from "./useLandingData";
 
 const FEATURES = [
-  { title: "Portfolio Management", icon: Layers3, body: "One book for the work you fund, with health and spend in the same view." },
-  { title: "Project Management", icon: Briefcase, body: "Plans, tickets, and status on the same project record." },
-  { title: "Resource Management", icon: Users, body: "See who is over capacity before you start more work." },
-  { title: "Financial Management", icon: Wallet, body: "Budget, hours, invoices, and margin stay connected." },
-  { title: "Risk & Issues", icon: ShieldAlert, body: "Score and track risks next to the work they can stall." },
-  { title: "Governance", icon: Scale, body: "Stage gates and decisions with owners, dates, and criteria." },
-  { title: "Strategy Alignment", icon: Target, body: "Map projects to objectives so the portfolio proves outcomes." },
-  { title: "PMO Intelligence", icon: Brain, body: "A weekly brief of exceptions: risk, capacity, gates, and cash." },
+  { title: "Portfolio home", icon: Layers3, body: "One book for funded work, capacity, cash, and the decisions waiting this week." },
+  { title: "Companies and contacts", icon: Building2, body: "The client record, activity, and the people who own the relationship." },
+  { title: "Project workspace", icon: Briefcase, body: "Health, lifecycle, team, insights, and plan on the same project." },
+  { title: "Project plan", icon: ChartColumn, body: "Milestones, tasks, subtasks, and an aligned Gantt you can edit." },
+  { title: "Team and capacity", icon: Users, body: "Roles, allocation, and logged hours so you see overload before it lands." },
+  { title: "Insights", icon: Target, body: "Schedule, budget, resource, and risk health scored from live project data." },
+  { title: "Finance", icon: Wallet, body: "Budget, hours, invoices, and margin stay on the same identity." },
+  { title: "Risk and governance", icon: ShieldAlert, body: "Open risks and stage gates sit next to the work they can stall." },
 ];
 
 export function LandingPage() {
   const data = useLandingData();
   const { user, isClient } = useAuth();
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("portfolio");
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
-  const scenes = useMemo(() => scenesFor(tab, data), [tab, data]);
-  const activeTab = TABS.find((item) => item.id === tab)?.label ?? "Portfolio";
 
   return (
     <div className="mkt">
@@ -53,8 +40,9 @@ export function LandingPage() {
           PMO
         </Link>
         <nav className="mkt-nav-links">
-          <a href="#watch">Watch</a>
+          <a href="#tours">Tours</a>
           <a href="#platform">Platform</a>
+          <a href="#demo">Demo</a>
         </nav>
         <div className="mkt-nav-actions">
           {user ? (
@@ -66,73 +54,86 @@ export function LandingPage() {
               <Link href="/login" className="mkt-text-link">
                 Sign in
               </Link>
-              <Link href="/login" className="mkt-cta mkt-cta-sm">
-                Get Started
-              </Link>
+              <a href="#demo" className="mkt-cta mkt-cta-sm">
+                Request a demo
+              </a>
             </>
           )}
         </div>
       </header>
 
-      <section className="mkt-hero">
-        <div className="mkt-blob mkt-blob-a" />
-        <div className="mkt-blob mkt-blob-b" />
-        <div className="mkt-blob mkt-blob-c" />
-        <p className="mkt-kicker">PMO platform for every organization</p>
-        <h1>Turn Projects Into Business Outcomes.</h1>
-        <p className="mkt-lead">
-          DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
-          project portfolio.
-        </p>
-        <div className="mkt-hero-actions">
-          <Link href="/login" className="mkt-cta">
-            Get Started
-          </Link>
-          <a href="#watch" className="mkt-ghost">
-            Explore the Platform
-          </a>
+      <section className="mkt-hero mkt-hero-split">
+        <div className="mkt-hero-copy">
+          <p className="mkt-kicker">Watch the live PMO, then book the walkthrough</p>
+          <h1>See the workspace before you ask for a demo.</h1>
+          <p className="mkt-lead">
+            These are short tours of the actual DMC PMO. Portfolio home, company records, project team, insights, and
+            the Accelo-style plan. Same data your team would run.
+          </p>
+          <div className="mkt-hero-actions">
+            <a href="#demo" className="mkt-cta">
+              Request a demo
+            </a>
+            <a href="#tours" className="mkt-ghost">
+              Watch module tours
+            </a>
+          </div>
+          <dl className="mkt-hero-stats">
+            <div>
+              <dt>Projects on the book</dt>
+              <dd>{data.projects.length}</dd>
+            </div>
+            <div>
+              <dt>Work aligned</dt>
+              <dd>{data.alignedPct}%</dd>
+            </div>
+            <div>
+              <dt>Benefit progress</dt>
+              <dd>{data.benefitAvg}%</dd>
+            </div>
+          </dl>
+        </div>
+        <div className="mkt-hero-media">
+          <div className="mkt-hero-video-wrap">
+            <video
+              className="mkt-hero-video"
+              src="/tours/hero.mp4"
+              poster="/tours/hero.jpg"
+              muted
+              playsInline
+              loop
+              autoPlay
+              preload="metadata"
+            />
+            <div className="mkt-tour-badge">Live product</div>
+          </div>
         </div>
       </section>
 
-      <section className="mkt-watch" id="watch">
-        <div className="mkt-tabs" role="tablist" aria-label="Platform films">
-          {TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              className={tab === item.id ? "active" : undefined}
-              onClick={() => setTab(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+      <section className="mkt-watch" id="tours">
+        <div className="mkt-section-head">
+          <p className="mkt-kicker">Product tours</p>
+          <h2>Click a module. Watch the real screen.</h2>
+          <p className="mkt-lead">
+            Not slides. Not a sketched UI. These clips were recorded in the live workspace on Q3 Warehouse Rollout and
+            Cascade Ventures.
+          </p>
         </div>
-        <ProductFilm
-          key={tab}
-          title={`${activeTab} in motion`}
-          eyebrow="Interactive film"
-          scenes={scenes}
-          autoPlay
-          loop
-          variant="hero"
-        />
-        <p className="mkt-watch-note">Click a tab, play, pause, or jump chapters. Pause to explore the live board.</p>
+        <TourPlayer initialId="plan" />
       </section>
 
       <section className="mkt-trust">
-        <p>Teams use DMC PMO across</p>
+        <p>Built for the people who have to answer for the book</p>
         <div>
-          {["Operations", "IT", "Product", "Finance", "Delivery", "Strategy"].map((name) => (
+          {["PMO", "Delivery", "Finance", "Client leads", "Executives"].map((name) => (
             <span key={name}>{name}</span>
           ))}
         </div>
       </section>
 
       <section className="mkt-platform" id="platform">
-        <h2>Everything Your PMO Needs. One Platform.</h2>
-        <p className="mkt-lead">Eight capabilities. One project identity. Built for any company that runs a portfolio.</p>
+        <h2>The modules you just watched.</h2>
+        <p className="mkt-lead">One project identity from intake to invoice. Ask for the demo on the parts that matter to you.</p>
         <div className="mkt-features">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
@@ -149,12 +150,16 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mkt-final">
-        <h2>See your whole portfolio in one place.</h2>
-        <p>Start a demo workspace and walk the same board you just watched.</p>
-        <Link href="/login" className="mkt-cta">
-          Get Started
-        </Link>
+      <section className="mkt-final mkt-demo" id="demo">
+        <div className="mkt-demo-copy">
+          <p className="mkt-kicker">Book a walkthrough</p>
+          <h2>If the videos look like your week, ask for the demo.</h2>
+          <p>
+            Tell us who you are and which modules you want live. We will walk the same workspace, with your questions
+            on the table.
+          </p>
+        </div>
+        <DemoRequestForm />
       </section>
 
       <footer className="mkt-footer">
@@ -163,253 +168,12 @@ export function LandingPage() {
           PMO
         </Link>
         <div className="mkt-footer-links">
-          <a href="#watch">Watch</a>
-          <a href="#platform">Platform</a>
+          <a href="#tours">Tours</a>
+          <a href="#demo">Request a demo</a>
           <Link href="/login">Sign in</Link>
         </div>
-        <span>© 2026 DMC PMO</span>
+        <span>2026 DMC PMO</span>
       </footer>
-    </div>
-  );
-}
-
-function scenesFor(tab: string, data: LandingData): FilmScene[] {
-  if (tab === "projects") return projectScenes(data);
-  if (tab === "resources") return resourceScenes(data);
-  if (tab === "risks") return riskScenes(data);
-  if (tab === "ai") return aiScenes(data);
-  return portfolioScenes(data);
-}
-
-function portfolioScenes(data: LandingData): FilmScene[] {
-  return [
-    {
-      id: "health",
-      title: "Portfolio health",
-      caption: `${data.metrics?.health ?? "Watch"} across the live investment book.`,
-      durationMs: 5200,
-      render: () => (
-        <ProductFrame title="portfolio / health" active="portfolio" compact>
-          <div className="mkt-film-metrics">
-            <BigStat label="Health" value={data.metrics?.health ?? "Watch"} />
-            <BigStat label="Budget" value={data.metrics ? data.money(data.metrics.invested) : "-"} />
-            <BigStat label="Aligned" value={`${data.alignedPct}%`} />
-            <BigStat label="Margin" value={`${data.metrics?.margin ?? 0}%`} />
-          </div>
-        </ProductFrame>
-      ),
-    },
-    {
-      id: "timeline",
-      title: "Timeline",
-      caption: "The portfolio calendar, using real start and due dates.",
-      durationMs: 5200,
-      render: () => (
-        <ProductFrame title="portfolio / timeline" active="portfolio" compact>
-          <div className="mkt-mini">
-            {data.projects.map((p) => (
-              <div key={p.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{p.name}</strong>
-                  <span>
-                    {p.start} to {p.due}
-                  </span>
-                </div>
-                <div className="mkt-bar">
-                  <i style={{ width: `${p.progress}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-  ];
-}
-
-function projectScenes(data: LandingData): FilmScene[] {
-  return [
-    {
-      id: "status",
-      title: "Project status",
-      caption: `${data.statusCounts.onTrack} on track · ${data.statusCounts.atRisk} at risk · ${data.statusCounts.overdue} overdue.`,
-      durationMs: 5000,
-      render: () => (
-        <ProductFrame title="projects / status" active="projects" compact>
-          <div className="mkt-mini">
-            {data.projects.map((p) => (
-              <div key={p.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{p.name}</strong>
-                  <Pill value={p.status} />
-                </div>
-                <ProgressLine value={p.progress} />
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-    {
-      id: "miles",
-      title: "Milestones",
-      caption: "Phase gates stay on the same record as the plan.",
-      durationMs: 5000,
-      render: () => (
-        <ProductFrame title="projects / milestones" active="projects" compact>
-          <div className="mkt-mini">
-            {data.milestones.slice(0, 5).map((m) => (
-              <div key={m.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{m.name}</strong>
-                  <Pill value={m.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-  ];
-}
-
-function resourceScenes(data: LandingData): FilmScene[] {
-  return [
-    {
-      id: "load",
-      title: "Utilization",
-      caption: data.overloaded.length
-        ? `${data.overloaded.map((o) => o.name).join(", ")} over 100% this week.`
-        : "Capacity is inside the band.",
-      durationMs: 6000,
-      render: () => (
-        <ProductFrame title="resources / load" active="resources" compact>
-          <div className="mkt-mini">
-            {data.capacity.map((person) => (
-              <div key={person.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{person.name}</strong>
-                  <span>{person.pct}%</span>
-                </div>
-                <div className="mkt-bar">
-                  <i style={{ width: `${Math.min(person.pct, 140)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-  ];
-}
-
-function riskScenes(data: LandingData): FilmScene[] {
-  return [
-    {
-      id: "open",
-      title: "Open risks",
-      caption: `${data.highRisks.length} high-impact items on the live book.`,
-      durationMs: 5500,
-      render: () => (
-        <ProductFrame title="risks / open" active="risks" compact>
-          <div className="mkt-mini">
-            {data.risks.map((risk) => (
-              <div key={risk.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{risk.title}</strong>
-                  <Pill value={risk.impact} />
-                </div>
-                <p>{risk.mitigation}</p>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-    {
-      id: "gates",
-      title: "Governance",
-      caption: "Gates waiting on a decision become the Monday agenda.",
-      durationMs: 5500,
-      render: () => (
-        <ProductFrame title="governance / gates" active="governance" compact>
-          <div className="mkt-mini">
-            {data.gates.map((gate) => (
-              <div key={gate.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{gate.name}</strong>
-                  <Pill value={gate.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-  ];
-}
-
-function aiScenes(data: LandingData): FilmScene[] {
-  return [
-    {
-      id: "brief",
-      title: "Exception brief",
-      caption: "Start with what is not green.",
-      durationMs: 5500,
-      render: () => (
-        <ProductFrame title="insights / brief" active="ai" compact>
-          <div className="mkt-mini">
-            <div className="insight-card">
-              <strong>
-                Portfolio is {data.metrics?.health?.toLowerCase() ?? "watch"}
-              </strong>
-              <p>
-                {data.metrics?.atRisk ?? 0} projects need attention · {data.highRisks.length} high risks
-              </p>
-            </div>
-            {data.overloaded.map((person) => (
-              <div key={person.id} className="insight-card">
-                <strong>
-                  {person.name} is at {person.pct}%
-                </strong>
-                <p>
-                  {person.count} assignments this week
-                </p>
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-    {
-      id: "align",
-      title: "Strategy moving",
-      caption: `${data.alignedPct}% of projects name an objective.`,
-      durationMs: 5500,
-      render: () => (
-        <ProductFrame title="strategy / objectives" active="strategy" compact>
-          <div className="mkt-mini">
-            {data.objectives.map((o) => (
-              <div key={o.id} className="insight-card">
-                <div className="mkt-row">
-                  <strong>{o.name}</strong>
-                  <span>{o.progress}%</span>
-                </div>
-                <ProgressLine value={o.progress} />
-              </div>
-            ))}
-          </div>
-        </ProductFrame>
-      ),
-    },
-  ];
-}
-
-function BigStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric-card">
-      <div className="metric-label">{label}</div>
-      <div className="metric-value">{value}</div>
     </div>
   );
 }
