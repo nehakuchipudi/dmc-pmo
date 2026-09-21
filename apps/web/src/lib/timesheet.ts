@@ -1,4 +1,4 @@
-import type { TimeEntry } from "./types";
+import type { Project, TeamMember, TimeEntry } from "./types";
 
 export function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -38,6 +38,10 @@ export function formatDayLabel(iso: string) {
   return parseIso(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+export function formatLongDay(iso: string) {
+  return parseIso(iso).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
+}
+
 export function formatWeekRange(weekStart: string) {
   const end = addDays(weekStart, 6);
   const startLabel = parseIso(weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -51,20 +55,133 @@ export function hoursInRange(entries: TimeEntry[], start: string, end: string) {
     .reduce((sum, entry) => sum + entry.hours, 0);
 }
 
-export function groupHours(
-  entries: TimeEntry[],
-  keyOf: (entry: TimeEntry) => string,
-) {
-  const map = new Map<string, { key: string; hours: number; billable: number; count: number }>();
-  for (const entry of entries) {
-    const key = keyOf(entry);
-    const current = map.get(key) ?? { key, hours: 0, billable: 0, count: 0 };
-    current.hours += entry.hours;
-    current.billable += entry.billable ? entry.hours : 0;
-    current.count += 1;
-    map.set(key, current);
+export function formatDuration(hours: number) {
+  const minutes = Math.round(hours * 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!minutes) return "0m";
+  if (!h) return `${m}m`;
+  if (!m) return `${h}h 00m`;
+  return `${h}h ${String(m).padStart(2, "0")}m`;
+}
+
+export function formatClockHours(hours: number) {
+  if (!hours) return "";
+  const minutes = Math.round(hours * 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+export function parseClock(value: string) {
+  const [h, m] = value.split(":").map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+export function formatClock(minutes: number) {
+  const wrapped = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  const suffix = h >= 12 ? "pm" : "am";
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, "0")}${suffix}`;
+}
+
+export function entryWindow(entry: TimeEntry) {
+  let start = 9 * 60;
+  if (entry.start) start = parseClock(entry.start);
+  else {
+    let hash = 0;
+    for (const ch of entry.id) hash += ch.charCodeAt(0);
+    start = 8 * 60 + (hash % 8) * 45;
   }
-  return [...map.values()].sort((a, b) => b.hours - a.hours);
+  const end = start + Math.round(entry.hours * 60);
+  return { start, end };
+}
+
+export function billRateFor(name: string, team: TeamMember[]) {
+  return team.find((member) => member.name === name)?.billRate ?? 180;
+}
+
+export function costRateFor(name: string, team: TeamMember[]) {
+  return Math.round(billRateFor(name, team) * 0.35);
+}
+
+export type OverviewProjectRow = {
+  projectId: string;
+  projectName: string;
+  activities: number;
+  nonbillable: number;
+  billable: number;
+  total: number;
+  amount: number;
+  cost: number;
+};
+
+export type OverviewCompanyRow = {
+  companyId: string;
+  companyName: string;
+  activities: number;
+  nonbillable: number;
+  billable: number;
+  total: number;
+  amount: number;
+  cost: number;
+  projects: OverviewProjectRow[];
+};
+
+export function overviewByCompany(
+  entries: TimeEntry[],
+  projects: Project[],
+  team: TeamMember[],
+): OverviewCompanyRow[] {
+  const companies = new Map<string, OverviewCompanyRow>();
+  for (const entry of entries) {
+    const project = projects.find((item) => item.id === entry.projectId);
+    const companyId = project?.companyId ?? "internal";
+    const companyName = project?.companyName ?? "Internal";
+    const company = companies.get(companyId) ?? {
+      companyId,
+      companyName,
+      activities: 0,
+      nonbillable: 0,
+      billable: 0,
+      total: 0,
+      amount: 0,
+      cost: 0,
+      projects: [],
+    };
+    let projectRow = company.projects.find((item) => item.projectId === entry.projectId);
+    if (!projectRow) {
+      projectRow = {
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        activities: 0,
+        nonbillable: 0,
+        billable: 0,
+        total: 0,
+        amount: 0,
+        cost: 0,
+      };
+      company.projects.push(projectRow);
+    }
+    const billable = entry.billable ? entry.hours : 0;
+    const nonbillable = entry.billable ? 0 : entry.hours;
+    const amount = billable * billRateFor(entry.userName, team);
+    const cost = entry.hours * costRateFor(entry.userName, team);
+    for (const row of [company, projectRow]) {
+      row.activities += 1;
+      row.billable += billable;
+      row.nonbillable += nonbillable;
+      row.total += entry.hours;
+      row.amount += amount;
+      row.cost += cost;
+    }
+    companies.set(companyId, company);
+  }
+  return [...companies.values()]
+    .map((row) => ({ ...row, projects: row.projects.sort((a, b) => b.total - a.total) }))
+    .sort((a, b) => b.total - a.total);
 }
 
 export function weekMatrix(entries: TimeEntry[], weekStart: string, rowKey: (entry: TimeEntry) => string) {

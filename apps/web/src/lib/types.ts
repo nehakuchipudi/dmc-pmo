@@ -354,6 +354,7 @@ export interface TimeEntry {
   taskId?: string;
   taskName?: string;
   date: string;
+  start?: string;
   hours: number;
   billable: boolean;
   note: string;
