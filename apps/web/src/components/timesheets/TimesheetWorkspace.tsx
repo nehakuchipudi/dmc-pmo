@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
-import { Field, PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { exportCsv } from "@/lib/pdf";
 import { money } from "@/lib/seed";
@@ -41,7 +41,8 @@ export function TimesheetWorkspace() {
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [day, setDay] = useState(todayIso());
   const [weekStart, setWeekStart] = useState(startOfWeek(todayIso()));
-  const [person, setPerson] = useState(user?.name ?? "All");
+  const [reportPerson, setReportPerson] = useState("All");
+  const [sheetPerson, setSheetPerson] = useState(user?.name ?? "All");
   const [rangeStart, setRangeStart] = useState(startOfWeek(todayIso()));
   const [rangeEnd, setRangeEnd] = useState(addDays(startOfWeek(todayIso()), 6));
   const [billableOnly, setBillableOnly] = useState(false);
@@ -65,11 +66,14 @@ export function TimesheetWorkspace() {
   const scoped = useMemo(() => {
     return entries
       .filter((entry) => (staffOnly ? entry.userName === user?.name || entry.userName === "J. Kim" : true))
-      .filter((entry) => (person === "All" ? true : entry.userName === person))
+      .filter((entry) => {
+        const who = view === "Overview" ? reportPerson : sheetPerson;
+        return who === "All" ? true : entry.userName === who;
+      })
       .filter((entry) => (billableOnly ? entry.billable : true))
       .filter((entry) => (workFilter === "Billable" ? entry.billable : workFilter === "Non-billable" ? !entry.billable : true))
       .sort((a, b) => a.start?.localeCompare(b.start ?? "") || b.date.localeCompare(a.date));
-  }, [entries, staffOnly, user?.name, person, billableOnly, workFilter]);
+  }, [entries, staffOnly, user?.name, reportPerson, sheetPerson, view, billableOnly, workFilter]);
 
   const overviewEntries = scoped.filter((entry) => entry.date >= rangeStart && entry.date <= rangeEnd);
   const report = overviewByCompany(overviewEntries, projects, team);
@@ -100,7 +104,7 @@ export function TimesheetWorkspace() {
       !matrix.rows.some((row) => row.key === project.name),
   );
 
-  const selectedPerson = person === "All" ? user?.name : person;
+  const selectedPerson = sheetPerson === "All" ? user?.name : sheetPerson;
   const myTasks = tasks.filter((task) => {
     if (selectedPerson && task.assignee !== selectedPerson) return false;
     if (task.status === "Done") return false;
@@ -133,28 +137,32 @@ export function TimesheetWorkspace() {
         <section>
           <div className="ts-toolbar">
             <div className="ts-toolbar-group">
-              <Field label="People">
-                <TextSelect value={person} onChange={(e) => setPerson(e.target.value)}>
+              <label className="ts-inline">
+                <span>People</span>
+                <TextSelect value={reportPerson} onChange={(e) => setReportPerson(e.target.value)}>
                   {people.map((name) => (
                     <option key={name} value={name}>
                       {name === "All" ? "Users and groups" : name}
                     </option>
                   ))}
                 </TextSelect>
-              </Field>
-              <Field label="Rate type">
+              </label>
+              <label className="ts-inline">
+                <span>Rate type</span>
                 <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
                   <option>All</option>
                   <option>Billable</option>
                   <option>Non-billable</option>
                 </TextSelect>
-              </Field>
-              <Field label="From">
+              </label>
+              <label className="ts-inline">
+                <span>From</span>
                 <TextInput type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} />
-              </Field>
-              <Field label="To">
+              </label>
+              <label className="ts-inline">
+                <span>To</span>
                 <TextInput type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
-              </Field>
+              </label>
             </div>
             <div className="ts-toolbar-group ts-toolbar-toggles">
               <label>
@@ -299,7 +307,7 @@ export function TimesheetWorkspace() {
               >
                 Weekly view
               </button>
-              <TextSelect value={person} onChange={(e) => setPerson(e.target.value)}>
+              <TextSelect value={sheetPerson} onChange={(e) => setSheetPerson(e.target.value)} aria-label="Person">
                 {people.map((name) => (
                   <option key={name} value={name}>
                     {name}
@@ -435,7 +443,7 @@ export function TimesheetWorkspace() {
         <section>
           <div className="ts-toolbar">
             <div className="ts-toolbar-group">
-              <TextSelect value={person} onChange={(e) => setPerson(e.target.value)}>
+              <TextSelect value={sheetPerson} onChange={(e) => setSheetPerson(e.target.value)} aria-label="Person">
                 {people.map((name) => (
                   <option key={name} value={name}>
                     {name}
