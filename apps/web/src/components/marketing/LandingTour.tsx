@@ -98,7 +98,13 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
     advancedRef.current = false;
     video.currentTime = 0;
     void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [clip.id]);
+    const tick = window.setInterval(() => {
+      if (video.ended || (!video.paused && video.duration > 0 && video.currentTime >= video.duration - 0.05)) {
+        advance();
+      }
+    }, 200);
+    return () => window.clearInterval(tick);
+  }, [advance, clip.id]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
