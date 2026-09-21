@@ -13,7 +13,7 @@ export const PRODUCT_TOURS: ProductTour[] = [
   {
     id: "hero",
     title: "The whole workspace",
-    kicker: "20 second tour",
+    kicker: "Home to plan",
     blurb: "Home, company record, project team, insights, and the live plan in one walk.",
     src: "/tours/hero.mp4",
     poster: "/tours/hero.jpg",

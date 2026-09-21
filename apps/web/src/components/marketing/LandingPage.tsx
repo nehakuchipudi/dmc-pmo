@@ -92,6 +92,7 @@ export function LandingPage() {
               <dd>{data.benefitAvg}%</dd>
             </div>
           </dl>
+          <p className="mkt-hero-modules">Portfolio · Companies · Team · Insights · Plan</p>
         </div>
         <div className="mkt-hero-media">
           <div className="mkt-hero-video-wrap">
