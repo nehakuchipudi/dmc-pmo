@@ -215,7 +215,30 @@
   background:
     radial-gradient(800px 280px at 80% 0%, rgba(97, 97, 255, 0.22), transparent 55%),
     #111217;
-  min-height: 420px;
+  min-height: 0;
+}
+
+.mkt-live-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #111217;
+}
+
+.mkt-film-live {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(17, 18, 23, 0.78);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .mkt-film-hit {
@@ -268,7 +291,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 4px 20px 0;
+  padding: 14px 20px 18px;
   font-size: 0.86rem;
 }
 
