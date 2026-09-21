@@ -738,14 +738,24 @@ export const seedInvoices: Invoice[] = [
 ];
 
 export const seedTimeEntries: TimeEntry[] = [
-  { id: "te1", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk1", taskName: "Configure WMS user roles", date: "2026-08-05", hours: 2.5, billable: true, note: "Role matrix draft", status: "Submitted" },
-  { id: "te2", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk4", taskName: "Install racking Zone B", date: "2026-08-05", hours: 4, billable: true, note: "Onsite supervision", status: "Approved" },
-  { id: "te3", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", taskId: "tk6", taskName: "Client review homepage design", date: "2026-08-06", hours: 1.5, billable: true, note: "Prep review notes", status: "Draft" },
-  { id: "te4", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-05-14", hours: 8, billable: true, note: "Discovery on site", status: "Approved" },
-  { id: "te5", userName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", date: "2026-06-18", hours: 6, billable: true, note: "Intake flow", status: "Approved" },
-  { id: "te6", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-06-22", hours: 5, billable: true, note: "CMS spike", status: "Approved" },
-  { id: "te7", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-07-09", hours: 10, billable: true, note: "Racking layout", status: "Approved" },
-  { id: "te8", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-07-21", hours: 7, billable: true, note: "GPS vendor tests", status: "Approved" },
+  { id: "te1", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk1", taskName: "Configure WMS user roles", date: "2026-08-05", start: "09:00", hours: 2.5, billable: true, note: "Role matrix draft", status: "Submitted" },
+  { id: "te2", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk4", taskName: "Install racking Zone B", date: "2026-08-05", start: "10:00", hours: 4, billable: true, note: "Onsite supervision", status: "Approved" },
+  { id: "te3", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", taskId: "tk6", taskName: "Client review homepage design", date: "2026-08-06", start: "13:00", hours: 1.5, billable: true, note: "Prep review notes", status: "Draft" },
+  { id: "te4", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-05-14", start: "08:00", hours: 8, billable: true, note: "Discovery on site", status: "Approved" },
+  { id: "te5", userName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", date: "2026-06-18", start: "09:00", hours: 6, billable: true, note: "Intake flow", status: "Approved" },
+  { id: "te6", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-06-22", start: "09:30", hours: 5, billable: true, note: "CMS spike", status: "Approved" },
+  { id: "te7", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-07-09", start: "08:00", hours: 10, billable: true, note: "Racking layout", status: "Approved" },
+  { id: "te8", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-07-21", start: "08:30", hours: 7, billable: true, note: "GPS vendor tests", status: "Approved" },
+  { id: "te18", userName: "Dillon Morgan", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-21", start: "09:00", hours: 0.5, billable: true, note: "Daily standup", status: "Approved" },
+  { id: "te9", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk1", taskName: "Configure WMS user roles", date: "2026-09-21", start: "09:30", hours: 3, billable: true, note: "Role matrix revisions", status: "Draft" },
+  { id: "te10", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-21", start: "09:00", hours: 2.5, billable: true, note: "Client standup and blockers", status: "Submitted" },
+  { id: "te11", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-09-21", start: "08:00", hours: 4, billable: true, note: "Device pairing checks", status: "Approved" },
+  { id: "te12", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-09-22", start: "09:00", hours: 5, billable: true, note: "Homepage variants", status: "Submitted" },
+  { id: "te13", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-23", start: "08:30", hours: 6, billable: true, note: "Zone B walkthrough", status: "Approved" },
+  { id: "te14", userName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", date: "2026-09-21", start: "14:00", hours: 1.5, billable: false, note: "Internal billing review", status: "Approved" },
+  { id: "te15", userName: "S. Ahmed", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", date: "2026-09-24", start: "10:00", hours: 4, billable: true, note: "Intake form polish", status: "Draft" },
+  { id: "te16", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-18", start: "08:00", hours: 7, billable: true, note: "Cutover rehearsal", status: "Approved" },
+  { id: "te17", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-09-25", start: "09:00", hours: 3.5, billable: true, note: "Exception alerts", status: "Submitted" },
 ];
 
 export const seedNotifications: NotificationItem[] = [

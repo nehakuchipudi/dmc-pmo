@@ -151,6 +151,7 @@ type CreateTimeInput = {
   projectId: string;
   taskId?: string;
   date: string;
+  start?: string;
   hours: number;
   billable: boolean;
   note: string;
@@ -1485,6 +1486,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       taskId: task?.id,
       taskName: task?.name,
       date: input.date,
+      start: input.start,
       hours: input.hours,
       billable: input.billable,
       note: input.note,
