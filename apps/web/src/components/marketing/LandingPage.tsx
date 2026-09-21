@@ -1,36 +1,78 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
+  Brain,
   Briefcase,
-  Building2,
-  ChartColumn,
   Layers3,
+  Scale,
   ShieldAlert,
   Target,
   Users,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { DemoRequestForm } from "./DemoRequestForm";
-import { TourPlayer } from "./TourPlayer";
-import { useLandingData } from "./useLandingData";
+
+const TABS = [
+  {
+    id: "portfolio",
+    label: "Portfolio",
+    title: "Portfolio home",
+    caption: "Funded work, capacity, cash, and the decisions waiting this week.",
+    src: "/tours/portfolio.mp4",
+    poster: "/tours/portfolio.jpg",
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    title: "Project plan",
+    caption: "Milestones, tasks, and an aligned Gantt on Q3 Warehouse Rollout.",
+    src: "/tours/plan.mp4",
+    poster: "/tours/plan.jpg",
+  },
+  {
+    id: "resources",
+    label: "Resources",
+    title: "Project team",
+    caption: "Roles, allocation, capacity, and logged hours on the same roster.",
+    src: "/tours/team.mp4",
+    poster: "/tours/team.jpg",
+  },
+  {
+    id: "risks",
+    label: "Risks",
+    title: "Project insights",
+    caption: "Schedule, budget, resources, and risk scored from live project data.",
+    src: "/tours/insights.mp4",
+    poster: "/tours/insights.jpg",
+  },
+  {
+    id: "ai",
+    label: "Intelligence",
+    title: "The whole workspace",
+    caption: "Home, company record, project team, insights, and the live plan in one walk.",
+    src: "/tours/hero.mp4",
+    poster: "/tours/hero.jpg",
+  },
+] as const;
 
 const FEATURES = [
-  { title: "Portfolio home", icon: Layers3, body: "One book for funded work, capacity, cash, and the decisions waiting this week." },
-  { title: "Companies and contacts", icon: Building2, body: "The client record, activity, and the people who own the relationship." },
-  { title: "Project workspace", icon: Briefcase, body: "Health, lifecycle, team, insights, and plan on the same project." },
-  { title: "Project plan", icon: ChartColumn, body: "Milestones, tasks, subtasks, and an aligned Gantt you can edit." },
-  { title: "Team and capacity", icon: Users, body: "Roles, allocation, and logged hours so you see overload before it lands." },
-  { title: "Insights", icon: Target, body: "Schedule, budget, resource, and risk health scored from live project data." },
-  { title: "Finance", icon: Wallet, body: "Budget, hours, invoices, and margin stay on the same identity." },
-  { title: "Risk and governance", icon: ShieldAlert, body: "Open risks and stage gates sit next to the work they can stall." },
+  { title: "Portfolio Management", icon: Layers3, body: "One book for the work you fund, with health and spend in the same view." },
+  { title: "Project Management", icon: Briefcase, body: "Plans, tickets, and status on the same project record." },
+  { title: "Resource Management", icon: Users, body: "See who is over capacity before you start more work." },
+  { title: "Financial Management", icon: Wallet, body: "Budget, hours, invoices, and margin stay connected." },
+  { title: "Risk & Issues", icon: ShieldAlert, body: "Score and track risks next to the work they can stall." },
+  { title: "Governance", icon: Scale, body: "Stage gates and decisions with owners, dates, and criteria." },
+  { title: "Strategy Alignment", icon: Target, body: "Map projects to objectives so the portfolio proves outcomes." },
+  { title: "PMO Intelligence", icon: Brain, body: "A weekly brief of exceptions: risk, capacity, gates, and cash." },
 ];
 
 export function LandingPage() {
-  const data = useLandingData();
   const { user, isClient } = useAuth();
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("portfolio");
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
+  const tour = TABS.find((item) => item.id === tab) ?? TABS[0];
 
   return (
     <div className="mkt">
@@ -40,9 +82,8 @@ export function LandingPage() {
           PMO
         </Link>
         <nav className="mkt-nav-links">
-          <a href="#tours">Tours</a>
+          <a href="#watch">Watch</a>
           <a href="#platform">Platform</a>
-          <a href="#demo">Demo</a>
         </nav>
         <div className="mkt-nav-actions">
           {user ? (
@@ -54,87 +95,88 @@ export function LandingPage() {
               <Link href="/login" className="mkt-text-link">
                 Sign in
               </Link>
-              <a href="#demo" className="mkt-cta mkt-cta-sm">
-                Request a demo
-              </a>
+              <Link href="/login" className="mkt-cta mkt-cta-sm">
+                Get Started
+              </Link>
             </>
           )}
         </div>
       </header>
 
-      <section className="mkt-hero mkt-hero-split">
-        <div className="mkt-hero-copy">
-          <p className="mkt-kicker">Watch the live PMO, then book the walkthrough</p>
-          <h1>See the workspace before you ask for a demo.</h1>
-          <p className="mkt-lead">
-            These are short tours of the actual DMC PMO. Portfolio home, company records, project team, insights, and
-            the Accelo-style plan. Same data your team would run.
-          </p>
-          <div className="mkt-hero-actions">
-            <a href="#demo" className="mkt-cta">
-              Request a demo
-            </a>
-            <a href="#tours" className="mkt-ghost">
-              Watch module tours
-            </a>
-          </div>
-          <dl className="mkt-hero-stats">
-            <div>
-              <dt>Projects on the book</dt>
-              <dd>{data.projects.length}</dd>
-            </div>
-            <div>
-              <dt>Work aligned</dt>
-              <dd>{data.alignedPct}%</dd>
-            </div>
-            <div>
-              <dt>Benefit progress</dt>
-              <dd>{data.benefitAvg}%</dd>
-            </div>
-          </dl>
-          <p className="mkt-hero-modules">Portfolio · Companies · Team · Insights · Plan</p>
+      <section className="mkt-hero">
+        <div className="mkt-blob mkt-blob-a" />
+        <div className="mkt-blob mkt-blob-b" />
+        <div className="mkt-blob mkt-blob-c" />
+        <p className="mkt-kicker">PMO platform for every organization</p>
+        <h1>Turn Projects Into Business Outcomes.</h1>
+        <p className="mkt-lead">
+          DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
+          project portfolio.
+        </p>
+        <div className="mkt-hero-actions">
+          <Link href="/login" className="mkt-cta">
+            Get Started
+          </Link>
+          <a href="#watch" className="mkt-ghost">
+            Explore the Platform
+          </a>
         </div>
-        <div className="mkt-hero-media">
-          <div className="mkt-hero-video-wrap">
+      </section>
+
+      <section className="mkt-watch" id="watch">
+        <div className="mkt-tabs" role="tablist" aria-label="Live product tours">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              className={tab === item.id ? "active" : undefined}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mkt-film mkt-film-hero">
+          <div className="mkt-film-stage">
             <video
-              className="mkt-hero-video"
-              src="/tours/hero.mp4"
-              poster="/tours/hero.jpg"
+              key={tour.id}
+              className="mkt-live-video"
+              src={tour.src}
+              poster={tour.poster}
               muted
               playsInline
               loop
               autoPlay
+              controls
               preload="metadata"
             />
-            <div className="mkt-tour-badge">Live product</div>
+            <div className="mkt-film-live">Live product</div>
+          </div>
+          <div className="mkt-film-caption">
+            <em>{tour.title}</em>
+            <span>{tour.caption}</span>
           </div>
         </div>
-      </section>
-
-      <section className="mkt-watch" id="tours">
-        <div className="mkt-section-head">
-          <p className="mkt-kicker">Product tours</p>
-          <h2>Click a module. Watch the real screen.</h2>
-          <p className="mkt-lead">
-            Not slides. Not a sketched UI. These clips were recorded in the live workspace on Q3 Warehouse Rollout and
-            Cascade Ventures.
-          </p>
-        </div>
-        <TourPlayer initialId="plan" />
+        <p className="mkt-watch-note">
+          Click a tab to watch the live workspace. These clips were recorded on Q3 Warehouse Rollout and Cascade
+          Ventures.
+        </p>
       </section>
 
       <section className="mkt-trust">
-        <p>Built for the people who have to answer for the book</p>
+        <p>Teams use DMC PMO across</p>
         <div>
-          {["PMO", "Delivery", "Finance", "Client leads", "Executives"].map((name) => (
+          {["Operations", "IT", "Product", "Finance", "Delivery", "Strategy"].map((name) => (
             <span key={name}>{name}</span>
           ))}
         </div>
       </section>
 
       <section className="mkt-platform" id="platform">
-        <h2>The modules you just watched.</h2>
-        <p className="mkt-lead">One project identity from intake to invoice. Ask for the demo on the parts that matter to you.</p>
+        <h2>Everything Your PMO Needs. One Platform.</h2>
+        <p className="mkt-lead">Eight capabilities. One project identity. Built for any company that runs a portfolio.</p>
         <div className="mkt-features">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
@@ -151,16 +193,12 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mkt-final mkt-demo" id="demo">
-        <div className="mkt-demo-copy">
-          <p className="mkt-kicker">Book a walkthrough</p>
-          <h2>If the videos look like your week, ask for the demo.</h2>
-          <p>
-            Tell us who you are and which modules you want live. We will walk the same workspace, with your questions
-            on the table.
-          </p>
-        </div>
-        <DemoRequestForm />
+      <section className="mkt-final">
+        <h2>See your whole portfolio in one place.</h2>
+        <p>Start a demo workspace and walk the same board you just watched.</p>
+        <Link href="/login" className="mkt-cta">
+          Get Started
+        </Link>
       </section>
 
       <footer className="mkt-footer">
@@ -169,11 +207,11 @@ export function LandingPage() {
           PMO
         </Link>
         <div className="mkt-footer-links">
-          <a href="#tours">Tours</a>
-          <a href="#demo">Request a demo</a>
+          <a href="#watch">Watch</a>
+          <a href="#platform">Platform</a>
           <Link href="/login">Sign in</Link>
         </div>
-        <span>2026 DMC PMO</span>
+        <span>© 2026 DMC PMO</span>
       </footer>
     </div>
   );
