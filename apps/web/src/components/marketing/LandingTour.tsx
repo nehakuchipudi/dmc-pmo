@@ -22,6 +22,8 @@ function formatClock(seconds: number) {
 
 export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const indexRef = useRef(0);
+  const advancedRef = useRef(false);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [current, setCurrent] = useState(0);
@@ -30,11 +32,14 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   const clip = clips[index] ?? clips[0];
   const nextClip = clips[(index + 1) % clips.length];
   const progress = duration ? Math.min(100, (current / duration) * 100) : 0;
-  const nearEnd = duration > 0 && duration - current <= 1.4;
+  const remaining = duration > 0 ? Math.max(0, duration - current) : 0;
+  const nearEnd = duration > 0 && remaining <= 2.2;
 
   const goTo = useCallback(
     (next: number) => {
       const wrapped = ((next % clips.length) + clips.length) % clips.length;
+      advancedRef.current = false;
+      indexRef.current = wrapped;
       setIndex(wrapped);
       setCurrent(0);
       setDuration(0);
@@ -42,6 +47,12 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
     },
     [clips.length],
   );
+
+  const advance = useCallback(() => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
+    goTo(indexRef.current + 1);
+  }, [goTo]);
 
   const toggle = useCallback(() => {
     const video = videoRef.current;
@@ -65,19 +76,26 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
       void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
       return;
     }
-    goTo(index - 1);
-  }, [goTo, index]);
+    goTo(indexRef.current - 1);
+  }, [goTo]);
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "");
     if (hash === "watchnow" || hash === "watch") {
       document.getElementById("watchnow")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, []);
+    const named = clips.findIndex((item) => hash === `watch-${item.id}` || hash === item.id);
+    if (named >= 0) goTo(named);
+  }, [clips, goTo]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    advancedRef.current = false;
     video.currentTime = 0;
     void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   }, [clip.id]);
@@ -90,18 +108,22 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
         event.preventDefault();
         toggle();
       }
-      if (event.key === "ArrowRight") goTo(index + 1);
+      if (event.key === "ArrowRight") goTo(indexRef.current + 1);
       if (event.key === "ArrowLeft") previous();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goTo, index, previous, toggle]);
+  }, [goTo, previous, toggle]);
 
   function syncTime() {
     const video = videoRef.current;
     if (!video) return;
+    const nextDuration = Number.isFinite(video.duration) ? video.duration : 0;
     setCurrent(video.currentTime);
-    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+    setDuration(nextDuration);
+    if (video.ended || (nextDuration > 0 && video.currentTime >= nextDuration - 0.08)) {
+      advance();
+    }
   }
 
   function seek(pct: number) {
@@ -145,7 +167,7 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
             playsInline
             autoPlay
             preload="auto"
-            onEnded={() => goTo(index + 1)}
+            onEnded={advance}
             onTimeUpdate={syncTime}
             onLoadedMetadata={syncTime}
             onPlay={() => setPlaying(true)}
@@ -155,8 +177,13 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
             }}
             onClick={toggle}
           />
+          <video className="mkt-film-preload" src={nextClip.src} muted preload="auto" aria-hidden="true" tabIndex={-1} />
           <div className="mkt-film-live">Live {clip.label}</div>
-          {nearEnd ? <div className="mkt-film-nextup">Next: {nextClip.label}</div> : null}
+          {nearEnd ? (
+            <button type="button" className="mkt-film-nextup" onClick={() => goTo(index + 1)}>
+              Next {nextClip.label} in {Math.max(1, Math.ceil(remaining))}s
+            </button>
+          ) : null}
           {!playing ? (
             <button type="button" className="mkt-film-play mkt-film-play-center" onClick={toggle} aria-label="Play module tour">
               <Play size={26} fill="currentColor" />
@@ -193,22 +220,28 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
           <em>{clip.title}</em>
           <span>{clip.caption}</span>
         </div>
-        <div className="mkt-film-chapters">
+        <div className="mkt-playlist" aria-label="Module playlist">
           {clips.map((item, i) => (
             <button
               key={item.id}
               type="button"
-              className={i === index ? "active" : undefined}
+              className={clsx(i === index && "active")}
               onClick={() => goTo(i)}
             >
-              {item.label}
+              <img src={item.poster} alt="" />
+              <span>{item.label}</span>
+              {i === index ? (
+                <b className="mkt-playlist-bar" aria-hidden="true">
+                  <i style={{ width: `${progress}%` }} />
+                </b>
+              ) : null}
             </button>
           ))}
         </div>
       </div>
       <p className="mkt-watch-note">
-        Each tab is that live module. The film advances on its own when a clip ends, or jump ahead with the tabs and
-        controls.
+        Each tab plays that live module. When a clip ends the next tab starts on its own. Pause, seek, or jump ahead
+        from the playlist.
       </p>
     </section>
   );
