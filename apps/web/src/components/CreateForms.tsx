@@ -27,7 +27,7 @@ export function CreateForms({
 }: {
   kind: CreateKind;
   onClose: () => void;
-  defaults?: { companyId?: string; projectId?: string; hours?: number };
+  defaults?: { companyId?: string; projectId?: string; hours?: number; date?: string };
 }) {
   const { user } = useAuth();
   const companies = useAppStore((s) => s.companies);
@@ -156,6 +156,7 @@ export function CreateForms({
           userName={user?.name ?? "Staff"}
           defaultProjectId={defaults?.projectId}
           defaultHours={defaults?.hours}
+          defaultDate={defaults?.date}
           onSubmit={(v) => {
             createTimeEntry(v);
             onClose();
@@ -594,6 +595,7 @@ function TimeForm({
   userName,
   defaultProjectId,
   defaultHours,
+  defaultDate,
   onSubmit,
 }: {
   projects: { id: string; name: string }[];
@@ -601,6 +603,7 @@ function TimeForm({
   userName: string;
   defaultProjectId?: string;
   defaultHours?: number;
+  defaultDate?: string;
   onSubmit: (v: {
     userName: string;
     projectId: string;
@@ -613,6 +616,7 @@ function TimeForm({
 }) {
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
   const [taskId, setTaskId] = useState("");
+  const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
   const [hours, setHours] = useState(String(defaultHours && defaultHours > 0 ? defaultHours : 1));
   const [note, setNote] = useState("");
   const [billable, setBillable] = useState(true);
@@ -625,7 +629,7 @@ function TimeForm({
           userName,
           projectId,
           taskId: taskId || undefined,
-          date: new Date().toISOString().slice(0, 10),
+          date,
           hours: Number(hours) || 0,
           billable,
           note,
@@ -656,6 +660,9 @@ function TimeForm({
             </option>
           ))}
         </TextSelect>
+      </Field>
+      <Field label="Date">
+        <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
       <Field label="Hours">
         <TextInput type="number" step="0.25" min="0.25" value={hours} onChange={(e) => setHours(e.target.value)} />

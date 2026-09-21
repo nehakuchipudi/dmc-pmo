@@ -746,6 +746,15 @@ export const seedTimeEntries: TimeEntry[] = [
   { id: "te6", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-06-22", hours: 5, billable: true, note: "CMS spike", status: "Approved" },
   { id: "te7", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-07-09", hours: 10, billable: true, note: "Racking layout", status: "Approved" },
   { id: "te8", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-07-21", hours: 7, billable: true, note: "GPS vendor tests", status: "Approved" },
+  { id: "te9", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", taskId: "tk1", taskName: "Configure WMS user roles", date: "2026-09-21", hours: 3, billable: true, note: "Role matrix revisions", status: "Draft" },
+  { id: "te10", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-21", hours: 2.5, billable: true, note: "Client standup and blockers", status: "Submitted" },
+  { id: "te11", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-09-21", hours: 4, billable: true, note: "Device pairing checks", status: "Approved" },
+  { id: "te12", userName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", date: "2026-09-22", hours: 5, billable: true, note: "Homepage variants", status: "Submitted" },
+  { id: "te13", userName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-23", hours: 6, billable: true, note: "Zone B walkthrough", status: "Approved" },
+  { id: "te14", userName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", date: "2026-09-21", hours: 1.5, billable: false, note: "Internal billing review", status: "Approved" },
+  { id: "te15", userName: "S. Ahmed", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", date: "2026-09-24", hours: 4, billable: true, note: "Intake form polish", status: "Draft" },
+  { id: "te16", userName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", date: "2026-09-18", hours: 7, billable: true, note: "Cutover rehearsal", status: "Approved" },
+  { id: "te17", userName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", date: "2026-09-25", hours: 3.5, billable: true, note: "Exception alerts", status: "Submitted" },
 ];
 
 export const seedNotifications: NotificationItem[] = [
