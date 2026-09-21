@@ -209,14 +209,15 @@ export function CompanyCreateForm({
       className="company-create"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!name.trim()) return;
+        const typedName = name.trim() || String(new FormData(e.currentTarget).get("companyName") || "").trim();
+        if (!typedName) return;
         const storedAddresses: CompanyAddress[] = addresses.map((item, index) => ({
           id: `addr-${index + 1}`,
           ...item,
         }));
         onSubmit({
           company: {
-            name: name.trim(),
+            name: typedName,
             status,
             accountManager: managers[0] ?? "M. Doyle",
             accountManagers: managers.length ? managers : ["M. Doyle"],
@@ -237,15 +238,18 @@ export function CompanyCreateForm({
         });
       }}
     >
-      <Field label="Name of company" required>
-        <TextInput
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name of company"
-          required
-          autoFocus
-        />
-      </Field>
+      <div className="company-create-top">
+        <Field label="Name of company" required>
+          <TextInput
+            name="companyName"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name of company"
+            required
+            autoFocus
+          />
+        </Field>
+      </div>
 
       <div className="company-create-grid">
         <section className="company-create-col">
@@ -264,7 +268,7 @@ export function CompanyCreateForm({
               </TextSelect>
             </Field>
             <Field label="Website">
-              <TextInput type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
+              <TextInput value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
             </Field>
           </div>
           <div className="company-create-row">

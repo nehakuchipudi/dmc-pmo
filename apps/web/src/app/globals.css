@@ -1431,6 +1431,14 @@ button, input, select, textarea { font: inherit; }
   font-weight: 700;
 }
 .company-create { display: grid; gap: 16px; }
+.company-create-top {
+  position: sticky;
+  top: -8px;
+  z-index: 2;
+  padding-bottom: 8px;
+  background: var(--color-surface);
+}
+.company-create-top .field-input { min-height: 48px; font-size: 1.05rem; }
 .company-create-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
