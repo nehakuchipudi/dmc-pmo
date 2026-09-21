@@ -60,6 +60,23 @@ export interface CompanyFile {
   sizeKb: number;
 }
 
+export type CompanyPrivacy = "Standard" | "Confidential";
+
+export interface CompanyAddress {
+  id: string;
+  line1: string;
+  city: string;
+  region: string;
+  postal: string;
+  country: string;
+}
+
+export interface CompanyCustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 export interface CompanyAsset {
   id: string;
   companyId: string;
@@ -85,6 +102,13 @@ export interface Company {
   portalContacts: number;
   createdAt?: string;
   address?: string;
+  addresses?: CompanyAddress[];
+  website?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  privacy?: CompanyPrivacy;
+  customFields?: CompanyCustomField[];
   tags?: string[];
   favorite?: boolean;
   primaryContactId?: string;
@@ -111,6 +135,12 @@ export interface Contact {
   portal: "Enabled" | "Not Invited";
   lastInteraction: string;
   phone?: string;
+  mobile?: string;
+  salutation?: string;
+  firstName?: string;
+  lastName?: string;
+  category?: string;
+  pronouns?: string;
   notes?: string;
   noteItems?: ContactNote[];
   projectIds?: string[];

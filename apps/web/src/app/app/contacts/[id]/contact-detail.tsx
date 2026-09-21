@@ -160,6 +160,15 @@ export function ContactDetail({ id }: { id: string }) {
                     "None"
                   )}
                 </RecordFact>
+                {contact.mobile ? (
+                  <RecordFact label="Mobile">
+                    <a href={`tel:${contact.mobile.replace(/\s+/g, "")}`} className="text-[var(--color-navy)]">
+                      {contact.mobile}
+                    </a>
+                  </RecordFact>
+                ) : null}
+                {contact.category ? <RecordFact label="Category">{contact.category}</RecordFact> : null}
+                {contact.pronouns ? <RecordFact label="Pronouns">{contact.pronouns}</RecordFact> : null}
                 <RecordFact label="Portal">{contact.portal}</RecordFact>
                 <RecordFact label="Last interaction">{contact.lastInteraction}</RecordFact>
               </dl>
