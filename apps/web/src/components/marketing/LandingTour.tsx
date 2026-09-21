@@ -162,36 +162,36 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
               <Play size={26} fill="currentColor" />
             </button>
           ) : null}
+          <div className="mkt-film-controls">
+            <button type="button" onClick={previous} aria-label="Previous module">
+              <SkipBack size={16} />
+            </button>
+            <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"}>
+              {playing ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            <button type="button" onClick={() => goTo(index + 1)} aria-label="Next module">
+              <SkipForward size={16} />
+            </button>
+            <div className="mkt-film-time">
+              {formatClock(current)} / {formatClock(duration)}
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={0.5}
+              value={progress}
+              aria-label="Clip progress"
+              onChange={(event) => seek(Number(event.target.value))}
+            />
+            <button type="button" onClick={() => setWide((value) => !value)} aria-label="Expand film">
+              <Maximize2 size={16} />
+            </button>
+          </div>
         </div>
         <div className="mkt-film-caption">
           <em>{clip.title}</em>
           <span>{clip.caption}</span>
-        </div>
-        <div className="mkt-film-controls">
-          <button type="button" onClick={previous} aria-label="Previous module">
-            <SkipBack size={16} />
-          </button>
-          <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"}>
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </button>
-          <button type="button" onClick={() => goTo(index + 1)} aria-label="Next module">
-            <SkipForward size={16} />
-          </button>
-          <div className="mkt-film-time">
-            {formatClock(current)} / {formatClock(duration)}
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={0.5}
-            value={progress}
-            aria-label="Clip progress"
-            onChange={(event) => seek(Number(event.target.value))}
-          />
-          <button type="button" onClick={() => setWide((value) => !value)} aria-label="Expand film">
-            <Maximize2 size={16} />
-          </button>
         </div>
         <div className="mkt-film-chapters">
           {clips.map((item, i) => (

@@ -352,11 +352,16 @@
 .mkt-film-caption em { font-style: normal; font-weight: 700; }
 
 .mkt-film-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: grid;
   grid-template-columns: auto auto auto auto 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 10px 16px 8px;
+  padding: 28px 16px 12px;
+  background: linear-gradient(180deg, transparent, rgba(17, 18, 23, 0.82));
 }
 
 .mkt-film-controls button {
