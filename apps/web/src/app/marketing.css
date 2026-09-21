@@ -168,6 +168,14 @@
 .mkt-watch {
   width: min(1080px, calc(100% - 32px));
   margin: 12px auto 48px;
+  scroll-margin-top: 88px;
+}
+
+.mkt-watch-anchor {
+  display: block;
+  position: relative;
+  top: -88px;
+  height: 0;
 }
 
 .mkt-tabs {
@@ -179,11 +187,12 @@
 }
 
 .mkt-tabs button {
+  position: relative;
   border: 0;
   background: var(--mkt-soft);
   color: var(--mkt-muted);
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 10px 16px 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -191,6 +200,23 @@
 .mkt-tabs button.active {
   background: var(--mkt-ink);
   color: #fff;
+}
+
+.mkt-tab-progress {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+.mkt-tab-progress > span {
+  display: block;
+  height: 100%;
+  background: #fff;
 }
 
 .mkt-watch-note {
@@ -206,6 +232,12 @@
   overflow: hidden;
   color: #fff;
   box-shadow: 0 30px 80px rgba(97, 97, 255, 0.18), 0 16px 40px rgba(28, 29, 33, 0.16);
+}
+
+.mkt-film.is-wide {
+  position: relative;
+  z-index: 5;
+  transform: scale(1.02);
 }
 
 .mkt-film-hero { min-height: 520px; }
@@ -225,6 +257,7 @@
   aspect-ratio: 16 / 10;
   object-fit: cover;
   background: #111217;
+  cursor: pointer;
 }
 
 .mkt-film-live {
@@ -239,6 +272,27 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  pointer-events: none;
+}
+
+.mkt-film-nextup {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(97, 97, 255, 0.92);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.mkt-film-play-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .mkt-film-hit {
@@ -298,11 +352,16 @@
 .mkt-film-caption em { font-style: normal; font-weight: 700; }
 
 .mkt-film-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: grid;
   grid-template-columns: auto auto auto auto 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 10px 16px 8px;
+  padding: 28px 16px 12px;
+  background: linear-gradient(180deg, transparent, rgba(17, 18, 23, 0.82));
 }
 
 .mkt-film-controls button {

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import {
   Brain,
   Briefcase,
@@ -12,48 +11,49 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { LandingTour } from "@/components/marketing/LandingTour";
 import { useAuth } from "@/lib/auth";
 
-const TABS = [
+const TOURS = [
   {
     id: "portfolio",
     label: "Portfolio",
-    title: "Portfolio home",
-    caption: "Funded work, capacity, cash, and the decisions waiting this week.",
+    title: "Portfolio books",
+    caption: "Investment books, health, and the work leadership funds this week.",
     src: "/tours/portfolio.mp4",
     poster: "/tours/portfolio.jpg",
   },
   {
     id: "projects",
     label: "Projects",
-    title: "Project plan",
-    caption: "Milestones, tasks, and an aligned Gantt on Q3 Warehouse Rollout.",
-    src: "/tours/plan.mp4",
-    poster: "/tours/plan.jpg",
+    title: "Project list",
+    caption: "Open work, at-risk jobs, and the same project records the team delivers.",
+    src: "/tours/projects.mp4",
+    poster: "/tours/projects.jpg",
   },
   {
     id: "resources",
     label: "Resources",
-    title: "Project team",
-    caption: "Roles, allocation, capacity, and logged hours on the same roster.",
-    src: "/tours/team.mp4",
-    poster: "/tours/team.jpg",
+    title: "Capacity board",
+    caption: "People, load, and assignments against the work already in flight.",
+    src: "/tours/resources.mp4",
+    poster: "/tours/resources.jpg",
   },
   {
     id: "risks",
     label: "Risks",
-    title: "Project insights",
-    caption: "Schedule, budget, resources, and risk scored from live project data.",
-    src: "/tours/insights.mp4",
-    poster: "/tours/insights.jpg",
+    title: "Risk register",
+    caption: "Likelihood, impact, owners, and the issues that can stall delivery.",
+    src: "/tours/risks.mp4",
+    poster: "/tours/risks.jpg",
   },
   {
     id: "ai",
     label: "Intelligence",
-    title: "The whole workspace",
-    caption: "Home, company record, project team, insights, and the live plan in one walk.",
-    src: "/tours/hero.mp4",
-    poster: "/tours/hero.jpg",
+    title: "Portfolio insights",
+    caption: "A live brief of exceptions: risk, capacity, gates, and cash.",
+    src: "/tours/intelligence.mp4",
+    poster: "/tours/intelligence.jpg",
   },
 ] as const;
 
@@ -70,9 +70,7 @@ const FEATURES = [
 
 export function LandingPage() {
   const { user, isClient } = useAuth();
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("portfolio");
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
-  const tour = TABS.find((item) => item.id === tab) ?? TABS[0];
 
   return (
     <div className="mkt">
@@ -82,7 +80,7 @@ export function LandingPage() {
           PMO
         </Link>
         <nav className="mkt-nav-links">
-          <a href="#watch">Watch</a>
+          <a href="#watchnow">Watch</a>
           <a href="#platform">Platform</a>
         </nav>
         <div className="mkt-nav-actions">
@@ -117,53 +115,13 @@ export function LandingPage() {
           <Link href="/login" className="mkt-cta">
             Get Started
           </Link>
-          <a href="#watch" className="mkt-ghost">
+          <a href="#watchnow" className="mkt-ghost">
             Explore the Platform
           </a>
         </div>
       </section>
 
-      <section className="mkt-watch" id="watch">
-        <div className="mkt-tabs" role="tablist" aria-label="Live product tours">
-          {TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              className={tab === item.id ? "active" : undefined}
-              onClick={() => setTab(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="mkt-film mkt-film-hero">
-          <div className="mkt-film-stage">
-            <video
-              key={tour.id}
-              className="mkt-live-video"
-              src={tour.src}
-              poster={tour.poster}
-              muted
-              playsInline
-              loop
-              autoPlay
-              controls
-              preload="metadata"
-            />
-            <div className="mkt-film-live">Live product</div>
-          </div>
-          <div className="mkt-film-caption">
-            <em>{tour.title}</em>
-            <span>{tour.caption}</span>
-          </div>
-        </div>
-        <p className="mkt-watch-note">
-          Click a tab to watch the live workspace. These clips were recorded on Q3 Warehouse Rollout and Cascade
-          Ventures.
-        </p>
-      </section>
+      <LandingTour clips={TOURS} />
 
       <section className="mkt-trust">
         <p>Teams use DMC PMO across</p>
@@ -207,7 +165,7 @@ export function LandingPage() {
           PMO
         </Link>
         <div className="mkt-footer-links">
-          <a href="#watch">Watch</a>
+          <a href="#watchnow">Watch</a>
           <a href="#platform">Platform</a>
           <Link href="/login">Sign in</Link>
         </div>
