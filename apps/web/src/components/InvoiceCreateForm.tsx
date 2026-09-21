@@ -112,13 +112,14 @@ export function InvoiceCreateForm({
     if (!company) return;
     const primary = companyContacts.find((c) => c.id === company.primaryContactId) ?? companyContacts[0];
     setBillToContactId(primary?.id ?? "");
+    const nextProject = companyProjects.some((p) => p.id === projectId) ? companyProjects.find((p) => p.id === projectId) : companyProjects[0];
     if (!projectId || !companyProjects.some((p) => p.id === projectId)) {
-      setProjectId(companyProjects[0]?.id ?? "");
+      setProjectId(nextProject?.id ?? "");
     }
     if (retainerId && !companyRetainers.some((r) => r.id === retainerId)) setRetainerId("");
     setTerms((current) => (current === "Net 30" || !current ? company.billingTerms : current));
     if (template) {
-      setTitle(fillInvoiceTitle(template.titlePattern, { company: company.name, project: project?.name }));
+      setTitle(fillInvoiceTitle(template.titlePattern, { company: company.name, project: nextProject?.name }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
