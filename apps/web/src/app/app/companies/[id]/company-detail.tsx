@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
+import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
 import { RecordFact, RecordMetric, RecordRailBlock, RecordShell, TonePill } from "@/components/records/RecordChrome";
@@ -65,6 +68,7 @@ function SectionHead({
 }
 
 export function CompanyDetail({ id }: { id: string }) {
+  const router = useRouter();
   const companies = useAppStore((s) => s.companies);
   const companyAssets = useAppStore((s) => s.companyAssets);
   const projects = useAppStore((s) => s.projects);
@@ -94,6 +98,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const [addressDraft, setAddressDraft] = useState("");
   const [fileOpen, setFileOpen] = useState(false);
   const [assetOpen, setAssetOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const company = companies.find((c) => c.id === id);
   const companyProjects = useMemo(
@@ -354,6 +359,32 @@ export function CompanyDetail({ id }: { id: string }) {
                 </RecordFact>
                 <RecordFact label="Portal">{company.portalContacts} enabled contacts</RecordFact>
                 <RecordFact label="Billing terms">{company.billingTerms}</RecordFact>
+                <RecordFact label="Website">
+                  {company.website ? (
+                    <a href={company.website} className="text-[var(--color-navy)]" target="_blank" rel="noreferrer">
+                      {company.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  ) : (
+                    "None"
+                  )}
+                </RecordFact>
+                <RecordFact label="Phone">{company.phone || "None"}</RecordFact>
+                <RecordFact label="Email">
+                  {company.email ? (
+                    <a href={`mailto:${company.email}`} className="text-[var(--color-navy)]">
+                      {company.email}
+                    </a>
+                  ) : (
+                    "None"
+                  )}
+                </RecordFact>
+                {company.fax ? <RecordFact label="Fax">{company.fax}</RecordFact> : null}
+                <RecordFact label="Privacy">{company.privacy ?? "Standard"}</RecordFact>
+                {(company.customFields ?? []).map((field) => (
+                  <RecordFact key={field.id} label={field.label}>
+                    {field.value || "Empty"}
+                  </RecordFact>
+                ))}
                 <RecordFact label="Address">
                   <div className="flex gap-2">
                     <input
@@ -424,6 +455,10 @@ export function CompanyDetail({ id }: { id: string }) {
                 <div>
                   <div className="metric-label">Industry</div>
                   <div className="text-sm font-medium">{company.industry}</div>
+                </div>
+                <div>
+                  <div className="metric-label">Website</div>
+                  <div className="text-sm font-medium">{company.website ? company.website.replace(/^https?:\/\//, "") : "None"}</div>
                 </div>
                 <div>
                   <div className="metric-label">Last activity</div>
@@ -660,6 +695,7 @@ export function CompanyDetail({ id }: { id: string }) {
                   <th>Name</th>
                   <th>Title</th>
                   <th>Email</th>
+                  <th>Phone</th>
                   <th>Portal</th>
                   <th />
                 </tr>
@@ -668,26 +704,44 @@ export function CompanyDetail({ id }: { id: string }) {
                 {companyContacts.map((c) => (
                   <tr key={c.id}>
                     <td className="font-medium">
-                      {c.name}
+                      <Link href={`/app/contacts/view/?id=${c.id}`} className="text-[var(--color-navy)]">
+                        {c.name}
+                      </Link>
                       {primary?.id === c.id ? <span className="ml-2 text-xs text-[var(--color-muted)]">Primary</span> : null}
                     </td>
                     <td>{c.title}</td>
-                    <td>{c.email}</td>
+                    <td>
+                      <a href={`mailto:${c.email}`} className="text-[var(--color-navy)]">
+                        {c.email}
+                      </a>
+                    </td>
+                    <td>
+                      {c.phone ? (
+                        <a href={`tel:${c.phone.replace(/\s+/g, "")}`} className="text-[var(--color-navy)]">
+                          {c.phone}
+                        </a>
+                      ) : (
+                        "None"
+                      )}
+                    </td>
                     <td>
                       <TonePill value={c.portal} />
                     </td>
                     <td className="text-right">
-                      {primary?.id === c.id ? null : (
-                        <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
-                          Set primary
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        <ContactActions contact={c} compact />
+                        {primary?.id === c.id ? null : (
+                          <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
+                            Set primary
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {!companyContacts.length ? (
                   <tr>
-                    <td colSpan={5} className="text-[var(--color-muted)]">
+                    <td colSpan={6} className="text-[var(--color-muted)]">
                       No contacts yet.
                     </td>
                   </tr>
@@ -990,7 +1044,7 @@ export function CompanyDetail({ id }: { id: string }) {
               <RecordMetric label="Expenses" value={money(companyExpenses.reduce((s, e) => s + e.amount, 0))} />
             </div>
             <div className="panel overflow-hidden">
-              <div className="flex justify-end p-3">
+              <div className="flex justify-end gap-2 p-3">
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -1007,6 +1061,9 @@ export function CompanyDetail({ id }: { id: string }) {
                   }
                 >
                   Export CSV
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => setInvoiceOpen(true)}>
+                  New invoice
                 </button>
               </div>
               <table className="table">
@@ -1041,6 +1098,17 @@ export function CompanyDetail({ id }: { id: string }) {
       </RecordShell>
 
       <CreateForms kind={createKind} onClose={() => setCreateKind(null)} defaults={{ companyId: company.id, projectId: companyProjects[0]?.id }} />
+      <Modal open={invoiceOpen} title={`Create invoice: ${company.name}`} onClose={() => setInvoiceOpen(false)} xl>
+        <InvoiceCreateForm
+          defaultCompanyId={company.id}
+          defaultProjectId={companyProjects[0]?.id}
+          onCancel={() => setInvoiceOpen(false)}
+          onCreated={(invoiceId) => {
+            setInvoiceOpen(false);
+            router.push(`/app/billing/view/?id=${invoiceId}`);
+          }}
+        />
+      </Modal>
 
       <Modal open={editOpen} title="Edit company" onClose={() => setEditOpen(false)}>
         <form
@@ -1055,6 +1123,11 @@ export function CompanyDetail({ id }: { id: string }) {
               industry: String(fd.get("industry") || company.industry),
               billingTerms: String(fd.get("billingTerms") || company.billingTerms),
               address: String(fd.get("address") || company.address || ""),
+              website: String(fd.get("website") ?? company.website ?? ""),
+              phone: String(fd.get("phone") ?? company.phone ?? ""),
+              fax: String(fd.get("fax") ?? company.fax ?? ""),
+              email: String(fd.get("email") ?? company.email ?? ""),
+              privacy: (String(fd.get("privacy") || company.privacy || "Standard") as "Standard" | "Confidential"),
               notes: String(fd.get("notes") ?? company.notes ?? ""),
               status: String(fd.get("status") || company.status) as CompanyStatus,
             });
@@ -1081,6 +1154,24 @@ export function CompanyDetail({ id }: { id: string }) {
           </Field>
           <Field label="Billing terms">
             <TextInput name="billingTerms" defaultValue={company.billingTerms} />
+          </Field>
+          <Field label="Website">
+            <TextInput name="website" defaultValue={company.website ?? ""} />
+          </Field>
+          <Field label="Phone">
+            <TextInput name="phone" defaultValue={company.phone ?? ""} />
+          </Field>
+          <Field label="Fax">
+            <TextInput name="fax" defaultValue={company.fax ?? ""} />
+          </Field>
+          <Field label="Email">
+            <TextInput name="email" type="email" defaultValue={company.email ?? ""} />
+          </Field>
+          <Field label="Privacy">
+            <TextSelect name="privacy" defaultValue={company.privacy ?? "Standard"}>
+              <option>Standard</option>
+              <option>Confidential</option>
+            </TextSelect>
           </Field>
           <Field label="Address">
             <TextInput name="address" defaultValue={company.address ?? ""} />

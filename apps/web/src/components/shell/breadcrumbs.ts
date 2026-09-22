@@ -5,7 +5,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   strategy: "Strategy",
   ideas: "Ideas",
   portfolios: "Portfolios",
-  programs: "Programs",
   projects: "Projects",
   work: "Work",
   tickets: "Tickets",
@@ -43,22 +42,22 @@ export function buildAppBreadcrumbs({
   pathname,
   recordId,
   companies,
+  contacts,
   projects,
   tickets,
   invoices,
   retainers,
   portfolios,
-  programs,
 }: {
   pathname: string;
   recordId: string | null;
   companies: { id: string; name: string }[];
+  contacts?: { id: string; name: string }[];
   projects: { id: string; name: string; companyId: string; companyName: string }[];
   tickets: { id: string; number: number; subject: string }[];
   invoices: { id: string; number: string }[];
   retainers: { id: string; name: string }[];
   portfolios: { id: string; name: string }[];
-  programs: { id: string; name: string }[];
 }): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
   const appIndex = parts[0] === "app" ? 1 : 0;
@@ -83,6 +82,12 @@ export function buildAppBreadcrumbs({
   if (section === "companies") {
     const company = companies.find((c) => c.id === id);
     if (company) crumbs.push({ label: company.name });
+    return crumbs;
+  }
+
+  if (section === "contacts") {
+    const contact = contacts?.find((c) => c.id === id);
+    if (contact) crumbs.push({ label: contact.name });
     return crumbs;
   }
 
@@ -119,12 +124,6 @@ export function buildAppBreadcrumbs({
   if (section === "portfolios") {
     const portfolio = portfolios.find((p) => p.id === id);
     if (portfolio) crumbs.push({ label: portfolio.name });
-    return crumbs;
-  }
-
-  if (section === "programs") {
-    const program = programs.find((p) => p.id === id);
-    if (program) crumbs.push({ label: program.name });
     return crumbs;
   }
 

@@ -2,8 +2,16 @@
 
 import { clsx } from "clsx";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useAppStore } from "@/lib/store";
+
+function Overlay({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 export function StatusPill({
   tone,
@@ -20,13 +28,13 @@ export function statusTone(status: string): "success" | "warning" | "danger" | "
   if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent", "completed", "opened", "invoiced", "healthy", "achieved", "converted"].includes(s)) {
     return "success";
   }
-  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "watch", "scoring", "mitigating", "in review", "lagging"].includes(s)) {
+  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "planning", "watch", "scoring", "mitigating", "in review", "lagging"].includes(s)) {
     return "warning";
   }
-  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked"].includes(s)) {
+  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked", "cancelled"].includes(s)) {
     return "danger";
   }
-  if (["open", "high", "medium", "queued", "upcoming", "deferred"].includes(s)) return "info";
+  if (["open", "high", "medium", "queued", "upcoming", "deferred", "on hold"].includes(s)) return "info";
   return "neutral";
 }
 
@@ -170,32 +178,36 @@ export function Modal({
   onClose,
   children,
   wide,
+  xl,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
+  xl?: boolean;
 }) {
   if (!open) return null;
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className={clsx("modal-panel fade-in", wide && "modal-wide")}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
+    <Overlay>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className={clsx("modal-panel fade-in", wide && "modal-wide", xl && "modal-xl")}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-head">
+            <h2>{title}</h2>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="modal-body">{children}</div>
         </div>
-        {children}
       </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -248,26 +260,28 @@ export function Drawer({
 }) {
   if (!open) return null;
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <aside
-        className={clsx("drawer-panel", wide && "drawer-wide")}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="drawer-head">
-          <div>
-            <h2>{title}</h2>
-            {subtitle ? <p>{subtitle}</p> : null}
+    <Overlay>
+      <div className="drawer-backdrop" onClick={onClose}>
+        <aside
+          className={clsx("drawer-panel", wide && "drawer-wide")}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="drawer-head">
+            <div>
+              <h2>{title}</h2>
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+              <X size={16} />
+            </button>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </aside>
-    </div>
+          {children}
+        </aside>
+      </div>
+    </Overlay>
   );
 }
 
@@ -293,13 +307,18 @@ export function ToastHost() {
 export function Field({
   label,
   children,
+  required,
 }: {
   label: string;
   children: ReactNode;
+  required?: boolean;
 }) {
   return (
     <label className="mb-3 block text-sm">
-      <span className="mb-1 block text-[var(--color-muted)]">{label}</span>
+      <span className="mb-1 flex items-center justify-between gap-2 text-[var(--color-muted)]">
+        <span>{label}</span>
+        {required ? <span className="field-required">Required</span> : null}
+      </span>
       {children}
     </label>
   );

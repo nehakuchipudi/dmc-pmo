@@ -163,7 +163,7 @@ export function RetainerDetail({ id }: { id: string }) {
                 <dd className="font-semibold">{retainer.contactName ?? "Not linked"}</dd>
                 {linkedContact ? (
                   <dd className="mt-0.5 text-xs text-[var(--color-muted)]">
-                    <Link href={`/app/contacts`} className="hover:underline">
+                    <Link href={`/app/contacts/view/?id=${linkedContact.id}`} className="hover:underline">
                       {linkedContact.email}
                     </Link>
                   </dd>

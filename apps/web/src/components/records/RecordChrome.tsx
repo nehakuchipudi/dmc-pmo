@@ -10,16 +10,20 @@ export function RecordShell({
   subtitle,
   actions,
   stepper,
+  banner,
   rail,
   children,
+  wide = false,
 }: {
   breadcrumb: ReactNode;
   title: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
   stepper?: ReactNode;
+  banner?: ReactNode;
   rail: ReactNode;
   children: ReactNode;
+  wide?: boolean;
 }) {
   return (
     <div className="fade-in record-page">
@@ -32,8 +36,9 @@ export function RecordShell({
         {actions ? <div className="record-actions">{actions}</div> : null}
       </div>
       {stepper}
-      <div className="record-grid">
-        <aside className="record-rail">{rail}</aside>
+      {banner}
+      <div className={clsx("record-grid", wide && "is-wide")}>
+        {wide ? null : <aside className="record-rail">{rail}</aside>}
         <div className="record-main">{children}</div>
       </div>
     </div>

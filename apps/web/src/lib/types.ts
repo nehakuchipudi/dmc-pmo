@@ -7,7 +7,27 @@ export type Role =
   | "client";
 
 export type CompanyStatus = "Active" | "Prospect" | "Overdue Inv.";
-export type ProjectStatus = "On Track" | "At Risk" | "Overdue" | "Planned" | "Completed";
+export type ProjectStatus =
+  | "Draft"
+  | "Planning"
+  | "Active"
+  | "On Hold"
+  | "At Risk"
+  | "Completed"
+  | "Cancelled";
+export interface ProjectStatusChange {
+  id: string;
+  from: ProjectStatus;
+  to: ProjectStatus;
+  actor: string;
+  at: string;
+  when: string;
+}
+
+export interface ProjectWorkflow {
+  transitions: Record<ProjectStatus, ProjectStatus[]>;
+  changerRoles: Role[];
+}
 export type TicketPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TicketStatus = "Open" | "In Progress" | "Resolved";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue";
@@ -40,6 +60,23 @@ export interface CompanyFile {
   sizeKb: number;
 }
 
+export type CompanyPrivacy = "Standard" | "Confidential";
+
+export interface CompanyAddress {
+  id: string;
+  line1: string;
+  city: string;
+  region: string;
+  postal: string;
+  country: string;
+}
+
+export interface CompanyCustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 export interface CompanyAsset {
   id: string;
   companyId: string;
@@ -65,12 +102,26 @@ export interface Company {
   portalContacts: number;
   createdAt?: string;
   address?: string;
+  addresses?: CompanyAddress[];
+  website?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  privacy?: CompanyPrivacy;
+  customFields?: CompanyCustomField[];
   tags?: string[];
   favorite?: boolean;
   primaryContactId?: string;
   accountManagers?: string[];
   notes?: string;
   files?: CompanyFile[];
+}
+
+export interface ContactNote {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface Contact {
@@ -83,6 +134,16 @@ export interface Contact {
   email: string;
   portal: "Enabled" | "Not Invited";
   lastInteraction: string;
+  phone?: string;
+  mobile?: string;
+  salutation?: string;
+  firstName?: string;
+  lastName?: string;
+  category?: string;
+  pronouns?: string;
+  notes?: string;
+  noteItems?: ContactNote[];
+  projectIds?: string[];
 }
 
 export interface MaterialLine {
@@ -149,6 +210,8 @@ export interface Project {
   files: ProjectFile[];
   notes: ProjectNote[];
   scope: ProjectScope;
+  rates?: ProjectRate[];
+  statusHistory?: ProjectStatusChange[];
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */
@@ -203,7 +266,10 @@ export interface Task {
   dueLabel?: string;
   clientEditable: boolean;
   estimateHours: number;
+  budgetAmount?: number;
   dependsOn?: string;
+  parentTaskId?: string;
+  sortOrder?: number;
   links: TaskLink[];
 }
 
@@ -215,6 +281,43 @@ export interface TeamMember {
   role: Role;
   active: boolean;
   avatarUrl?: string;
+  billRate?: number;
+}
+
+export interface ProjectRate {
+  memberName: string;
+  hourlyRate: number;
+}
+
+export type InvoiceLineKind = "service" | "material" | "expense";
+
+export interface InvoiceLineItem {
+  id: string;
+  kind: InvoiceLineKind;
+  description: string;
+  hours?: number;
+  rate?: number;
+  quantity?: number;
+  amount: number;
+  taxPct?: number;
+  includeInPdf?: boolean;
+}
+
+export type InvoiceTemplateKind = "time_materials" | "progress" | "retainer" | "fixed_fee" | "expense";
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  summary: string;
+  kind: InvoiceTemplateKind;
+  titlePattern: string;
+  terms: string;
+  currency: string;
+  taxPct: number;
+  description: string;
+  internalDescription: string;
+  invoiceFor: "Work completed" | "Retainer period" | "Milestone" | "Expenses";
+  defaultLines: Omit<InvoiceLineItem, "id">[];
 }
 
 export interface Invoice {
@@ -226,9 +329,21 @@ export interface Invoice {
   terms: string;
   due: string;
   status: InvoiceStatus;
-  lineItems: { description: string; amount: number }[];
+  lineItems: InvoiceLineItem[];
   projectId?: string;
   retainerId?: string;
+  title?: string;
+  owner?: string;
+  billToContactId?: string;
+  billToName?: string;
+  currency?: string;
+  raised?: string;
+  billingThrough?: string;
+  poNumber?: string;
+  description?: string;
+  internalDescription?: string;
+  templateId?: string;
+  taxAmount?: number;
 }
 
 export interface TimeEntry {
@@ -239,6 +354,7 @@ export interface TimeEntry {
   taskId?: string;
   taskName?: string;
   date: string;
+  start?: string;
   hours: number;
   billable: boolean;
   note: string;
@@ -383,6 +499,7 @@ export interface Idea {
 }
 
 export type PortfolioHealth = "Healthy" | "Watch" | "Critical";
+export type ProjectHealth = PortfolioHealth;
 export interface Portfolio {
   id: string;
   name: string;
@@ -394,24 +511,12 @@ export interface Portfolio {
   description: string;
 }
 
-export interface Program {
-  id: string;
-  name: string;
-  portfolioId: string;
-  owner: string;
-  status: ProjectStatus;
-  projectIds: string[];
-  objectiveId?: string;
-  description: string;
-}
-
 export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
 export type RiskStatus = "Open" | "Mitigating" | "Closed";
 export interface RiskItem {
   id: string;
   title: string;
   projectId?: string;
-  programId?: string;
   owner: string;
   probability: RiskLevel;
   impact: RiskLevel;
@@ -474,4 +579,6 @@ export interface ResourceAllocation {
   hoursPerWeek: number;
   start: string;
   end: string;
+  projectRole?: string;
+  responsibility?: string;
 }

@@ -5,7 +5,6 @@ import type {
   Idea,
   IssueItem,
   Portfolio,
-  Program,
   ResourceAllocation,
   RiskItem,
   StrategicObjective,
@@ -21,7 +20,7 @@ export const seedObjectives: StrategicObjective[] = [
     status: "On Track",
     target: "3 go-lives with on-time delivery",
     progress: 68,
-    description: "Warehouse, vendor, and logistics programs that raise client operating reliability.",
+    description: "Warehouse, vendor, and logistics work that raises client operating reliability.",
   },
   {
     id: "so-rev",
@@ -127,35 +126,11 @@ export const seedPortfolios: Portfolio[] = [
   },
 ];
 
-export const seedPrograms: Program[] = [
-  {
-    id: "pg-cascade",
-    name: "Cascade Operations Modernization",
-    portfolioId: "pf-delivery",
-    owner: "M. Doyle",
-    status: "At Risk",
-    projectIds: ["p-warehouse", "p-vendor", "p-website"],
-    objectiveId: "so-ops",
-    description: "One client program: warehouse go-live, vendor intake, and the public site that explains the change.",
-  },
-  {
-    id: "pg-commerce",
-    name: "Commerce and Logistics",
-    portfolioId: "pf-delivery",
-    owner: "S. Cho",
-    status: "Overdue",
-    projectIds: ["p-fleet", "p-pos"],
-    objectiveId: "so-exp",
-    description: "Retail POS sync and fleet tracking. Shared integration patterns, separate companies.",
-  },
-];
-
 export const seedRisks: RiskItem[] = [
   {
     id: "rk-1",
     title: "Homepage review may slip cutover",
     projectId: "p-website",
-    programId: "pg-cascade",
     owner: "J. Kim",
     probability: "High",
     impact: "High",
@@ -167,7 +142,6 @@ export const seedRisks: RiskItem[] = [
     id: "rk-2",
     title: "Fleet GPS vendor latency",
     projectId: "p-fleet",
-    programId: "pg-commerce",
     owner: "S. Cho",
     probability: "Medium",
     impact: "Critical",
@@ -341,13 +315,13 @@ export const seedGates: GovernanceGate[] = [
 ];
 
 export const seedAllocations: ResourceAllocation[] = [
-  { id: "al-1", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 50, hoursPerWeek: 20, start: "2026-07-01", end: "2026-08-22" },
-  { id: "al-2", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-website", projectName: "Website Replatform", allocationPct: 30, hoursPerWeek: 12, start: "2026-07-15", end: "2026-09-10" },
-  { id: "al-3", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 40, hoursPerWeek: 16, start: "2026-07-20", end: "2026-08-22" },
-  { id: "al-4", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", allocationPct: 45, hoursPerWeek: 18, start: "2026-08-01", end: "2026-09-10" },
-  { id: "al-5", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", allocationPct: 35, hoursPerWeek: 14, start: "2026-06-20", end: "2026-08-12" },
-  { id: "al-6", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", allocationPct: 55, hoursPerWeek: 22, start: "2026-06-01", end: "2026-08-30" },
-  { id: "al-7", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-pos", projectName: "POS Integration", allocationPct: 25, hoursPerWeek: 10, start: "2026-07-10", end: "2026-08-28" },
-  { id: "al-8", memberId: "tm-sa", memberName: "S. Ahmed", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 60, hoursPerWeek: 24, start: "2026-08-01", end: "2026-08-22" },
-  { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28" },
+  { id: "al-1", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 50, hoursPerWeek: 20, start: "2026-07-01", end: "2026-08-22", projectRole: "Project Manager", responsibility: "Delivery and client" },
+  { id: "al-2", memberId: "tm-md", memberName: "M. Doyle", projectId: "p-website", projectName: "Website Replatform", allocationPct: 30, hoursPerWeek: 12, start: "2026-07-15", end: "2026-09-10", projectRole: "Project Manager", responsibility: "Scope and reviews" },
+  { id: "al-3", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 40, hoursPerWeek: 16, start: "2026-07-20", end: "2026-08-22", projectRole: "Tech Lead", responsibility: "WMS roles and portal" },
+  { id: "al-4", memberId: "tm-jk", memberName: "J. Kim", projectId: "p-website", projectName: "Website Replatform", allocationPct: 45, hoursPerWeek: 18, start: "2026-08-01", end: "2026-09-10", projectRole: "Tech Lead", responsibility: "CMS migration" },
+  { id: "al-5", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-vendor", projectName: "Vendor Onboarding Portal", allocationPct: 35, hoursPerWeek: 14, start: "2026-06-20", end: "2026-08-12", projectRole: "Project Manager", responsibility: "Intake workflows" },
+  { id: "al-6", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-fleet", projectName: "Fleet Tracking Pilot", allocationPct: 55, hoursPerWeek: 22, start: "2026-06-01", end: "2026-08-30", projectRole: "Project Manager", responsibility: "GPS vendor tests" },
+  { id: "al-7", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-pos", projectName: "POS Integration", allocationPct: 25, hoursPerWeek: 10, start: "2026-07-10", end: "2026-08-28", projectRole: "Analyst", responsibility: "Store rollout support" },
+  { id: "al-8", memberId: "tm-sa", memberName: "S. Ahmed", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 60, hoursPerWeek: 24, start: "2026-08-01", end: "2026-08-22", projectRole: "Developer", responsibility: "Racking and go-live" },
+  { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28", projectRole: "Project Manager", responsibility: "ERP sync" },
 ];

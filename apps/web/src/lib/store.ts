@@ -11,6 +11,7 @@ import {
   seedEmailOutbox,
   seedExpenses,
   seedInvoices,
+  seedInvoiceTemplates,
   seedMilestones,
   seedNotifications,
   seedOpportunities,
@@ -27,6 +28,14 @@ import {
 } from "./seed";
 import { makeActivity } from "./activity";
 import {
+  DEFAULT_PROJECT_WORKFLOW,
+  canChangeProjectStatus,
+  isValidProjectTransition,
+  normalizeProjectStatus,
+  toggleWorkflowTransition,
+} from "./project-lifecycle";
+import { weeklyHoursFromAllocation } from "./project-team";
+import {
   seedAllocations,
   seedBenefits,
   seedDependencies,
@@ -35,7 +44,6 @@ import {
   seedIssues,
   seedObjectives,
   seedPortfolios,
-  seedPrograms,
   seedRisks,
 } from "./ppm-seed";
 import type {
@@ -47,6 +55,7 @@ import type {
   CompanyAsset,
   CompanyFile,
   Contact,
+  ContactNote,
   CrossDependency,
   EmailOutboxItem,
   Expense,
@@ -55,16 +64,21 @@ import type {
   Idea,
   IdeaStage,
   Invoice,
+  InvoiceLineItem,
+  InvoiceTemplate,
   IssueItem,
   Milestone,
   NotificationItem,
   Opportunity,
   Portfolio,
-  Program,
   Project,
   ProjectFile,
   ProjectNote,
   ProjectScope,
+  ProjectStatus,
+  ProjectStatusChange,
+  ProjectWorkflow,
+  Role,
   ResourceAllocation,
   Retainer,
   RetainerPeriod,
@@ -81,13 +95,25 @@ import type {
   TicketMessage,
   TimeEntry,
 } from "./types";
+import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
 
 type CreateCompanyInput = {
   name: string;
   status: Company["status"];
   accountManager: string;
+  accountManagers?: string[];
   industry: string;
   billingTerms: string;
+  website?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  address?: string;
+  addresses?: Company["addresses"];
+  tags?: string[];
+  privacy?: Company["privacy"];
+  customFields?: Company["customFields"];
+  notes?: string;
 };
 
 type CreateProjectInput = {
@@ -114,6 +140,9 @@ type CreateTaskInput = {
   start?: string;
   status?: TaskStatus;
   milestoneId?: string;
+  parentTaskId?: string;
+  estimateHours?: number;
+  budgetAmount?: number;
   priority?: TaskPriority;
 };
 
@@ -122,9 +151,32 @@ type CreateTimeInput = {
   projectId: string;
   taskId?: string;
   date: string;
+  start?: string;
   hours: number;
   billable: boolean;
   note: string;
+};
+
+export type CreateInvoiceInput = {
+  projectId?: string;
+  retainerId?: string;
+  amount?: number;
+  description?: string;
+  title?: string;
+  owner?: string;
+  billToContactId?: string;
+  billToName?: string;
+  currency?: string;
+  raised?: string;
+  due?: string;
+  billingThrough?: string;
+  poNumber?: string;
+  internalDescription?: string;
+  templateId?: string;
+  terms?: string;
+  number?: string;
+  lineItems?: InvoiceLineItem[];
+  send?: boolean;
 };
 
 type Toast = { id: string; message: string; tone?: "success" | "info" | "danger" };
@@ -139,6 +191,7 @@ type AppState = {
   ticketMessages: TicketMessage[];
   tasks: Task[];
   invoices: Invoice[];
+  invoiceTemplates: InvoiceTemplate[];
   timeEntries: TimeEntry[];
   notifications: NotificationItem[];
   activities: ActivityItem[];
@@ -151,7 +204,6 @@ type AppState = {
   objectives: StrategicObjective[];
   ideas: Idea[];
   portfolios: Portfolio[];
-  programs: Program[];
   risks: RiskItem[];
   issues: IssueItem[];
   dependencies: CrossDependency[];
@@ -161,6 +213,7 @@ type AppState = {
   toasts: Toast[];
   recentlyViewed: { type: string; id: string; label: string }[];
   focusCompanyId: string | null;
+  projectWorkflow: ProjectWorkflow;
 
   pushToast: (message: string, tone?: Toast["tone"]) => void;
   setFocusCompanyId: (id: string | null) => void;
@@ -189,9 +242,18 @@ type AppState = {
   createCompanyAsset: (input: Omit<CompanyAsset, "id">) => string;
   updateCompanyAsset: (id: string, patch: Partial<CompanyAsset>) => void;
   deleteCompanyAsset: (id: string) => void;
-  createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction">) => string;
+  createContact: (input: Omit<Contact, "id" | "initials" | "lastInteraction"> & { primary?: boolean }) => string;
+  updateContact: (id: string, patch: Partial<Contact> & { primary?: boolean }) => void;
+  addContactNote: (contactId: string, body: string, author?: string) => void;
+  setPrimaryContact: (contactId: string) => void;
+  linkContactProject: (contactId: string, projectId: string) => void;
+  unlinkContactProject: (contactId: string, projectId: string) => void;
   createProject: (input: CreateProjectInput) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
+  setProjectStatus: (projectId: string, next: ProjectStatus) => boolean;
+  setProjectWorkflowTransition: (from: ProjectStatus, to: ProjectStatus, allowed: boolean) => void;
+  setProjectWorkflowRoles: (roles: Role[]) => void;
+  setProjectRate: (projectId: string, memberName: string, hourlyRate: number) => void;
   deleteProject: (id: string) => void;
   duplicateProject: (id: string) => string;
   deleteProjectFile: (projectId: string, fileId: string) => void;
@@ -202,6 +264,7 @@ type AppState = {
   createTask: (input: CreateTaskInput) => string;
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  reorderTasks: (orderedIds: string[]) => void;
   createMilestone: (
     projectId: string,
     name: string,
@@ -218,6 +281,18 @@ type AppState = {
   addTeamMember: (input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean }) => string;
   updateTeamMember: (id: string, patch: Partial<TeamMember>) => void;
   setTeamMemberActive: (id: string, active: boolean) => void;
+  addProjectMember: (input: {
+    projectId: string;
+    memberId: string;
+    projectRole: string;
+    responsibility: string;
+    allocationPct: number;
+  }) => string;
+  updateProjectMember: (
+    id: string,
+    patch: Partial<Pick<ResourceAllocation, "projectRole" | "responsibility" | "allocationPct" | "hoursPerWeek" | "start" | "end">>,
+  ) => void;
+  removeProjectMember: (id: string) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
   createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
@@ -242,7 +317,10 @@ type AppState = {
   updateRetainer: (id: string, patch: Partial<Retainer>) => void;
   deleteRetainer: (id: string) => void;
   addRetainerPeriod: (retainerId: string, start: string, end: string, budgetHours: number) => string;
-  createInvoiceDraft: (companyId: string, opts?: { projectId?: string; retainerId?: string; amount?: number; description?: string }) => string;
+  createInvoiceDraft: (companyId: string, opts?: CreateInvoiceInput) => string;
+  updateInvoice: (id: string, patch: Partial<Invoice>) => void;
+  createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
+  updateInvoiceTemplate: (id: string, patch: Partial<InvoiceTemplate>) => void;
   generateProjectInvoice: (projectId: string) => string;
   generatePeriodInvoice: (periodId: string) => string;
   addProjectFile: (projectId: string, file: Omit<ProjectFile, "id">) => void;
@@ -281,10 +359,35 @@ function displayNow() {
   });
 }
 
-function currentActor() {
-  if (typeof window === "undefined") return "Staff";
+const WORKFLOW_KEY = "dmc-pmo-project-workflow";
+
+function loadProjectWorkflow() {
+  if (typeof window === "undefined") return DEFAULT_PROJECT_WORKFLOW;
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_KEY);
+    if (!raw) return DEFAULT_PROJECT_WORKFLOW;
+    const parsed = JSON.parse(raw) as ProjectWorkflow;
+    if (!parsed?.transitions || !parsed?.changerRoles) return DEFAULT_PROJECT_WORKFLOW;
+    return parsed;
+  } catch {
+    return DEFAULT_PROJECT_WORKFLOW;
+  }
+}
+
+function persistProjectWorkflow(workflow: ProjectWorkflow) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(WORKFLOW_KEY, JSON.stringify(workflow));
+  }
+}
+
+function currentUser() {
+  if (typeof window === "undefined") return undefined;
   const id = window.localStorage.getItem("dmc-pmo-user");
-  return users.find((u) => u.id === id)?.name ?? "Staff";
+  return users.find((u) => u.id === id);
+}
+
+function currentActor() {
+  return currentUser()?.name ?? "Staff";
 }
 
 function activityRecord(
@@ -319,6 +422,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tasks: seedTasks,
   team: seedTeam,
   invoices: seedInvoices,
+  invoiceTemplates: seedInvoiceTemplates,
   timeEntries: seedTimeEntries,
   notifications: seedNotifications,
   activities: seedActivities,
@@ -331,7 +435,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   objectives: seedObjectives,
   ideas: seedIdeas,
   portfolios: seedPortfolios,
-  programs: seedPrograms,
   risks: seedRisks,
   issues: seedIssues,
   dependencies: seedDependencies,
@@ -345,6 +448,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     { type: "company", id: "c-northridge", label: "Northridge Retail Group" },
   ],
   focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
+  projectWorkflow: loadProjectWorkflow(),
 
   pushToast: (message, tone = "success") => {
     const id = uid("toast");
@@ -398,21 +502,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createCompany: (input) => {
     const id = uid("c");
+    const managers = input.accountManagers?.filter(Boolean).length
+      ? input.accountManagers.filter(Boolean)
+      : [input.accountManager];
     const company: Company = {
       id,
       name: input.name,
       initials: initialsFromName(input.name),
       status: input.status,
-      accountManager: input.accountManager,
+      accountManager: managers[0] ?? input.accountManager,
       openProjects: 0,
       openTickets: 0,
       lastActivity: formatDisplayDate(todayIso()),
       industry: input.industry,
       billingTerms: input.billingTerms,
       portalContacts: 0,
-      accountManagers: [input.accountManager],
-      notes: "",
+      accountManagers: managers,
+      website: input.website ?? "",
+      phone: input.phone ?? "",
+      fax: input.fax ?? "",
+      email: input.email ?? "",
+      address: input.address ?? "",
+      addresses: input.addresses ?? [],
+      tags: input.tags ?? (input.industry ? [input.industry] : []),
+      privacy: input.privacy ?? "Standard",
+      customFields: input.customFields ?? [],
+      notes: input.notes ?? "",
       files: [],
+      createdAt: todayIso(),
     };
     set((s) => ({
       companies: [company, ...s.companies],
@@ -515,11 +632,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createContact: (input) => {
     const id = uid("ct");
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const { primary, ...fields } = input;
     const contact: Contact = {
       id,
-      ...input,
+      ...fields,
+      companyName: company?.name ?? input.companyName,
       initials: initialsFromName(input.name),
       lastInteraction: formatDisplayDate(todayIso()),
+      phone: input.phone ?? "",
+      notes: input.notes ?? "",
+      noteItems: input.noteItems ?? [],
+      projectIds: input.projectIds,
     };
     set((s) => ({
       contacts: [contact, ...s.contacts],
@@ -529,12 +653,183 @@ export const useAppStore = create<AppState>((set, get) => ({
               ...c,
               portalContacts: input.portal === "Enabled" ? c.portalContacts + 1 : c.portalContacts,
               lastActivity: formatDisplayDate(todayIso()),
+              primaryContactId: primary || !c.primaryContactId ? id : c.primaryContactId,
             }
           : c,
       ),
     }));
+    get().logActivity({
+      type: "status",
+      action: "created the contact",
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: id,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${id}`,
+    });
     get().pushToast(`Contact ${contact.name} created`);
     return id;
+  },
+
+  updateContact: (id, patch) => {
+    const prev = get().contacts.find((c) => c.id === id);
+    if (!prev) return;
+    const { primary, ...fields } = patch;
+    const nextCompany = fields.companyId ? get().companies.find((c) => c.id === fields.companyId) : undefined;
+    const next: Contact = {
+      ...prev,
+      ...fields,
+      initials: fields.name ? initialsFromName(fields.name) : prev.initials,
+      companyName: nextCompany?.name ?? fields.companyName ?? prev.companyName,
+      lastInteraction: formatDisplayDate(todayIso()),
+    };
+    set((s) => ({
+      contacts: s.contacts.map((c) => (c.id === id ? next : c)),
+      companies: s.companies.map((c) => {
+        if (c.id === prev.companyId && prev.companyId !== next.companyId) {
+          return {
+            ...c,
+            portalContacts:
+              prev.portal === "Enabled" ? Math.max(0, c.portalContacts - 1) : c.portalContacts,
+            primaryContactId: c.primaryContactId === id ? undefined : c.primaryContactId,
+          };
+        }
+        if (c.id === next.companyId) {
+          let portalContacts = c.portalContacts;
+          if (prev.companyId !== next.companyId) {
+            portalContacts = next.portal === "Enabled" ? portalContacts + 1 : portalContacts;
+          } else if (fields.portal && fields.portal !== prev.portal) {
+            portalContacts = fields.portal === "Enabled" ? portalContacts + 1 : Math.max(0, portalContacts - 1);
+          }
+          return {
+            ...c,
+            portalContacts,
+            lastActivity: formatDisplayDate(todayIso()),
+            primaryContactId: primary ? id : primary === false && c.primaryContactId === id ? undefined : c.primaryContactId,
+          };
+        }
+        return c;
+      }),
+    }));
+    if (fields.companyId && fields.companyId !== prev.companyId) {
+      get().logActivity({
+        type: "status",
+        action: `moved contact to ${next.companyName}`,
+        companyId: next.companyId,
+        entityType: "contact",
+        entityId: id,
+        entityLabel: next.name,
+        href: `/app/contacts/view/?id=${id}`,
+      });
+    } else {
+      get().logActivity({
+        type: "status",
+        action: "updated contact details",
+        companyId: next.companyId,
+        entityType: "contact",
+        entityId: id,
+        entityLabel: next.name,
+        href: `/app/contacts/view/?id=${id}`,
+      });
+    }
+    get().pushToast("Contact updated");
+  },
+
+  addContactNote: (contactId, body, author) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    if (!contact || !body.trim()) return;
+    const note: ContactNote = {
+      id: uid("cn"),
+      author: author ?? currentActor(),
+      body: body.trim(),
+      createdAt: formatDisplayDate(todayIso()),
+    };
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, lastInteraction: note.createdAt, noteItems: [note, ...(c.noteItems ?? [])] }
+          : c,
+      ),
+    }));
+    get().logActivity({
+      type: "comment",
+      actor: note.author,
+      action: note.body,
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast("Note saved to contact");
+  },
+
+  setPrimaryContact: (contactId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    if (!contact) return;
+    set((s) => ({
+      companies: s.companies.map((c) =>
+        c.id === contact.companyId ? { ...c, primaryContactId: contactId } : c,
+      ),
+      contacts: s.contacts.map((c) =>
+        c.id === contactId ? { ...c, lastInteraction: formatDisplayDate(todayIso()) } : c,
+      ),
+    }));
+    get().logActivity({
+      type: "status",
+      action: "set as primary contact",
+      companyId: contact.companyId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast(`${contact.name} is now the primary contact`);
+  },
+
+  linkContactProject: (contactId, projectId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!contact || !project) return;
+    const current = contact.projectIds?.length
+      ? contact.projectIds
+      : get().projects.filter((p) => p.companyId === contact.companyId).map((p) => p.id);
+    if (current.includes(projectId)) return;
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, projectIds: [...current, projectId], lastInteraction: formatDisplayDate(todayIso()) }
+          : c,
+      ),
+    }));
+    get().logActivity({
+      type: "project",
+      action: `linked to ${project.name}`,
+      companyId: contact.companyId,
+      projectId,
+      entityType: "contact",
+      entityId: contactId,
+      entityLabel: contact.name,
+      href: `/app/contacts/view/?id=${contactId}`,
+    });
+    get().pushToast(`Linked ${project.name}`);
+  },
+
+  unlinkContactProject: (contactId, projectId) => {
+    const contact = get().contacts.find((c) => c.id === contactId);
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!contact) return;
+    const current = contact.projectIds?.length
+      ? contact.projectIds
+      : get().projects.filter((p) => p.companyId === contact.companyId).map((p) => p.id);
+    set((s) => ({
+      contacts: s.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, projectIds: current.filter((id) => id !== projectId), lastInteraction: formatDisplayDate(todayIso()) }
+          : c,
+      ),
+    }));
+    if (project) get().pushToast(`Removed ${project.name}`);
   },
 
   createProject: (input) => {
@@ -548,7 +843,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyName: company.name,
       manager: input.manager,
       progress: 0,
-      status: "Planned",
+      status: "Draft",
       due: input.due,
       start: todayIso(),
       budgetHours: input.budgetHours,
@@ -562,6 +857,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       materials: [],
       files: [],
       notes: [],
+      rates: [],
+      statusHistory: [],
       scope: {
         objectives: "",
         inScope: [],
@@ -591,24 +888,79 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
 
+  setProjectStatus: (projectId, nextRaw) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project) return false;
+    const from = normalizeProjectStatus(project.status);
+    const next = normalizeProjectStatus(nextRaw);
+    if (from === next) return true;
+    const user = currentUser();
+    if (!canChangeProjectStatus(user?.role, get().projectWorkflow)) {
+      get().pushToast("You are not allowed to change project status", "danger");
+      return false;
+    }
+    if (!isValidProjectTransition(from, next, get().projectWorkflow)) {
+      get().pushToast(`Cannot move from ${from} to ${next}`, "danger");
+      return false;
+    }
+    const actor = user?.name ?? currentActor();
+    const at = new Date().toISOString();
+    const when = displayNow();
+    const change: ProjectStatusChange = {
+      id: uid("sh"),
+      from,
+      to: next,
+      actor,
+      at,
+      when,
+    };
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, status: next, statusHistory: [...(p.statusHistory ?? []), change] }
+          : p,
+      ),
+    }));
+    get().logActivity({
+      type: "status",
+      actor,
+      action: `moved status from ${from} to ${next}`,
+      companyId: project.companyId,
+      projectId,
+      entityType: "project",
+      entityId: projectId,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${projectId}`,
+    });
+    get().pushToast(`Status moved to ${next}`);
+    return true;
+  },
+  setProjectWorkflowTransition: (from, to, allowed) => {
+    const projectWorkflow = toggleWorkflowTransition(get().projectWorkflow, from, to, allowed);
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
+    get().pushToast(allowed ? `Allowed ${from} to ${to}` : `Blocked ${from} to ${to}`);
+  },
+  setProjectWorkflowRoles: (roles) => {
+    const projectWorkflow = { ...get().projectWorkflow, changerRoles: roles };
+    persistProjectWorkflow(projectWorkflow);
+    set({ projectWorkflow });
+    get().pushToast("Lifecycle roles updated");
+  },
+
   updateProject: (id, patch) => {
     const prev = get().projects.find((p) => p.id === id);
+    const { status: nextStatus, ...rest } = patch;
+    if (nextStatus && prev && normalizeProjectStatus(nextStatus) !== normalizeProjectStatus(prev.status)) {
+      if (!get().setProjectStatus(id, nextStatus)) {
+        if (!Object.keys(rest).length) return;
+      }
+    }
     set((s) => ({
-      projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      projects: s.projects.map((p) => (p.id === id ? { ...p, ...rest } : p)),
     }));
     if (prev) {
-      if (patch.status && patch.status !== prev.status) {
-        get().logActivity({
-          type: "status",
-          action: `moved project to ${patch.status}`,
-          companyId: prev.companyId,
-          projectId: id,
-          entityType: "project",
-          entityId: id,
-          entityLabel: prev.name,
-          href: `/app/projects/view/?id=${id}`,
-        });
-      } else if (
+      if (
         (patch.budgetAmount !== undefined && patch.budgetAmount !== prev.budgetAmount) ||
         (patch.budgetHours !== undefined && patch.budgetHours !== prev.budgetHours)
       ) {
@@ -690,11 +1042,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: newId,
       name: `${source.name} (copy)`,
       progress: 0,
-      status: "Planned",
+      status: "Draft",
       loggedHours: 0,
       materials: source.materials.map((m) => ({ ...m, id: uid("mat") })),
       files: [],
       notes: [],
+      statusHistory: [],
       scope: { ...source.scope, inScope: [...source.scope.inScope], outOfScope: [...source.scope.outOfScope], deliverables: [...source.scope.deliverables], assumptions: [...source.scope.assumptions] },
     };
     set((s) => ({
@@ -766,7 +1119,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       due: input.due,
       start: input.start ?? todayIso(),
       clientEditable: false,
-      estimateHours: 4,
+      estimateHours: input.estimateHours ?? 4,
+      budgetAmount: input.budgetAmount,
+      parentTaskId: input.parentTaskId,
+      sortOrder: get().tasks.filter((t) =>
+        input.parentTaskId
+          ? t.parentTaskId === input.parentTaskId
+          : t.projectId === project.id && t.milestoneId === input.milestoneId && !t.parentTaskId,
+      ).length,
       links: [],
     };
     set((s) => ({ tasks: [task, ...s.tasks] }));
@@ -836,8 +1196,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteTask: (id) => {
-    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    set((s) => {
+      const remove = new Set([id, ...s.tasks.filter((t) => t.parentTaskId === id).map((t) => t.id)]);
+      return { tasks: s.tasks.filter((t) => !remove.has(t.id)) };
+    });
     get().pushToast("Task deleted", "danger");
+  },
+
+  reorderTasks: (orderedIds) => {
+    set((s) => ({
+      tasks: s.tasks.map((task) => {
+        const index = orderedIds.indexOf(task.id);
+        return index >= 0 ? { ...task, sortOrder: index } : task;
+      }),
+    }));
   },
 
   createMilestone: (projectId, name, due, opts) => {
@@ -970,6 +1342,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Scope updated");
   },
 
+  setProjectRate: (projectId, memberName, hourlyRate) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project) return;
+    const rates = [
+      ...(project.rates ?? []).filter((row) => row.memberName !== memberName),
+      { memberName, hourlyRate },
+    ];
+    set((s) => ({
+      projects: s.projects.map((p) => (p.id === projectId ? { ...p, rates } : p)),
+    }));
+    get().logActivity({
+      type: "budget",
+      action: `set ${memberName} rate to $${hourlyRate}/h`,
+      companyId: project.companyId,
+      projectId,
+      entityType: "project",
+      entityId: projectId,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${projectId}`,
+    });
+    get().pushToast(`Rate updated for ${memberName}`);
+  },
+
   addTeamMember: (input) => {
     const id = uid("tm");
     const member: TeamMember = {
@@ -979,6 +1374,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       role: input.role,
       initials: initialsFromName(input.name),
       active: input.active ?? true,
+      billRate: input.billRate,
       avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
     };
     set((s) => ({ team: [member, ...s.team] }));
@@ -997,6 +1393,85 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ team: s.team.map((m) => (m.id === id ? { ...m, active } : m)) }));
     get().pushToast(active ? "Member reactivated" : "Member deactivated", active ? "success" : "danger");
   },
+  addProjectMember: (input) => {
+    const project = get().projects.find((p) => p.id === input.projectId);
+    const member = get().team.find((m) => m.id === input.memberId);
+    if (!project || !member) return "";
+    if (get().allocations.some((row) => row.projectId === project.id && row.memberId === member.id)) {
+      get().pushToast(`${member.name} is already on this team`, "info");
+      return "";
+    }
+    const id = uid("al");
+    const allocationPct = Math.max(0, input.allocationPct);
+    const allocation: ResourceAllocation = {
+      id,
+      memberId: member.id,
+      memberName: member.name,
+      projectId: project.id,
+      projectName: project.name,
+      allocationPct,
+      hoursPerWeek: weeklyHoursFromAllocation(allocationPct),
+      start: project.start,
+      end: project.due,
+      projectRole: input.projectRole,
+      responsibility: input.responsibility,
+    };
+    set((s) => ({ allocations: [allocation, ...s.allocations] }));
+    get().logActivity({
+      type: "project",
+      action: `added ${member.name} to the team`,
+      companyId: project.companyId,
+      projectId: project.id,
+      entityType: "project",
+      entityId: project.id,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${project.id}`,
+    });
+    get().pushToast(`${member.name} added to the team`);
+    return id;
+  },
+  updateProjectMember: (id, patch) => {
+    const prev = get().allocations.find((row) => row.id === id);
+    const nextPatch = { ...patch };
+    if (nextPatch.allocationPct !== undefined) {
+      nextPatch.hoursPerWeek = weeklyHoursFromAllocation(nextPatch.allocationPct);
+    }
+    set((s) => ({
+      allocations: s.allocations.map((row) => (row.id === id ? { ...row, ...nextPatch } : row)),
+    }));
+    if (prev) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      get().logActivity({
+        type: "project",
+        action: `updated ${prev.memberName} on the team`,
+        companyId: project?.companyId,
+        projectId: prev.projectId,
+        entityType: "project",
+        entityId: prev.projectId,
+        entityLabel: project?.name ?? prev.projectName,
+        href: `/app/projects/view/?id=${prev.projectId}`,
+      });
+    }
+    get().pushToast("Team assignment updated");
+  },
+  removeProjectMember: (id) => {
+    const prev = get().allocations.find((row) => row.id === id);
+    set((s) => ({ allocations: s.allocations.filter((row) => row.id !== id) }));
+    if (prev) {
+      const project = get().projects.find((p) => p.id === prev.projectId);
+      get().logActivity({
+        type: "project",
+        action: `removed ${prev.memberName} from the team`,
+        companyId: project?.companyId,
+        projectId: prev.projectId,
+        entityType: "project",
+        entityId: prev.projectId,
+        entityLabel: project?.name ?? prev.projectName,
+        href: `/app/projects/view/?id=${prev.projectId}`,
+      });
+      get().pushToast(`${prev.memberName} removed from the team`);
+    }
+  },
 
   createTimeEntry: (input) => {
     const project = get().projects.find((p) => p.id === input.projectId);
@@ -1011,6 +1486,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       taskId: task?.id,
       taskName: task?.name,
       date: input.date,
+      start: input.start,
       hours: input.hours,
       billable: input.billable,
       note: input.note,
@@ -1245,37 +1721,105 @@ export const useAppStore = create<AppState>((set, get) => ({
   createInvoiceDraft: (companyId, opts) => {
     const company = get().companies.find((c) => c.id === companyId);
     if (!company) return "";
+    const project = opts?.projectId ? get().projects.find((p) => p.id === opts.projectId) : undefined;
+    const retainer = opts?.retainerId ? get().retainers.find((r) => r.id === opts.retainerId) : undefined;
+    const contact = opts?.billToContactId ? get().contacts.find((c) => c.id === opts.billToContactId) : undefined;
     const id = uid("inv");
-    const amount = opts?.amount ?? 2500;
-    const number = `INV-${2302 + get().invoices.length}`;
+    const raised = opts?.raised ?? todayIso();
+    const terms = opts?.terms ?? company.billingTerms;
+    const lineItems =
+      opts?.lineItems?.map((line) => ({
+        ...line,
+        id: line.id || uid("il"),
+        amount: computeLineAmount(line),
+      })) ?? [emptyInvoiceLine("service", { description: opts?.description ?? "Professional services", amount: opts?.amount ?? 2500 })];
+    const totals = invoiceTotals(lineItems);
+    const amount = opts?.amount ?? totals.total;
+    const number = opts?.number?.trim() || nextInvoiceNumber(get().invoices.length);
     const invoice: Invoice = {
       id,
       number,
       companyId: company.id,
       companyName: company.name,
       amount,
-      terms: company.billingTerms,
-      due: todayIso(),
+      terms,
+      due: opts?.due ?? dueFromTerms(raised, terms),
       status: "Draft",
-      lineItems: [{ description: opts?.description ?? "Professional services", amount }],
-      projectId: opts?.projectId,
-      retainerId: opts?.retainerId,
+      lineItems,
+      projectId: project?.id,
+      retainerId: retainer?.id,
+      title: opts?.title ?? opts?.description ?? (project ? `${project.name} invoice` : `Invoice for ${company.name}`),
+      owner: opts?.owner,
+      billToContactId: contact?.id ?? opts?.billToContactId,
+      billToName: contact?.name ?? opts?.billToName,
+      currency: opts?.currency ?? "USD",
+      raised,
+      billingThrough: opts?.billingThrough,
+      poNumber: opts?.poNumber,
+      description: opts?.description,
+      internalDescription: opts?.internalDescription,
+      templateId: opts?.templateId,
+      taxAmount: totals.tax,
     };
     set((s) => ({ invoices: [invoice, ...s.invoices] }));
     get().pushToast(`${number} draft created`);
+    if (opts?.send) get().sendInvoice(id);
     return id;
+  },
+
+  updateInvoice: (id, patch) => {
+    set((s) => ({
+      invoices: s.invoices.map((invoice) => {
+        if (invoice.id !== id) return invoice;
+        const next = { ...invoice, ...patch };
+        if (patch.lineItems) {
+          const totals = invoiceTotals(patch.lineItems);
+          next.amount = totals.total;
+          next.taxAmount = totals.tax;
+        }
+        return next;
+      }),
+    }));
+  },
+
+  createInvoiceTemplate: (input) => {
+    const id = uid("tpl");
+    const template: InvoiceTemplate = { ...input, id };
+    set((s) => ({ invoiceTemplates: [template, ...s.invoiceTemplates] }));
+    get().pushToast(`${template.name} saved as a template`);
+    return id;
+  },
+
+  updateInvoiceTemplate: (id, patch) => {
+    set((s) => ({
+      invoiceTemplates: s.invoiceTemplates.map((template) => (template.id === id ? { ...template, ...patch } : template)),
+    }));
+    get().pushToast("Invoice template updated");
   },
 
   generateProjectInvoice: (projectId) => {
     const project = get().projects.find((p) => p.id === projectId);
     if (!project) return "";
-    const materials = project.materials.reduce((s, m) => s + m.salePrice * m.qty, 0);
+    const materialLines = project.materials.map((m) =>
+      emptyInvoiceLine("material", {
+        description: m.title,
+        quantity: m.qty,
+        rate: m.salePrice,
+        amount: m.salePrice * m.qty,
+      }),
+    );
+    const materials = materialLines.reduce((sum, line) => sum + line.amount, 0);
     const services = Math.max(project.budgetAmount - materials, project.loggedHours * 180);
-    const amount = services + materials;
+    const serviceLine = emptyInvoiceLine("service", {
+      description: `${project.name} progress billing`,
+      amount: services,
+    });
     return get().createInvoiceDraft(project.companyId, {
       projectId,
-      amount,
+      title: `${project.name} progress billing`,
       description: `${project.name} progress billing`,
+      templateId: "tpl-progress",
+      lineItems: [serviceLine, ...materialLines],
     });
   },
 
@@ -1283,11 +1827,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const period = get().retainerPeriods.find((p) => p.id === periodId);
     const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
     if (!period || !retainer) return "";
-    const amount = Math.round(period.usedHours * 175);
+    const hours = period.usedHours;
+    const rate = 175;
+    const serviceLine = emptyInvoiceLine("service", {
+      description: `${retainer.name} (${period.start} to ${period.end})`,
+      hours,
+      rate,
+      amount: Math.round(hours * rate),
+    });
     const invId = get().createInvoiceDraft(retainer.companyId, {
       retainerId: retainer.id,
-      amount,
+      title: `${retainer.name} period invoice`,
       description: `${retainer.name} (${period.start} to ${period.end})`,
+      templateId: "tpl-retainer",
+      lineItems: [serviceLine],
     });
     set((s) => ({
       retainerPeriods: s.retainerPeriods.map((p) =>
@@ -1530,7 +2083,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           id: uid("e"),
           to: "billing@client.com",
           subject: `Invoice ${inv.number}`,
-          body: `Please find invoice ${inv.number} for ${inv.amount}.`,
+          body: `Please find invoice ${inv.number}${inv.title ? ` (${inv.title})` : ""} for ${inv.companyName}.`,
           sentAt: displayNow(),
           status: "Sent",
         },

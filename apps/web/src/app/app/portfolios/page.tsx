@@ -10,7 +10,7 @@ import { useAppStore } from "@/lib/store";
 export default function PortfoliosPage() {
   const portfolios = useAppStore((s) => s.portfolios);
   const projects = useAppStore((s) => s.projects);
-  const programs = useAppStore((s) => s.programs);
+  const objectives = useAppStore((s) => s.objectives);
 
   return (
     <div className="fade-in">
@@ -20,7 +20,7 @@ export default function PortfoliosPage() {
       />
       <MetricGrid>
         <MetricCard label="Portfolios" value={portfolios.length} />
-        <MetricCard label="Programs" value={programs.length} />
+        <MetricCard label="Objectives" value={objectives.length} />
         <MetricCard
           label="Booked"
           value={money(portfolios.reduce((s, p) => s + portfolioMetrics(p, projects).invested, 0))}

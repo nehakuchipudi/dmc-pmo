@@ -14,7 +14,6 @@ import {
   ClipboardList,
   Clock3,
   FileText,
-  FolderKanban,
   GitBranch,
   Landmark,
   Layers3,
@@ -58,7 +57,6 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/strategy", label: "Strategy", icon: Target },
       { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
       { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
-      { href: "/app/programs", label: "Programs", icon: FolderKanban },
     ],
   },
   {
@@ -137,7 +135,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const tickets = useAppStore((s) => s.tickets);
   const contacts = useAppStore((s) => s.contacts);
   const portfolios = useAppStore((s) => s.portfolios);
-  const programs = useAppStore((s) => s.programs);
   const ideas = useAppStore((s) => s.ideas);
   const invoices = useAppStore((s) => s.invoices);
   const retainers = useAppStore((s) => s.retainers);
@@ -174,11 +171,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pathname.includes("/companies/view") && recordId) setFocusCompanyId(recordId);
+    if (pathname.includes("/contacts/view") && recordId) {
+      const contact = contacts.find((c) => c.id === recordId);
+      if (contact) setFocusCompanyId(contact.companyId);
+    }
     if (pathname.includes("/projects/view") && recordId) {
       const project = projects.find((p) => p.id === recordId);
       if (project) setFocusCompanyId(project.companyId);
     }
-  }, [pathname, recordId, projects, setFocusCompanyId]);
+  }, [pathname, recordId, contacts, projects, setFocusCompanyId]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -214,14 +215,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!q) return [];
     return [
       ...portfolios.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/portfolios/view/?id=${p.id}`, label: p.name, type: "Portfolio" })),
-      ...programs.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/programs/view/?id=${p.id}`, label: p.name, type: "Program" })),
       ...projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/projects/view/?id=${p.id}`, label: p.name, type: "Project" })),
       ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
       ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: "/app/ideas", label: i.name, type: "Idea" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
-      ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: "/app/contacts", label: c.name, type: "Contact" })),
+      ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
     ].slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, programs, ideas]);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas]);
 
   const recentHits = useMemo(
     () =>
@@ -235,9 +235,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ? `/app/tickets/view/?id=${item.id}`
                 : item.type === "portfolio"
                   ? `/app/portfolios/view/?id=${item.id}`
-                  : item.type === "program"
-                    ? `/app/programs/view/?id=${item.id}`
-                    : "/app/home",
+                  : item.type === "contact"
+                      ? `/app/contacts/view/?id=${item.id}`
+                      : "/app/home",
         label: item.label,
         type: item.type.charAt(0).toUpperCase() + item.type.slice(1),
       })),
@@ -250,14 +250,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         pathname,
         recordId,
         companies,
+        contacts,
         projects,
         tickets,
         invoices,
         retainers,
         portfolios,
-        programs,
       }),
-    [pathname, recordId, companies, projects, tickets, invoices, retainers, portfolios, programs],
+    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios],
   );
 
   const companyChoices = useMemo(() => {
@@ -735,7 +735,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <input type="checkbox" defaultChecked />
           </label>
           <Link href="/app/settings" className="btn btn-primary w-full justify-center" onClick={() => setSettingsOpen(false)}>
-            Users & roles
+            Users and lifecycle
           </Link>
           <Link href="/app/automations" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
             Manage automations
@@ -747,7 +747,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="space-y-3 text-sm text-[var(--color-muted)]">
           <p>Home answers whether the firm is on the right work, with the right people, cost, and risk.</p>
           <p>Create (+) still adds companies, projects, tickets, tasks, ideas, and risks.</p>
-          <p>The company selector sets workspace context for new records. It does not hide other companies.</p>
+          <p>The company selector scopes Home to that company and defaults new records to it.</p>
           <p>Client portal users only see their company projects, tickets, billing, and retainers.</p>
           <Link href="/app/automations" className="btn btn-primary w-full justify-center" onClick={() => setHelpOpen(false)}>
             Open automations

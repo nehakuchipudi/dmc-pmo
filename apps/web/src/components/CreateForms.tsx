@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -25,14 +27,16 @@ export function CreateForms({
 }: {
   kind: CreateKind;
   onClose: () => void;
-  defaults?: { companyId?: string; projectId?: string; hours?: number };
+  defaults?: { companyId?: string; projectId?: string; hours?: number; date?: string; start?: string };
 }) {
   const { user } = useAuth();
   const companies = useAppStore((s) => s.companies);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const router = useRouter();
   const createCompany = useAppStore((s) => s.createCompany);
   const createContact = useAppStore((s) => s.createContact);
+  const updateContact = useAppStore((s) => s.updateContact);
   const createProject = useAppStore((s) => s.createProject);
   const createTicket = useAppStore((s) => s.createTicket);
   const createTask = useAppStore((s) => s.createTask);
@@ -73,12 +77,24 @@ export function CreateForms({
   if (!kind) return null;
 
   return (
-    <Modal open={!!kind} title={title} onClose={onClose}>
+    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"}>
       {kind === "company" && (
-        <CompanyForm
-          onSubmit={(v) => {
-            createCompany(v);
+        <CompanyCreateForm
+          onCancel={onClose}
+          onSubmit={(payload) => {
+            const id = createCompany(payload.company);
+            payload.newContacts.forEach((contact) => {
+              createContact({
+                ...contact,
+                companyId: id,
+                companyName: payload.company.name,
+              });
+            });
+            payload.linkedContactIds.forEach((contactId) => {
+              updateContact(contactId, { companyId: id, companyName: payload.company.name });
+            });
             onClose();
+            router.push(`/app/companies/view/?id=${id}`);
           }}
         />
       )}
@@ -140,6 +156,8 @@ export function CreateForms({
           userName={user?.name ?? "Staff"}
           defaultProjectId={defaults?.projectId}
           defaultHours={defaults?.hours}
+          defaultDate={defaults?.date}
+          defaultStart={defaults?.start}
           onSubmit={(v) => {
             createTimeEntry(v);
             onClose();
@@ -268,46 +286,6 @@ export function CreateForms({
   );
 }
 
-function CompanyForm({
-  onSubmit,
-}: {
-  onSubmit: (v: {
-    name: string;
-    status: "Active" | "Prospect" | "Overdue Inv.";
-    accountManager: string;
-    industry: string;
-    billingTerms: string;
-  }) => void;
-}) {
-  const [name, setName] = useState("");
-  const [industry, setIndustry] = useState("Professional Services");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        onSubmit({
-          name: name.trim(),
-          status: "Prospect",
-          accountManager: "M. Doyle",
-          industry: industry.trim() || "Professional Services",
-          billingTerms: "Net 30",
-        });
-      }}
-    >
-      <Field label="Company name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
-      </Field>
-      <Field label="Industry">
-        <TextInput value={industry} onChange={(e) => setIndustry(e.target.value)} />
-      </Field>
-      <button type="submit" className="btn btn-primary">
-        Create company
-      </button>
-    </form>
-  );
-}
-
 function ContactForm({
   companies,
   defaultCompanyId,
@@ -321,12 +299,20 @@ function ContactForm({
     companyName: string;
     title: string;
     email: string;
+    phone?: string;
+    notes?: string;
     portal: "Enabled" | "Not Invited";
+    primary?: boolean;
   }) => void;
 }) {
   const [name, setName] = useState("");
   const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
+  const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [portal, setPortal] = useState<"Enabled" | "Not Invited">("Not Invited");
+  const [primary, setPrimary] = useState(false);
   return (
     <form
       onSubmit={(e) => {
@@ -337,17 +323,20 @@ function ContactForm({
           name: name.trim(),
           companyId: company.id,
           companyName: company.name,
-          title: "Stakeholder",
+          title: title.trim() || "Stakeholder",
           email: email || `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-          portal: "Not Invited",
+          phone: phone.trim(),
+          notes: notes.trim(),
+          portal,
+          primary,
         });
       }}
     >
       <Field label="Full name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
+        <TextInput name="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Company">
-        <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+        <TextSelect name="companyId" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -355,9 +344,28 @@ function ContactForm({
           ))}
         </TextSelect>
       </Field>
-      <Field label="Email">
-        <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Field label="Role / title">
+        <TextInput name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VP Operations" />
       </Field>
+      <Field label="Email">
+        <TextInput name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      </Field>
+      <Field label="Phone">
+        <TextInput name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 503 555 0100" />
+      </Field>
+      <Field label="Portal">
+        <TextSelect value={portal} onChange={(e) => setPortal(e.target.value as "Enabled" | "Not Invited")}>
+          <option value="Not Invited">Not Invited</option>
+          <option value="Enabled">Enabled</option>
+        </TextSelect>
+      </Field>
+      <Field label="Notes">
+        <textarea className="field-input min-h-16" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      <label className="mb-3 flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={primary} onChange={(e) => setPrimary(e.target.checked)} />
+        Set as primary contact
+      </label>
       <button type="submit" className="btn btn-primary">
         Create contact
       </button>
@@ -588,6 +596,8 @@ function TimeForm({
   userName,
   defaultProjectId,
   defaultHours,
+  defaultDate,
+  defaultStart,
   onSubmit,
 }: {
   projects: { id: string; name: string }[];
@@ -595,11 +605,14 @@ function TimeForm({
   userName: string;
   defaultProjectId?: string;
   defaultHours?: number;
+  defaultDate?: string;
+  defaultStart?: string;
   onSubmit: (v: {
     userName: string;
     projectId: string;
     taskId?: string;
     date: string;
+    start?: string;
     hours: number;
     billable: boolean;
     note: string;
@@ -607,6 +620,8 @@ function TimeForm({
 }) {
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
   const [taskId, setTaskId] = useState("");
+  const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
+  const [start, setStart] = useState(defaultStart || "09:00");
   const [hours, setHours] = useState(String(defaultHours && defaultHours > 0 ? defaultHours : 1));
   const [note, setNote] = useState("");
   const [billable, setBillable] = useState(true);
@@ -619,7 +634,8 @@ function TimeForm({
           userName,
           projectId,
           taskId: taskId || undefined,
-          date: new Date().toISOString().slice(0, 10),
+          date,
+          start,
           hours: Number(hours) || 0,
           billable,
           note,
@@ -650,6 +666,12 @@ function TimeForm({
             </option>
           ))}
         </TextSelect>
+      </Field>
+      <Field label="Date">
+        <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <Field label="Start">
+        <TextInput type="time" value={start} onChange={(e) => setStart(e.target.value)} />
       </Field>
       <Field label="Hours">
         <TextInput type="number" step="0.25" min="0.25" value={hours} onChange={(e) => setHours(e.target.value)} />

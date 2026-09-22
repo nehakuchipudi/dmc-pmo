@@ -8,7 +8,6 @@ import { useAppStore } from "@/lib/store";
 export function useLandingData() {
   const projects = useAppStore((s) => s.projects);
   const portfolios = useAppStore((s) => s.portfolios);
-  const programs = useAppStore((s) => s.programs);
   const objectives = useAppStore((s) => s.objectives);
   const risks = useAppStore((s) => s.risks);
   const issues = useAppStore((s) => s.issues);
@@ -22,7 +21,7 @@ export function useLandingData() {
   return useMemo(() => {
     const delivery = portfolios.find((p) => p.id === "pf-delivery");
     const metrics = delivery ? portfolioMetrics(delivery, projects) : null;
-    const mapped = new Set(programs.flatMap((p) => p.projectIds));
+    const mapped = new Set(portfolios.flatMap((p) => p.projectIds));
     const aligned = projects.filter((p) => mapped.has(p.id)).length;
     const capacity = allocationByMember(allocations);
     const overloaded = capacity.filter((c) => c.pct > 100);
@@ -35,7 +34,6 @@ export function useLandingData() {
     return {
       projects,
       portfolios,
-      programs,
       objectives,
       risks,
       issues,
@@ -56,10 +54,10 @@ export function useLandingData() {
       blocked: blockedDependencies(dependencies),
       pendingGates: gates.filter((g) => g.status === "In Review" || g.status === "Upcoming"),
       statusCounts: {
-        onTrack: projects.filter((p) => p.status === "On Track").length,
+        onTrack: projects.filter((p) => p.status === "Active").length,
         atRisk: projects.filter((p) => p.status === "At Risk").length,
-        overdue: projects.filter((p) => p.status === "Overdue").length,
-        planned: projects.filter((p) => p.status === "Planned").length,
+        overdue: projects.filter((p) => p.status === "On Hold").length,
+        planned: projects.filter((p) => p.status === "Draft" || p.status === "Planning").length,
         completed: projects.filter((p) => p.status === "Completed").length,
       },
       money,
@@ -67,7 +65,6 @@ export function useLandingData() {
   }, [
     projects,
     portfolios,
-    programs,
     objectives,
     risks,
     issues,

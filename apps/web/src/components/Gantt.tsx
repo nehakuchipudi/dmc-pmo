@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Minus, Plus, Search } from "lucide-react";
+import { addDays, durationDays, sortPlanItems, toTime } from "@/lib/project-plan";
 import { formatDisplayDate, formatShortDate } from "@/lib/seed";
 import type { Milestone, Task, TaskStatus } from "@/lib/types";
 
@@ -11,20 +12,6 @@ function tickLabel(iso: string, scale: "Days" | "Weeks") {
   const [, m, d] = iso.split("-");
   if (!m || !d) return iso;
   return scale === "Days" ? `${m}/${d}` : `${m}/${d}`;
-}
-
-function toTime(iso: string) {
-  return new Date(`${iso}T12:00:00`).getTime();
-}
-
-function addDays(iso: string, days: number) {
-  const d = new Date(`${iso}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function durationDays(start: string, due: string) {
-  return Math.max(1, Math.round((toTime(due) - toTime(start)) / 86400000) + 1);
 }
 
 function statusColor(status: TaskStatus | Milestone["status"], phaseColor: string) {
@@ -46,7 +33,7 @@ function statusColor(status: TaskStatus | Milestone["status"], phaseColor: strin
 type Row =
   | { type: "phase"; id: string; phase: Milestone; color: string; start: string; due: string; tasks: Task[] }
   | { type: "group"; id: string; group: Milestone; color: string; start: string; due: string; tasks: Task[] }
-  | { type: "task"; id: string; task: Task; color: string; phaseId: string };
+  | { type: "task"; id: string; task: Task; color: string; phaseId: string; nested?: boolean };
 
 export function GanttBoard({
   milestones,
@@ -82,12 +69,14 @@ export function GanttBoard({
         group: g,
         tasks: tasks.filter(
           (t) =>
+            !t.parentTaskId &&
             t.milestoneId === g.id &&
             (!q || t.name.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)),
         ),
       }));
       const directTasks = tasks.filter(
         (t) =>
+          !t.parentTaskId &&
           t.milestoneId === phase.id &&
           (!q || t.name.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)),
       );
@@ -103,13 +92,26 @@ export function GanttBoard({
         const gDue = gTasks.length ? [...gTasks.map((t) => t.due)].sort().slice(-1)[0] : group.due;
         out.push({ type: "group", id: group.id, group, color, start: gStart, due: gDue, tasks: gTasks });
         if (collapsed[group.id]) return;
-        gTasks.forEach((task) => out.push({ type: "task", id: task.id, task, color, phaseId: phase.id }));
+        gTasks.forEach((task) => {
+          out.push({ type: "task", id: task.id, task, color, phaseId: phase.id });
+          if (collapsed[task.id]) return;
+          sortPlanItems(tasks.filter((child) => child.parentTaskId === task.id)).forEach((child) =>
+            out.push({ type: "task", id: child.id, task: child, color, phaseId: phase.id, nested: true }),
+          );
+        });
       });
-      directTasks.forEach((task) => out.push({ type: "task", id: task.id, task, color, phaseId: phase.id }));
+      directTasks.forEach((task) => {
+        out.push({ type: "task", id: task.id, task, color, phaseId: phase.id });
+        if (collapsed[task.id]) return;
+        sortPlanItems(tasks.filter((child) => child.parentTaskId === task.id)).forEach((child) =>
+          out.push({ type: "task", id: child.id, task: child, color, phaseId: phase.id, nested: true }),
+        );
+      });
     });
     // Ungrouped tasks
     const ungrouped = tasks.filter(
       (t) =>
+        !t.parentTaskId &&
         !t.milestoneId &&
         (!q || t.name.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)),
     );
@@ -173,6 +175,20 @@ export function GanttBoard({
 
   const selectedTask = tasks.find((t) => t.id === selected);
   const laneH = 44;
+  const dragRef = useRef<{ id: string; mode: "move" | "start" | "end"; x: number; start: string; due: string } | null>(null);
+
+  function shiftTask(id: string, start: string, due: string, mode: "move" | "start" | "end", days: number) {
+    if (!days) return;
+    if (mode === "move") onUpdateTask(id, { start: addDays(start, days), due: addDays(due, days) });
+    if (mode === "start") {
+      const next = addDays(start, days);
+      if (next <= due) onUpdateTask(id, { start: next });
+    }
+    if (mode === "end") {
+      const next = addDays(due, days);
+      if (next >= start) onUpdateTask(id, { due: next });
+    }
+  }
 
   return (
     <div className="gantt-board gantt-board-pro">
@@ -275,8 +291,8 @@ export function GanttBoard({
                 className={`gantt-side-row gantt-side-task ${selected === row.task.id ? "active" : ""}`}
                 onClick={() => setSelected(row.task.id)}
               >
-                <div className="truncate pl-7 font-medium">{row.task.name}</div>
-                <div className="pl-7 text-xs text-[var(--color-muted)]">
+                <div className={`truncate font-medium ${row.nested ? "pl-10" : "pl-7"}`}>{row.task.name}</div>
+                <div className={`${row.nested ? "pl-10" : "pl-7"} text-xs text-[var(--color-muted)]`}>
                   {formatShortDate(row.task.start)} to {formatShortDate(row.task.due)}
                 </div>
               </button>
@@ -401,6 +417,25 @@ export function GanttBoard({
                         background: barColor,
                       }}
                       onClick={() => setSelected(row.task.id)}
+                      onPointerDown={(e) => {
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                        dragRef.current = {
+                          id: row.task.id,
+                          mode: "move",
+                          x: e.clientX,
+                          start: row.task.start,
+                          due: row.task.due,
+                        };
+                      }}
+                      onPointerMove={(e) => {
+                        const drag = dragRef.current;
+                        if (!drag || drag.id !== row.task.id) return;
+                        const days = Math.round((e.clientX - drag.x) / zoom);
+                        shiftTask(drag.id, drag.start, drag.due, drag.mode, days);
+                      }}
+                      onPointerUp={() => {
+                        dragRef.current = null;
+                      }}
                       title={`${row.task.name}: ${formatDisplayDate(row.task.start)} to ${formatDisplayDate(row.task.due)}`}
                     >
                       <span
@@ -460,7 +495,7 @@ export function GanttBoard({
         </div>
       ) : (
         <p className="mt-3 text-sm text-[var(--color-muted)]">
-          Click a task bar to edit dates and status. Dependency arrows show from predecessor tasks.
+          Drag a bar to reschedule. Click it to edit dates and status. Arrows show task dependencies.
         </p>
       )}
     </div>
