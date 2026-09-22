@@ -23,6 +23,8 @@ import {
   Zap,
 } from "lucide-react";
 import { LandingConnected } from "@/components/marketing/LandingConnected";
+import { LandingDemo } from "@/components/marketing/LandingDemo";
+import { LandingFaq } from "@/components/marketing/LandingFaq";
 import { LandingTour } from "@/components/marketing/LandingTour";
 import { useAuth } from "@/lib/auth";
 
@@ -148,6 +150,7 @@ const NAV = [
     items: [
       { label: "Live workspace tours", href: "#watchnow" },
       { label: "Capacity and teams", href: "#watch-resources" },
+      { label: "FAQ", href: "#faq" },
     ],
   },
 ] as const;
@@ -165,7 +168,6 @@ export function LandingPage() {
   const { user, isClient } = useAuth();
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
   const startHref = user ? appHref : "/login";
-  const startLabel = user ? "Open workspace" : "Get Started";
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -202,11 +204,19 @@ export function LandingPage() {
         </nav>
         <div className="mkt-nav-actions">
           {user ? (
-            <Link href={appHref} className="mkt-cta mkt-cta-sm">
-              Open workspace
-            </Link>
+            <>
+              <a href="#demo" className="mkt-text-link">
+                Request a demo
+              </a>
+              <Link href={appHref} className="mkt-cta mkt-cta-sm">
+                Open workspace
+              </Link>
+            </>
           ) : (
             <>
+              <a href="#demo" className="mkt-text-link">
+                Request a demo
+              </a>
               <Link href="/login" className="mkt-text-link">
                 Sign in
               </Link>
@@ -240,6 +250,11 @@ export function LandingPage() {
                 ))}
               </div>
             ))}
+            <div>
+              <a href="#demo" onClick={() => setMenuOpen(false)}>
+                Request a demo
+              </a>
+            </div>
           </nav>
         ) : null}
       </header>
@@ -398,13 +413,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mkt-final mkt-final-dark">
-        <h2>Walk the same workspace.</h2>
-        <p>Sign in and open the boards you just watched.</p>
-        <Link href={startHref} className="mkt-cta">
-          {startLabel}
-        </Link>
-      </section>
+      <LandingFaq />
+      <LandingDemo />
 
       <footer className="mkt-footer">
         <Link href="/" className="mkt-logo">
@@ -415,7 +425,8 @@ export function LandingPage() {
           <a href="#product">Product</a>
           <a href="#platform">Capabilities</a>
           <a href="#journey">How it works</a>
-          <a href="#watchnow">Resources</a>
+          <a href="#faq">FAQ</a>
+          <a href="#demo">Request a demo</a>
           <Link href="/login">Sign in</Link>
         </div>
         <span>© 2026 DMC PMO</span>
