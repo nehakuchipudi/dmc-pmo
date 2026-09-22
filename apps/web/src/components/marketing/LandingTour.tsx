@@ -253,8 +253,7 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
         </div>
       </div>
       <p className="mkt-watch-note">
-        Each tab plays that live module. When a clip ends the next tab starts on its own. Pause, seek, or jump ahead
-        from the playlist.
+        Pause, seek, or pick a tab. When a clip ends, the next module starts.
       </p>
     </section>
   );
