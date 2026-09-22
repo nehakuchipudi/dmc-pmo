@@ -1886,7 +1886,11 @@ button, input, select, textarea { font: inherit; }
 .toast-danger { background: var(--color-danger); }
 .toast-info { background: var(--color-info); }
 
-.fade-in { animation: fadeUp 420ms ease both; }
+.fade-in { animation: fadeIn 420ms ease both; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }

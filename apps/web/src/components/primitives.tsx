@@ -2,8 +2,16 @@
 
 import { clsx } from "clsx";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useAppStore } from "@/lib/store";
+
+function Overlay({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 export function StatusPill({
   tone,
@@ -181,23 +189,25 @@ export function Modal({
 }) {
   if (!open) return null;
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className={clsx("modal-panel fade-in", wide && "modal-wide", xl && "modal-xl")}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
+    <Overlay>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className={clsx("modal-panel fade-in", wide && "modal-wide", xl && "modal-xl")}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-head">
+            <h2>{title}</h2>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="modal-body">{children}</div>
         </div>
-        <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -250,26 +260,28 @@ export function Drawer({
 }) {
   if (!open) return null;
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <aside
-        className={clsx("drawer-panel", wide && "drawer-wide")}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="drawer-head">
-          <div>
-            <h2>{title}</h2>
-            {subtitle ? <p>{subtitle}</p> : null}
+    <Overlay>
+      <div className="drawer-backdrop" onClick={onClose}>
+        <aside
+          className={clsx("drawer-panel", wide && "drawer-wide")}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="drawer-head">
+            <div>
+              <h2>{title}</h2>
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+              <X size={16} />
+            </button>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </aside>
-    </div>
+          {children}
+        </aside>
+      </div>
+    </Overlay>
   );
 }
 
