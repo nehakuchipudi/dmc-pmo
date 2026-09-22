@@ -156,14 +156,17 @@ export function LandingPage() {
           </div>
         </div>
         <div className="mkt-hero-shot">
-          <img src="/marketing/hero-home.jpg" alt="DMC PMO portfolio home with health, cost, risk, and decisions" />
+          <img src="/marketing/hero-generic.svg" alt="Generic portfolio overview with project health, capacity, and budget" />
         </div>
       </section>
 
       <div className="mkt-watch-head">
-        <p className="mkt-kicker">Product tour</p>
-        <h2>Five short walks through the platform.</h2>
-        <p className="mkt-lead">Portfolio, projects, resources, risks, then intelligence. Each clip starts when the last one ends.</p>
+        <p className="mkt-kicker">The workspace</p>
+        <h2>Run your PMO with complete visibility.</h2>
+        <p className="mkt-lead">
+          Connect companies, projects, plans, teams, milestones and business outcomes in one modern workspace built for
+          the way your organization actually delivers work.
+        </p>
       </div>
       <LandingTour clips={TOURS} />
 

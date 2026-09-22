@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-label="Generic PMO portfolio overview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#243447"/>
+      <stop offset="1" stop-color="#1a2836"/>
+    </linearGradient>
+    <linearGradient id="barA" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#6b8aab"/>
+      <stop offset="1" stop-color="#a8bdd0"/>
+    </linearGradient>
+    <linearGradient id="barB" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#5b8c7a"/>
+      <stop offset="1" stop-color="#7ba891"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" rx="22" fill="url(#bg)"/>
+  <rect x="0" y="0" width="72" height="640" rx="22" fill="#1b2a38"/>
+  <rect x="56" y="0" width="16" height="640" fill="#1b2a38"/>
+  <circle cx="36" cy="36" r="12" fill="#6b8aab"/>
+  <rect x="24" y="72" width="24" height="8" rx="4" fill="#3d5a73"/>
+  <rect x="24" y="96" width="24" height="8" rx="4" fill="#6b8aab"/>
+  <rect x="24" y="120" width="24" height="8" rx="4" fill="#3d5a73"/>
+  <rect x="24" y="144" width="24" height="8" rx="4" fill="#3d5a73"/>
+  <rect x="24" y="168" width="24" height="8" rx="4" fill="#3d5a73"/>
+  <rect x="24" y="192" width="24" height="8" rx="4" fill="#3d5a73"/>
+  <rect x="96" y="28" width="168" height="12" rx="6" fill="#d7e2ec"/>
+  <rect x="96" y="50" width="92" height="8" rx="4" fill="#6b7c8f"/>
+  <rect x="96" y="92" width="148" height="52" rx="14" fill="#2f4558"/>
+  <text x="116" y="114" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">24</text>
+  <text x="116" y="132" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">Projects</text>
+  <rect x="256" y="92" width="148" height="52" rx="14" fill="#2f4558"/>
+  <text x="276" y="114" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">18</text>
+  <text x="276" y="132" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">On track</text>
+  <rect x="416" y="92" width="148" height="52" rx="14" fill="#2f4558"/>
+  <text x="436" y="114" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">3</text>
+  <text x="436" y="132" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">At risk</text>
+  <rect x="576" y="92" width="148" height="52" rx="14" fill="#2f4558"/>
+  <text x="596" y="114" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">92%</text>
+  <text x="596" y="132" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">Health</text>
+  <rect x="736" y="92" width="188" height="52" rx="14" fill="#2f4558"/>
+  <text x="756" y="114" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">$4.8M</text>
+  <text x="756" y="132" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">Budget used</text>
+  <rect x="96" y="164" width="404" height="268" rx="18" fill="#2a3d50"/>
+  <text x="120" y="196" fill="#d7e2ec" font-family="Manrope, Arial, sans-serif" font-size="14" font-weight="600">Project health</text>
+  <circle cx="298" cy="312" r="78" fill="#1b2a38"/>
+  <path d="M298 234 a78 78 0 1 1 -67.5 39" fill="none" stroke="#7ba891" stroke-width="22" stroke-linecap="round"/>
+  <path d="M230.5 273 a78 78 0 0 1 22.5 -67" fill="none" stroke="#d4a574" stroke-width="22" stroke-linecap="round"/>
+  <text x="298" y="308" text-anchor="middle" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="22" font-weight="700">75%</text>
+  <text x="298" y="328" text-anchor="middle" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">On plan</text>
+  <rect x="520" y="164" width="404" height="268" rx="18" fill="#2a3d50"/>
+  <text x="544" y="196" fill="#d7e2ec" font-family="Manrope, Arial, sans-serif" font-size="14" font-weight="600">Capacity</text>
+  <rect x="560" y="248" width="36" height="140" rx="8" fill="url(#barA)"/>
+  <rect x="616" y="276" width="36" height="112" rx="8" fill="url(#barB)"/>
+  <rect x="672" y="232" width="36" height="156" rx="8" fill="url(#barA)"/>
+  <rect x="728" y="300" width="36" height="88" rx="8" fill="url(#barB)"/>
+  <rect x="784" y="260" width="36" height="128" rx="8" fill="url(#barA)"/>
+  <rect x="840" y="288" width="36" height="100" rx="8" fill="url(#barB)"/>
+  <rect x="96" y="452" width="828" height="156" rx="18" fill="#2a3d50"/>
+  <text x="120" y="484" fill="#d7e2ec" font-family="Manrope, Arial, sans-serif" font-size="14" font-weight="600">Financial summary</text>
+  <rect x="120" y="504" width="180" height="10" rx="5" fill="#3d5a73"/>
+  <rect x="120" y="528" width="248" height="10" rx="5" fill="#3d5a73"/>
+  <rect x="120" y="552" width="210" height="10" rx="5" fill="#3d5a73"/>
+  <rect x="520" y="504" width="120" height="10" rx="5" fill="#6b8aab"/>
+  <rect x="520" y="528" width="96" height="10" rx="5" fill="#7ba891"/>
+  <rect x="520" y="552" width="108" height="10" rx="5" fill="#d4a574"/>
+  <rect x="700" y="500" width="188" height="72" rx="14" fill="#1b2a38"/>
+  <text x="720" y="530" fill="#a8bdd0" font-family="Manrope, Arial, sans-serif" font-size="11">Forecast</text>
+  <text x="720" y="552" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">$12.4M</text>
+</svg>
