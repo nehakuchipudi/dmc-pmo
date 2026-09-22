@@ -70,6 +70,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 52px;
   padding: 0 28px;
   border-radius: 999px;
@@ -95,6 +96,7 @@
 .mkt-ghost {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   min-height: 52px;
   padding: 0 22px;
   border-radius: 999px;
@@ -104,11 +106,156 @@
   background: #fff;
 }
 
+.mkt-nav.is-on-hero {
+  background: transparent;
+  color: #fff;
+}
+
+.mkt-nav.is-on-hero .mkt-nav-links,
+.mkt-nav.is-on-hero .mkt-text-link { color: rgba(255, 255, 255, 0.82); }
+.mkt-nav.is-on-hero .mkt-nav-links a:hover,
+.mkt-nav.is-on-hero .mkt-text-link:hover { color: #fff; }
+
 .mkt-hero {
   position: relative;
   text-align: center;
   padding: 72px 24px 28px;
 }
+
+.mkt-hero-cover {
+  min-height: calc(100vh - 72px);
+  padding: 72px 24px 0;
+  color: #fff;
+  overflow: hidden;
+}
+
+.mkt-hero-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 16, 32, 0.42) 0%, rgba(10, 20, 40, 0.28) 42%, rgba(246, 247, 251, 0) 86%),
+    url("/marketing/hero-skyline.png") center 40% / cover no-repeat,
+    #0b1730;
+}
+
+.mkt-hero-cover .mkt-hero-copy {
+  position: relative;
+  z-index: 1;
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+
+.mkt-hero-cover .mkt-kicker { color: #c5d4ff; }
+.mkt-hero-cover h1 {
+  max-width: 16ch;
+  margin: 0 auto;
+  color: #fff;
+}
+.mkt-hero-cover .mkt-lead {
+  color: rgba(255, 255, 255, 0.84);
+  max-width: 42ch;
+}
+.mkt-hero-cover .mkt-ghost {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.mkt-hero-stage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 18px;
+  align-items: end;
+  width: min(1120px, 100%);
+  margin: 48px auto 0;
+}
+
+.mkt-hero-cover .mkt-hero-shot {
+  background: #fff;
+  border: 0;
+  box-shadow: 0 30px 80px rgba(8, 16, 32, 0.35);
+}
+
+.mkt-hero-benefits {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 28px;
+}
+
+.mkt-hero-benefits div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(16, 28, 48, 0.55);
+  backdrop-filter: blur(16px);
+  text-align: left;
+}
+
+.mkt-hero-benefits span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.mkt-hero-benefits p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.mkt-journey {
+  width: min(1080px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 72px 0 36px;
+  text-align: center;
+}
+
+.mkt-journey h2 { max-width: 16ch; }
+
+.mkt-journey-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-journey-steps li {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.mkt-journey-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--mkt-soft);
+  color: var(--mkt-purple);
+}
+
+.mkt-journey-steps li:nth-child(2) .mkt-journey-icon { color: #4d8fd1; }
+.mkt-journey-steps li:nth-child(3) .mkt-journey-icon { color: #7a73e8; }
+.mkt-journey-steps li:nth-child(4) .mkt-journey-icon { color: #4ea37a; }
+.mkt-journey-steps li:nth-child(5) .mkt-journey-icon { color: #5b7c99; }
+.mkt-journey-steps li:nth-child(6) .mkt-journey-icon { color: #3d9b6c; }
+
+.mkt-journey-steps strong { font-size: 0.98rem; }
+.mkt-journey-steps span { color: var(--mkt-muted); font-size: 0.82rem; line-height: 1.4; }
 
 .mkt-hero-split {
   display: grid;
@@ -942,10 +1089,14 @@
   .mkt-hero-copy h1 { margin: 0 auto; }
   .mkt-hero-copy .mkt-lead { margin-left: auto; }
   .mkt-hero-split .mkt-hero-actions { justify-content: center; }
+  .mkt-hero-stage,
+  .mkt-journey-steps,
   .mkt-action-grid,
   .mkt-audiences,
   .mkt-connect-grid,
   .mkt-connect-preview { grid-template-columns: 1fr; }
+  .mkt-hero-benefits { grid-template-columns: 1fr; padding-bottom: 16px; }
+  .mkt-hero-cover { padding-top: 36px; min-height: 0; }
 }
 
 @media (max-width: 640px) {
