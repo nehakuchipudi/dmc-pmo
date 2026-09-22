@@ -146,8 +146,8 @@
   z-index: 1;
   border-radius: 22px;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid var(--mkt-line);
+  background: #1a2836;
+  border: 1px solid rgba(36, 52, 71, 0.4);
   box-shadow: 0 28px 70px rgba(28, 29, 33, 0.16), 0 8px 24px rgba(97, 97, 255, 0.12);
 }
 
@@ -172,10 +172,12 @@
 }
 
 .mkt-watch-head {
-  width: min(720px, calc(100% - 32px));
+  width: min(760px, calc(100% - 32px));
   margin: 12px auto 8px;
   text-align: center;
 }
+
+.mkt-watch-head h2 { max-width: 18ch; }
 
 .mkt-connected,
 .mkt-action {
