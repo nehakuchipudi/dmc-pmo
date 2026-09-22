@@ -94,12 +94,20 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   }, [index]);
 
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (hash === "watchnow" || hash === "watch") {
-      document.getElementById("watchnow")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    function applyHash() {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "watchnow" || hash === "watch") {
+        document.getElementById("watchnow")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      const named = clips.findIndex((item) => hash === `watch-${item.id}` || hash === item.id);
+      if (named >= 0) {
+        goTo(named);
+        document.getElementById("watchnow")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
-    const named = clips.findIndex((item) => hash === `watch-${item.id}` || hash === item.id);
-    if (named >= 0) goTo(named);
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
   }, [clips, goTo]);
 
   useEffect(() => {

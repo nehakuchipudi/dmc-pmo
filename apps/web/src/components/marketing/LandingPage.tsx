@@ -12,6 +12,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { LandingConnected } from "@/components/marketing/LandingConnected";
 import { LandingTour } from "@/components/marketing/LandingTour";
 import { useAuth } from "@/lib/auth";
 
@@ -114,6 +115,7 @@ export function LandingPage() {
         </Link>
         <nav className="mkt-nav-links">
           <a href="#product">Product</a>
+          <a href="#connected">Connected</a>
           <a href="#watchnow">Watch</a>
           <a href="#platform">Capabilities</a>
           <a href="#action">How it works</a>
@@ -160,6 +162,8 @@ export function LandingPage() {
         </div>
       </section>
 
+      <LandingConnected />
+
       <div className="mkt-watch-head">
         <p className="mkt-kicker">The workspace</p>
         <h2>Run your PMO with complete visibility.</h2>
@@ -169,17 +173,6 @@ export function LandingPage() {
         </p>
       </div>
       <LandingTour clips={TOURS} />
-
-      <section className="mkt-connected" id="connected">
-        <p className="mkt-kicker">One workspace</p>
-        <h2>Every project in one book.</h2>
-        <p className="mkt-lead">
-          Open work, owners, status, and budget stay together so leadership and delivery read the same list.
-        </p>
-        <div className="mkt-shot mkt-shot-wide">
-          <img src="/marketing/shot-projects.jpg" alt="DMC PMO project list with status, progress, and budget" />
-        </div>
-      </section>
 
       <section className="mkt-trust">
         <p>Teams use DMC PMO across</p>
