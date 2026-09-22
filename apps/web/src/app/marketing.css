@@ -109,6 +109,7 @@
 .mkt-nav.is-on-hero {
   background: transparent;
   color: #fff;
+  backdrop-filter: none;
 }
 
 .mkt-nav.is-on-hero .mkt-nav-links,
@@ -124,7 +125,7 @@
 
 .mkt-hero-cover {
   min-height: calc(100vh - 72px);
-  padding: 72px 24px 0;
+  padding: 56px 24px 0;
   color: #fff;
   overflow: hidden;
 }
@@ -132,10 +133,23 @@
 .mkt-hero-sky {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(8, 16, 32, 0.42) 0%, rgba(10, 20, 40, 0.28) 42%, rgba(246, 247, 251, 0) 86%),
-    url("/marketing/hero-skyline.png") center 40% / cover no-repeat,
-    #0b1730;
+  background: linear-gradient(180deg, #07111f 0%, #10233d 46%, #1b3354 70%, #f6f7fb 100%);
+}
+
+.mkt-hero-sky::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 18% 0;
+  background: url("/marketing/hero-skyline.png") center 78% / cover no-repeat;
+  opacity: 0.28;
+  mix-blend-mode: screen;
+}
+
+.mkt-hero-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 17, 31, 0.35) 0%, rgba(7, 17, 31, 0.08) 50%, rgba(246, 247, 251, 0.55) 84%, #f6f7fb 100%);
 }
 
 .mkt-hero-cover .mkt-hero-copy {
@@ -150,10 +164,12 @@
   max-width: 16ch;
   margin: 0 auto;
   color: #fff;
+  text-shadow: 0 8px 28px rgba(8, 16, 32, 0.35);
 }
 .mkt-hero-cover .mkt-lead {
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(255, 255, 255, 0.9);
   max-width: 42ch;
+  text-shadow: 0 4px 18px rgba(8, 16, 32, 0.45);
 }
 .mkt-hero-cover .mkt-ghost {
   border-color: rgba(255, 255, 255, 0.55);
@@ -169,13 +185,19 @@
   gap: 18px;
   align-items: end;
   width: min(1120px, 100%);
-  margin: 48px auto 0;
+  margin: 36px auto 0;
 }
 
 .mkt-hero-cover .mkt-hero-shot {
   background: #fff;
   border: 0;
   box-shadow: 0 30px 80px rgba(8, 16, 32, 0.35);
+}
+
+.mkt-hero-cover .mkt-hero-shot img {
+  max-height: 380px;
+  object-fit: cover;
+  object-position: top left;
 }
 
 .mkt-hero-benefits {
@@ -280,7 +302,7 @@
 .mkt-blob-b { width: 240px; height: 240px; background: #ffe8a3; top: 80px; right: 10%; opacity: 0.75; }
 .mkt-blob-c { width: 200px; height: 200px; background: #c8f4e4; bottom: -40px; left: 40%; opacity: 0.55; }
 
-.mkt-hero > *:not(.mkt-blob) { position: relative; z-index: 1; }
+.mkt-hero > *:not(.mkt-blob):not(.mkt-hero-sky) { position: relative; z-index: 1; }
 
 .mkt-hero-copy h1 { margin: 0; max-width: 12ch; }
 
