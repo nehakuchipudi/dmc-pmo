@@ -20,10 +20,14 @@ function formatClock(seconds: number) {
   return `${m}:${s}`;
 }
 
+function wrapIndex(next: number, length: number) {
+  return ((next % length) + length) % length;
+}
+
 export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const indexRef = useRef(0);
-  const advancedRef = useRef(false);
+  const pendingAdvanceRef = useRef(false);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [current, setCurrent] = useState(0);
@@ -37,8 +41,8 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
 
   const goTo = useCallback(
     (next: number) => {
-      const wrapped = ((next % clips.length) + clips.length) % clips.length;
-      advancedRef.current = false;
+      const wrapped = wrapIndex(next, clips.length);
+      pendingAdvanceRef.current = false;
       indexRef.current = wrapped;
       setIndex(wrapped);
       setCurrent(0);
@@ -49,10 +53,15 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   );
 
   const advance = useCallback(() => {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    goTo(indexRef.current + 1);
-  }, [goTo]);
+    if (pendingAdvanceRef.current) return;
+    pendingAdvanceRef.current = true;
+    const wrapped = wrapIndex(indexRef.current + 1, clips.length);
+    indexRef.current = wrapped;
+    setIndex(wrapped);
+    setCurrent(0);
+    setDuration(0);
+    setPlaying(true);
+  }, [clips.length]);
 
   const toggle = useCallback(() => {
     const video = videoRef.current;
@@ -73,6 +82,7 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
     if (video && video.currentTime > 1.4) {
       video.currentTime = 0;
       setCurrent(0);
+      pendingAdvanceRef.current = false;
       void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
       return;
     }
@@ -95,16 +105,16 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    advancedRef.current = false;
     video.currentTime = 0;
     void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    const tick = window.setInterval(() => {
-      if (video.ended || (!video.paused && video.duration > 0 && video.currentTime >= video.duration - 0.05)) {
-        advance();
-      }
-    }, 200);
-    return () => window.clearInterval(tick);
-  }, [advance, clip.id]);
+    const unlock = () => {
+      if (video.currentTime < 0.12) return;
+      pendingAdvanceRef.current = false;
+      video.removeEventListener("timeupdate", unlock);
+    };
+    video.addEventListener("timeupdate", unlock);
+    return () => video.removeEventListener("timeupdate", unlock);
+  }, [clip.id]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -124,17 +134,14 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
   function syncTime() {
     const video = videoRef.current;
     if (!video) return;
-    const nextDuration = Number.isFinite(video.duration) ? video.duration : 0;
     setCurrent(video.currentTime);
-    setDuration(nextDuration);
-    if (video.ended || (nextDuration > 0 && video.currentTime >= nextDuration - 0.08)) {
-      advance();
-    }
+    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
   }
 
   function seek(pct: number) {
     const video = videoRef.current;
     if (!video || !video.duration) return;
+    pendingAdvanceRef.current = false;
     video.currentTime = (pct / 100) * video.duration;
     syncTime();
   }
