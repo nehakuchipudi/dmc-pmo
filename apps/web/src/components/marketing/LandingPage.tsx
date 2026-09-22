@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Brain,
   Briefcase,
+  Check,
   Layers3,
   Scale,
   ShieldAlert,
@@ -58,34 +59,44 @@ const TOURS = [
 ] as const;
 
 const FEATURES = [
-  { title: "Portfolio Management", icon: Layers3, body: "One book for the work you fund, with health and spend in the same view." },
-  { title: "Project Management", icon: Briefcase, body: "Plans, tickets, and status on the same project record." },
-  { title: "Resource Management", icon: Users, body: "See who is over capacity before you start more work." },
-  { title: "Financial Management", icon: Wallet, body: "Budget, hours, invoices, and margin stay connected." },
-  { title: "Risk & Issues", icon: ShieldAlert, body: "Score and track risks next to the work they can stall." },
-  { title: "Governance", icon: Scale, body: "Stage gates and decisions with owners, dates, and criteria." },
-  { title: "Strategy Alignment", icon: Target, body: "Map projects to objectives so the portfolio proves outcomes." },
-  { title: "PMO Intelligence", icon: Brain, body: "A weekly brief of exceptions: risk, capacity, gates, and cash." },
+  { title: "Portfolio Management", icon: Layers3, body: "Group funded work by book, owner, health, and spend." },
+  { title: "Project Management", icon: Briefcase, body: "Keep the plan, team, status, and files on one project." },
+  { title: "Resource Management", icon: Users, body: "See who is overloaded before you staff another job." },
+  { title: "Financial Management", icon: Wallet, body: "Hold budget, hours, invoices, and margin together." },
+  { title: "Risk and Issues", icon: ShieldAlert, body: "Log likelihood, impact, owner, and the next action." },
+  { title: "Governance", icon: Scale, body: "Run stage gates with criteria, owners, and dates." },
+  { title: "Strategy Alignment", icon: Target, body: "Tie each project to an objective you can measure." },
+  { title: "PMO Intelligence", icon: Brain, body: "Surface the calls that need a decision this week." },
 ];
-
-const CONNECTED = ["Strategy", "Portfolio", "Projects", "Plan", "Delivery", "Outcomes"];
 
 const ACTION_SHOTS = [
   {
-    src: "/marketing/shot-overview.jpg",
-    title: "Project workspace",
-    body: "Health, cost, team, and the live record on one project.",
+    src: "/marketing/card-overview.jpg",
+    title: "Project record",
+    body: "Status, cost, team, and progress stay on the same job.",
   },
   {
-    src: "/marketing/shot-plan.jpg",
-    title: "Project plan",
-    body: "Phases, tasks, and the Gantt the delivery team actually runs.",
+    src: "/marketing/card-plan.jpg",
+    title: "Delivery plan",
+    body: "Phases and tasks on a schedule the team can run.",
   },
   {
-    src: "/marketing/shot-insights.jpg",
-    title: "Weekly PMO brief",
-    body: "Exceptions across capacity, risk, gates, and cash.",
+    src: "/marketing/card-insights.jpg",
+    title: "Weekly brief",
+    body: "Capacity, risk, gates, and cash that need attention.",
   },
+];
+
+const LEADERSHIP = [
+  "Portfolio health and spend in one home",
+  "A weekly brief of risk, capacity, and cash",
+  "Objectives mapped to the work they fund",
+];
+
+const DELIVERY = [
+  "One project record for plan, team, and tasks",
+  "Time, expenses, and invoices on that job",
+  "Gates and decisions with owners and dates",
 ];
 
 export function LandingPage() {
@@ -150,26 +161,20 @@ export function LandingPage() {
       </section>
 
       <div className="mkt-watch-head">
-        <p className="mkt-kicker">Live product tour</p>
-        <h2>Watch the real workspace.</h2>
-        <p className="mkt-lead">Each tab is a live module. The film advances on its own when a clip ends.</p>
+        <p className="mkt-kicker">Product tour</p>
+        <h2>Five short walks through the platform.</h2>
+        <p className="mkt-lead">Portfolio, projects, resources, risks, then intelligence. Each clip starts when the last one ends.</p>
       </div>
       <LandingTour clips={TOURS} />
 
       <section className="mkt-connected" id="connected">
-        <p className="mkt-kicker">The full picture</p>
-        <h2>Your Portfolio, Connected</h2>
+        <p className="mkt-kicker">One workspace</p>
+        <h2>Every project in one book.</h2>
         <p className="mkt-lead">
-          Strategy, books, projects, people, and risk sit on the same records. This is the workspace teams open every
-          week, not a mock.
+          Open work, owners, status, and budget stay together so leadership and delivery read the same list.
         </p>
         <div className="mkt-shot mkt-shot-wide">
           <img src="/marketing/shot-projects.jpg" alt="DMC PMO project list with status, progress, and budget" />
-        </div>
-        <div className="mkt-pills" aria-hidden="true">
-          {CONNECTED.map((name) => (
-            <span key={name}>{name}</span>
-          ))}
         </div>
       </section>
 
@@ -184,8 +189,8 @@ export function LandingPage() {
 
       <section className="mkt-platform" id="platform">
         <p className="mkt-kicker">Capabilities</p>
-        <h2>Everything Your PMO Needs. One Platform.</h2>
-        <p className="mkt-lead">Eight capabilities. One project identity. Built for any company that runs a portfolio.</p>
+        <h2>The modules a PMO actually runs.</h2>
+        <p className="mkt-lead">Portfolio through intelligence, on one project identity.</p>
         <div className="mkt-features">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
@@ -203,9 +208,9 @@ export function LandingPage() {
       </section>
 
       <section className="mkt-action" id="action">
-        <p className="mkt-kicker">How it works</p>
-        <h2>See the PMO in Action</h2>
-        <p className="mkt-lead">The same project workspace, plan, and weekly brief from the live tool.</p>
+        <p className="mkt-kicker">Inside the tool</p>
+        <h2>From one project to the whole book.</h2>
+        <p className="mkt-lead">Open a job, run the plan, then read what needs a decision this week.</p>
         <div className="mkt-action-grid">
           {ACTION_SHOTS.map((shot) => (
             <article key={shot.title} className="mkt-action-card">
@@ -219,27 +224,33 @@ export function LandingPage() {
         </div>
         <div className="mkt-audiences">
           <article>
-            <h3>Built for Leadership</h3>
+            <h3>For leadership</h3>
             <ul>
-              <li>Portfolio health and performance in one home</li>
-              <li>Risk, capacity, and cash in the weekly brief</li>
-              <li>Strategy, objectives, and the work they fund</li>
+              {LEADERSHIP.map((item) => (
+                <li key={item}>
+                  <Check size={16} />
+                  <span>{item}</span>
+                </li>
+              ))}
             </ul>
           </article>
           <article>
-            <h3>Built for Delivery Teams</h3>
+            <h3>For delivery teams</h3>
             <ul>
-              <li>Project workspace, plan, and tasks on one record</li>
-              <li>Time, expenses, and invoices on the same job</li>
-              <li>Stage gates and decisions with owners and dates</li>
+              {DELIVERY.map((item) => (
+                <li key={item}>
+                  <Check size={16} />
+                  <span>{item}</span>
+                </li>
+              ))}
             </ul>
           </article>
         </div>
       </section>
 
       <section className="mkt-final mkt-final-dark">
-        <h2>Make every project count.</h2>
-        <p>Start a demo workspace and walk the same boards you just watched.</p>
+        <h2>Walk the same workspace.</h2>
+        <p>Sign in and open the boards you just watched.</p>
         <Link href={startHref} className="mkt-cta">
           {startLabel}
         </Link>
