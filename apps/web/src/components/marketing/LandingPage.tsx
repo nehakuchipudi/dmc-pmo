@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
+  ArrowRight,
+  BarChart3,
   Brain,
   Briefcase,
   Check,
   Layers3,
+  Play,
   Scale,
+  Settings2,
   ShieldAlert,
   Target,
+  TrendingUp,
   Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { LandingConnected } from "@/components/marketing/LandingConnected";
 import { LandingTour } from "@/components/marketing/LandingTour";
@@ -100,15 +107,39 @@ const DELIVERY = [
   "Gates and decisions with owners and dates",
 ];
 
+const BENEFITS = [
+  { title: "More visibility across your portfolio", icon: BarChart3 },
+  { title: "Better decisions with real-time data", icon: Zap },
+  { title: "Greater impact from your projects", icon: Target },
+];
+
+const JOURNEY = [
+  { title: "Strategy", body: "Set direction and key objectives", icon: Target },
+  { title: "Portfolio", body: "Prioritize and allocate funding", icon: Layers3 },
+  { title: "Projects", body: "Track progress and health", icon: Briefcase },
+  { title: "Resources", body: "Manage capacity and teams", icon: Users },
+  { title: "Delivery", body: "Execute and collaborate", icon: Settings2 },
+  { title: "Outcomes", body: "Measure value and business impact", icon: TrendingUp },
+];
+
 export function LandingPage() {
   const { user, isClient } = useAuth();
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
   const startHref = user ? appHref : "/login";
   const startLabel = user ? "Open workspace" : "Get Started";
+  const [onHero, setOnHero] = useState(true);
+
+  useEffect(() => {
+    const hero = document.getElementById("product");
+    if (!hero) return;
+    const observer = new IntersectionObserver(([entry]) => setOnHero(entry.isIntersecting), { threshold: 0.18 });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="mkt">
-      <header className="mkt-nav">
+      <header className={onHero ? "mkt-nav is-on-hero" : "mkt-nav"}>
         <Link href="/" className="mkt-logo">
           <span className="mkt-logo-mark">DMC</span>
           PMO
@@ -138,11 +169,10 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="mkt-hero mkt-hero-split" id="product">
-        <div className="mkt-blob mkt-blob-a" />
-        <div className="mkt-blob mkt-blob-b" />
+      <section className="mkt-hero mkt-hero-cover" id="product">
+        <div className="mkt-hero-sky" aria-hidden="true" />
         <div className="mkt-hero-copy">
-          <p className="mkt-kicker">PMO platform for every organization</p>
+          <p className="mkt-kicker">One platform. Endless possibilities.</p>
           <h1>Turn Projects Into Business Outcomes.</h1>
           <p className="mkt-lead">
             DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
@@ -150,16 +180,53 @@ export function LandingPage() {
           </p>
           <div className="mkt-hero-actions">
             <Link href={startHref} className="mkt-cta">
-              {startLabel}
+              Open workspace
+              <ArrowRight size={16} />
             </Link>
             <a href="#watchnow" className="mkt-ghost">
-              Explore the Platform
+              <Play size={14} fill="currentColor" />
+              Watch product tour
             </a>
           </div>
         </div>
-        <div className="mkt-hero-shot">
-          <img src="/marketing/hero-generic.svg" alt="Generic portfolio overview with project health, capacity, and budget" />
+        <div className="mkt-hero-stage">
+          <div className="mkt-hero-shot">
+            <img src="/marketing/hero-home.jpg" alt="DMC PMO portfolio home with health, cost, risk, and decisions" />
+          </div>
+          <aside className="mkt-hero-benefits">
+            {BENEFITS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title}>
+                  <span>
+                    <Icon size={16} />
+                  </span>
+                  <p>{item.title}</p>
+                </div>
+              );
+            })}
+          </aside>
         </div>
+      </section>
+
+      <section className="mkt-journey" id="journey">
+        <p className="mkt-kicker">The DMC PMO journey</p>
+        <h2>From strategy to outcomes.</h2>
+        <p className="mkt-lead">Connect your goals, projects and delivery in one place.</p>
+        <ol className="mkt-journey-steps">
+          {JOURNEY.map((step) => {
+            const Icon = step.icon;
+            return (
+              <li key={step.title}>
+                <span className="mkt-journey-icon">
+                  <Icon size={18} />
+                </span>
+                <strong>{step.title}</strong>
+                <span>{step.body}</span>
+              </li>
+            );
+          })}
+        </ol>
       </section>
 
       <LandingConnected />
