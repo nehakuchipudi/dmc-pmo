@@ -75,11 +75,12 @@ export function LandingConnected() {
 
   return (
     <section
-      className="mkt-connect"
+      className="mkt-band mkt-band-connect"
       id="connected"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
+      <div className="mkt-band-inner mkt-band-inner-wide">
       <p className="mkt-kicker">Built around the way PMOs work</p>
       <h2>Everything connected. Nothing hidden.</h2>
       <div className="mkt-connect-grid" role="tablist" aria-label="How the workspace stays connected">
@@ -117,6 +118,7 @@ export function LandingConnected() {
       <a className="mkt-connect-down" href="#watchnow" aria-label="Continue to the live product tour">
         <ArrowDown size={18} />
       </a>
+      </div>
     </section>
   );
 }
