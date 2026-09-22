@@ -8,7 +8,9 @@ import {
   Brain,
   Briefcase,
   Check,
+  ChevronDown,
   Layers3,
+  Menu,
   Play,
   Scale,
   Settings2,
@@ -17,6 +19,7 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  X,
   Zap,
 } from "lucide-react";
 import { LandingConnected } from "@/components/marketing/LandingConnected";
@@ -113,6 +116,42 @@ const BENEFITS = [
   { title: "Greater impact from your projects", icon: Target },
 ];
 
+const NAV = [
+  {
+    label: "Product",
+    href: "#product",
+    items: [
+      { label: "Overview", href: "#product" },
+      { label: "Connected workspace", href: "#connected" },
+      { label: "Live product tour", href: "#watchnow" },
+    ],
+  },
+  {
+    label: "Capabilities",
+    href: "#platform",
+    items: [
+      { label: "PMO modules", href: "#platform" },
+      { label: "Portfolio through intelligence", href: "#platform" },
+    ],
+  },
+  {
+    label: "How it works",
+    href: "#journey",
+    items: [
+      { label: "Strategy to outcomes", href: "#journey" },
+      { label: "Inside the tool", href: "#action" },
+    ],
+  },
+  {
+    label: "Resources",
+    href: "#watchnow",
+    items: [
+      { label: "Live workspace tours", href: "#watchnow" },
+      { label: "Capacity and teams", href: "#watch-resources" },
+    ],
+  },
+] as const;
+
 const JOURNEY = [
   { title: "Strategy", body: "Set direction and key objectives", icon: Target },
   { title: "Portfolio", body: "Prioritize and allocate funding", icon: Layers3 },
@@ -127,29 +166,39 @@ export function LandingPage() {
   const appHref = user ? (isClient ? "/portal" : "/app/home") : "/login";
   const startHref = user ? appHref : "/login";
   const startLabel = user ? "Open workspace" : "Get Started";
-  const [onHero, setOnHero] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const hero = document.getElementById("product");
-    if (!hero) return;
-    const observer = new IntersectionObserver(([entry]) => setOnHero(entry.isIntersecting), { threshold: 0.18 });
-    observer.observe(hero);
-    return () => observer.disconnect();
+    function onHash() {
+      setMenuOpen(false);
+    }
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
   return (
     <div className="mkt">
-      <header className={onHero ? "mkt-nav is-on-hero" : "mkt-nav"}>
+      <header className="mkt-nav">
         <Link href="/" className="mkt-logo">
           <span className="mkt-logo-mark">DMC</span>
           PMO
         </Link>
-        <nav className="mkt-nav-links">
-          <a href="#product">Product</a>
-          <a href="#connected">Connected</a>
-          <a href="#watchnow">Watch</a>
-          <a href="#platform">Capabilities</a>
-          <a href="#action">How it works</a>
+        <nav className="mkt-nav-links" aria-label="Marketing">
+          {NAV.map((item) => (
+            <div className="mkt-nav-item" key={item.label}>
+              <a href={item.href}>
+                {item.label}
+                <ChevronDown size={14} />
+              </a>
+              <div className="mkt-nav-drop">
+                {item.items.map((entry) => (
+                  <a key={entry.label} href={entry.href}>
+                    {entry.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
         <div className="mkt-nav-actions">
           {user ? (
@@ -166,7 +215,33 @@ export function LandingPage() {
               </Link>
             </>
           )}
+          <button
+            type="button"
+            className="mkt-nav-toggle"
+            aria-expanded={menuOpen}
+            aria-controls="mkt-mobile-nav"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            <span>Menu</span>
+          </button>
         </div>
+        {menuOpen ? (
+          <nav className="mkt-nav-drawer" id="mkt-mobile-nav" aria-label="Marketing menu">
+            {NAV.map((item) => (
+              <div key={item.label}>
+                <a href={item.href} onClick={() => setMenuOpen(false)}>
+                  {item.label}
+                </a>
+                {item.items.map((entry) => (
+                  <a key={entry.label} href={entry.href} onClick={() => setMenuOpen(false)}>
+                    {entry.label}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </nav>
+        ) : null}
       </header>
 
       <section className="mkt-hero mkt-hero-cover" id="product">
@@ -209,105 +284,117 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mkt-journey" id="journey">
-        <p className="mkt-kicker">The DMC PMO journey</p>
-        <h2>From strategy to outcomes.</h2>
-        <p className="mkt-lead">Connect your goals, projects and delivery in one place.</p>
-        <ol className="mkt-journey-steps">
-          {JOURNEY.map((step) => {
-            const Icon = step.icon;
-            return (
-              <li key={step.title}>
-                <span className="mkt-journey-icon">
-                  <Icon size={18} />
-                </span>
-                <strong>{step.title}</strong>
-                <span>{step.body}</span>
-              </li>
-            );
-          })}
-        </ol>
+      <section className="mkt-band mkt-band-journey" id="journey">
+        <div className="mkt-band-inner">
+          <p className="mkt-kicker">The DMC PMO journey</p>
+          <h2>From strategy to outcomes.</h2>
+          <p className="mkt-lead">Connect your goals, projects and delivery in one place.</p>
+          <ol className="mkt-journey-steps">
+            {JOURNEY.map((step) => {
+              const Icon = step.icon;
+              return (
+                <li key={step.title}>
+                  <span className="mkt-journey-icon">
+                    <Icon size={18} />
+                  </span>
+                  <strong>{step.title}</strong>
+                  <span>{step.body}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </section>
 
       <LandingConnected />
 
-      <div className="mkt-watch-head">
-        <p className="mkt-kicker">The workspace</p>
-        <h2>Run your PMO with complete visibility.</h2>
-        <p className="mkt-lead">
-          Connect companies, projects, plans, teams, milestones and business outcomes in one modern workspace built for
-          the way your organization actually delivers work.
-        </p>
-      </div>
-      <LandingTour clips={TOURS} />
-
-      <section className="mkt-trust">
-        <p>Teams use DMC PMO across</p>
-        <div>
-          {["Operations", "IT", "Product", "Finance", "Delivery", "Strategy"].map((name) => (
-            <span key={name}>{name}</span>
-          ))}
+      <section className="mkt-band mkt-band-watch" id="resources">
+        <div className="mkt-band-inner mkt-band-inner-wide">
+          <div className="mkt-watch-head">
+            <p className="mkt-kicker">The workspace</p>
+            <h2>Run your PMO with complete visibility.</h2>
+            <p className="mkt-lead">
+              Connect companies, projects, plans, teams, milestones and business outcomes in one modern workspace built
+              for the way your organization actually delivers work.
+            </p>
+          </div>
+          <LandingTour clips={TOURS} />
         </div>
       </section>
 
-      <section className="mkt-platform" id="platform">
-        <p className="mkt-kicker">Capabilities</p>
-        <h2>The modules a PMO actually runs.</h2>
-        <p className="mkt-lead">Portfolio through intelligence, on one project identity.</p>
-        <div className="mkt-features">
-          {FEATURES.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <article key={feature.title}>
-                <span className="mkt-feature-icon">
-                  <Icon size={18} />
-                </span>
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
+      <section className="mkt-band mkt-band-trust">
+        <div className="mkt-band-inner">
+          <p>Teams use DMC PMO across</p>
+          <div className="mkt-trust-row">
+            {["Operations", "IT", "Product", "Finance", "Delivery", "Strategy"].map((name) => (
+              <span key={name}>{name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mkt-band mkt-band-platform" id="platform">
+        <div className="mkt-band-inner mkt-band-inner-wide">
+          <p className="mkt-kicker">Capabilities</p>
+          <h2>The modules a PMO actually runs.</h2>
+          <p className="mkt-lead">Portfolio through intelligence, on one project identity.</p>
+          <div className="mkt-features">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <article key={feature.title}>
+                  <span className="mkt-feature-icon">
+                    <Icon size={18} />
+                  </span>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.body}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="mkt-band mkt-band-action" id="action">
+        <div className="mkt-band-inner mkt-band-inner-wide">
+          <p className="mkt-kicker">Inside the tool</p>
+          <h2>From one project to the whole book.</h2>
+          <p className="mkt-lead">Open a job, run the plan, then read what needs a decision this week.</p>
+          <div className="mkt-action-grid">
+            {ACTION_SHOTS.map((shot) => (
+              <article key={shot.title} className="mkt-action-card">
+                <div className="mkt-shot">
+                  <img src={shot.src} alt={shot.title} />
+                </div>
+                <h3>{shot.title}</h3>
+                <p>{shot.body}</p>
               </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mkt-action" id="action">
-        <p className="mkt-kicker">Inside the tool</p>
-        <h2>From one project to the whole book.</h2>
-        <p className="mkt-lead">Open a job, run the plan, then read what needs a decision this week.</p>
-        <div className="mkt-action-grid">
-          {ACTION_SHOTS.map((shot) => (
-            <article key={shot.title} className="mkt-action-card">
-              <div className="mkt-shot">
-                <img src={shot.src} alt={shot.title} />
-              </div>
-              <h3>{shot.title}</h3>
-              <p>{shot.body}</p>
+            ))}
+          </div>
+          <div className="mkt-audiences">
+            <article>
+              <h3>For leadership</h3>
+              <ul>
+                {LEADERSHIP.map((item) => (
+                  <li key={item}>
+                    <Check size={16} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </article>
-          ))}
-        </div>
-        <div className="mkt-audiences">
-          <article>
-            <h3>For leadership</h3>
-            <ul>
-              {LEADERSHIP.map((item) => (
-                <li key={item}>
-                  <Check size={16} />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-          <article>
-            <h3>For delivery teams</h3>
-            <ul>
-              {DELIVERY.map((item) => (
-                <li key={item}>
-                  <Check size={16} />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
+            <article>
+              <h3>For delivery teams</h3>
+              <ul>
+                {DELIVERY.map((item) => (
+                  <li key={item}>
+                    <Check size={16} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -326,8 +413,9 @@ export function LandingPage() {
         </Link>
         <div className="mkt-footer-links">
           <a href="#product">Product</a>
-          <a href="#watchnow">Watch</a>
           <a href="#platform">Capabilities</a>
+          <a href="#journey">How it works</a>
+          <a href="#watchnow">Resources</a>
           <Link href="/login">Sign in</Link>
         </div>
         <span>© 2026 DMC PMO</span>
