@@ -321,6 +321,10 @@
   padding: 80px 24px;
   overflow: hidden;
   scroll-margin-top: 76px;
+  background:
+    radial-gradient(980px 460px at 12% 0%, rgba(7, 17, 31, 0.07), transparent 60%),
+    radial-gradient(820px 380px at 92% 100%, rgba(7, 17, 31, 0.045), transparent 56%),
+    #f6f7fb;
 }
 
 .mkt-band-inner {
@@ -333,46 +337,16 @@
 
 .mkt-band-inner-wide { width: min(1120px, 100%); }
 
-.mkt-band-journey {
+.mkt-band-connect,
+.mkt-band-trust,
+.mkt-band-action {
   background:
-    radial-gradient(920px 420px at 8% 0%, rgba(97, 97, 255, 0.22), transparent 58%),
-    radial-gradient(760px 360px at 92% 100%, rgba(125, 211, 252, 0.24), transparent 54%),
-    #e8edff;
-}
-
-.mkt-band-connect {
-  background:
-    radial-gradient(900px 400px at 88% 0%, rgba(167, 139, 250, 0.24), transparent 58%),
-    radial-gradient(720px 340px at 6% 100%, rgba(196, 181, 253, 0.2), transparent 52%),
-    #f3ebff;
-}
-
-.mkt-band-watch {
-  background:
-    radial-gradient(900px 420px at 16% 0%, rgba(253, 186, 116, 0.24), transparent 58%),
-    radial-gradient(740px 360px at 94% 100%, rgba(254, 215, 170, 0.26), transparent 52%),
-    #fff0e4;
+    radial-gradient(980px 460px at 88% 0%, rgba(7, 17, 31, 0.05), transparent 60%),
+    #fff;
 }
 
 .mkt-band-trust {
   padding: 36px 24px;
-  background:
-    radial-gradient(720px 280px at 50% 100%, rgba(125, 211, 252, 0.28), transparent 62%),
-    #e7f6ff;
-}
-
-.mkt-band-platform {
-  background:
-    radial-gradient(880px 400px at 90% 8%, rgba(129, 140, 248, 0.22), transparent 58%),
-    radial-gradient(700px 340px at 8% 92%, rgba(196, 181, 253, 0.18), transparent 52%),
-    #e9edff;
-}
-
-.mkt-band-action {
-  background:
-    radial-gradient(900px 400px at 8% 0%, rgba(52, 211, 153, 0.18), transparent 58%),
-    radial-gradient(740px 360px at 94% 92%, rgba(167, 243, 208, 0.24), transparent 52%),
-    #e7f8ef;
 }
 
 .mkt-trust-row {
