@@ -32,7 +32,16 @@ export default function BenefitsPage() {
               <div className="font-semibold">{b.name}</div>
               <div className="text-xs text-[var(--color-muted)]">{b.metric} · {b.owner}</div>
             </div>,
-            objectives.find((o) => o.id === b.objectiveId)?.code ?? "-",
+            (() => {
+              const objective = objectives.find((o) => o.id === b.objectiveId);
+              return objective ? (
+                <Link key={`${b.id}-o`} href={`/app/strategy/view/?id=${objective.id}`} className="text-[var(--color-navy)]">
+                  {objective.code}
+                </Link>
+              ) : (
+                "-"
+              );
+            })(),
             b.projectId ? (
               <Link href={`/app/projects/view/?id=${b.projectId}`} className="text-[var(--color-navy)]">
                 {projects.find((p) => p.id === b.projectId)?.name ?? b.projectId}

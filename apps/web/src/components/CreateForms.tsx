@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
+import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -18,6 +19,8 @@ export type CreateKind =
   | "milestone"
   | "idea"
   | "risk"
+  | "portfolio"
+  | "objective"
   | null;
 
 export function CreateForms({
@@ -45,6 +48,8 @@ export function CreateForms({
   const createExpense = useAppStore((s) => s.createExpense);
   const createIdea = useAppStore((s) => s.createIdea);
   const createRisk = useAppStore((s) => s.createRisk);
+  const createPortfolio = useAppStore((s) => s.createPortfolio);
+  const createObjective = useAppStore((s) => s.createObjective);
   const objectives = useAppStore((s) => s.objectives);
 
   const title = useMemo(() => {
@@ -69,6 +74,10 @@ export function CreateForms({
         return "New idea";
       case "risk":
         return "Log risk";
+      case "portfolio":
+        return "New portfolio";
+      case "objective":
+        return "New objective";
       default:
         return "";
     }
@@ -77,7 +86,7 @@ export function CreateForms({
   if (!kind) return null;
 
   return (
-    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"}>
+    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"} wide={kind === "portfolio"}>
       {kind === "company" && (
         <CompanyCreateForm
           onCancel={onClose}
@@ -180,7 +189,7 @@ export function CreateForms({
           onSubmit={(e) => {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
-            createIdea({
+            const id = createIdea({
               name: String(data.get("name") ?? ""),
               summary: String(data.get("summary") ?? ""),
               submitter: user?.name ?? "Staff",
@@ -189,6 +198,7 @@ export function CreateForms({
               objectiveId: String(data.get("objectiveId") || "") || undefined,
             });
             onClose();
+            router.push(`/app/ideas/view/?id=${id}`);
           }}
         >
           <Field label="Name">
@@ -279,6 +289,54 @@ export function CreateForms({
           </Field>
           <button type="submit" className="btn btn-primary">
             Save risk
+          </button>
+        </form>
+      )}
+      {kind === "portfolio" && (
+        <PortfolioEditForm
+          projects={projects}
+          objectives={objectives}
+          onSubmit={(values) => {
+            const id = createPortfolio({
+              ...values,
+              owner: values.owner || user?.name || "PMO",
+            });
+            onClose();
+            router.push(`/app/portfolios/view/?id=${id}`);
+          }}
+        />
+      )}
+      {kind === "objective" && (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            const id = createObjective({
+              name: String(data.get("name") ?? ""),
+              owner: user?.name ?? "Dillon Morgan",
+              horizon: String(data.get("horizon") ?? "2026 Q4"),
+              target: String(data.get("target") ?? "Define target"),
+              description: String(data.get("description") ?? ""),
+            });
+            onClose();
+            router.push(`/app/strategy/view/?id=${id}`);
+          }}
+        >
+          <Field label="Name">
+            <TextInput name="name" required placeholder="What must be true?" />
+          </Field>
+          <Field label="Target">
+            <TextInput name="target" placeholder="Measurable outcome" />
+          </Field>
+          <Field label="Horizon">
+            <TextInput name="horizon" defaultValue="2026 Q4" />
+          </Field>
+          <Field label="Description">
+            <TextTextarea name="description" />
+          </Field>
+          <button type="submit" className="btn btn-primary">
+            Save objective
           </button>
         </form>
       )}

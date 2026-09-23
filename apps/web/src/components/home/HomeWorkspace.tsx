@@ -144,7 +144,7 @@ function PortfolioHome() {
           columns={["Code", "Objective", "Owner", "Status", "Progress"]}
           rows={objectives.map((o) => [
             o.code,
-            <Link key={o.id} href="/app/strategy" className="font-medium">
+            <Link key={o.id} href={`/app/strategy/view/?id=${o.id}`} className="font-medium text-[var(--color-navy)]">
               {o.name}
             </Link>,
             o.owner,

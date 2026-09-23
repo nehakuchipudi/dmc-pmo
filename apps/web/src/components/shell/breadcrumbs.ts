@@ -48,6 +48,8 @@ export function buildAppBreadcrumbs({
   invoices,
   retainers,
   portfolios,
+  ideas,
+  objectives,
 }: {
   pathname: string;
   recordId: string | null;
@@ -58,6 +60,8 @@ export function buildAppBreadcrumbs({
   invoices: { id: string; number: string }[];
   retainers: { id: string; name: string }[];
   portfolios: { id: string; name: string }[];
+  ideas?: { id: string; name: string }[];
+  objectives?: { id: string; name: string; code?: string }[];
 }): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
   const appIndex = parts[0] === "app" ? 1 : 0;
@@ -124,6 +128,18 @@ export function buildAppBreadcrumbs({
   if (section === "portfolios") {
     const portfolio = portfolios.find((p) => p.id === id);
     if (portfolio) crumbs.push({ label: portfolio.name });
+    return crumbs;
+  }
+
+  if (section === "ideas") {
+    const idea = ideas?.find((i) => i.id === id);
+    if (idea) crumbs.push({ label: idea.name });
+    return crumbs;
+  }
+
+  if (section === "strategy") {
+    const objective = objectives?.find((o) => o.id === id);
+    if (objective) crumbs.push({ label: objective.code ? `${objective.code} ${objective.name}` : objective.name });
     return crumbs;
   }
 

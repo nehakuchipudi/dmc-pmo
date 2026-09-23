@@ -46,6 +46,7 @@ import {
   seedPortfolios,
   seedRisks,
 } from "./ppm-seed";
+import { ideaComposite } from "./ppm";
 import type {
   ActivityItem,
   ActivityType,
@@ -336,9 +337,21 @@ type AppState = {
   runAutomation: (id: string) => void;
   queueEmail: (to: string, subject: string, body: string) => void;
   createObjective: (input: { name: string; owner: string; horizon: string; target: string; description: string }) => string;
+  updateObjective: (id: string, patch: Partial<StrategicObjective>) => void;
   createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string }) => string;
+  updateIdea: (id: string, patch: Partial<Idea>) => void;
   advanceIdea: (id: string) => void;
   convertIdea: (id: string) => string | undefined;
+  createPortfolio: (input: {
+    name: string;
+    owner: string;
+    theme: string;
+    budget: number;
+    description: string;
+    projectIds?: string[];
+    objectiveIds?: string[];
+  }) => string;
+  updatePortfolio: (id: string, patch: Partial<Portfolio>) => void;
   createRisk: (input: { title: string; owner: string; projectId?: string; probability: RiskItem["probability"]; impact: RiskItem["impact"]; mitigation: string; due: string }) => string;
   updateRiskStatus: (id: string, status: RiskStatus) => void;
   updateIssueStatus: (id: string, status: IssueItem["status"]) => void;
@@ -2267,6 +2280,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
 
+  updateObjective: (id, patch) => {
+    const prev = get().objectives.find((o) => o.id === id);
+    if (!prev) return;
+    const progress =
+      patch.progress == null ? prev.progress : Math.max(0, Math.min(100, Math.round(Number(patch.progress) || 0)));
+    set((s) => ({
+      objectives: s.objectives.map((o) => (o.id === id ? { ...o, ...patch, id: o.id, code: o.code, progress } : o)),
+    }));
+    get().pushToast("Objective updated");
+  },
+
   createIdea: (input) => {
     const company = get().companies.find((c) => c.id === input.companyId);
     const id = uid("idea");
@@ -2288,6 +2312,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ ideas: [idea, ...s.ideas] }));
     get().pushToast("Idea submitted");
     return id;
+  },
+
+  updateIdea: (id, patch) => {
+    const prev = get().ideas.find((i) => i.id === id);
+    if (!prev) return;
+    const companyId = patch.companyId === "" ? undefined : (patch.companyId ?? prev.companyId);
+    const company = companyId ? get().companies.find((c) => c.id === companyId) : undefined;
+    const next: Idea = {
+      ...prev,
+      ...patch,
+      companyId,
+      companyName: companyId ? (company?.name ?? patch.companyName ?? prev.companyName) : undefined,
+      objectiveId: patch.objectiveId === "" ? undefined : (patch.objectiveId ?? prev.objectiveId),
+    };
+    if (patch.score == null && (patch.strategicFit != null || patch.valueScore != null || patch.riskScore != null)) {
+      next.score = ideaComposite(next);
+    }
+    set((s) => ({ ideas: s.ideas.map((i) => (i.id === id ? next : i)) }));
+    get().pushToast("Idea updated");
   },
 
   advanceIdea: (id) => {
@@ -2323,6 +2366,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast("Idea converted to a project");
     return projectId;
+  },
+
+  createPortfolio: (input) => {
+    const id = uid("pf");
+    const portfolio: Portfolio = {
+      id,
+      name: input.name,
+      owner: input.owner,
+      theme: input.theme,
+      budget: input.budget,
+      projectIds: input.projectIds ?? [],
+      objectiveIds: input.objectiveIds ?? [],
+      description: input.description,
+    };
+    set((s) => ({ portfolios: [portfolio, ...s.portfolios] }));
+    get().pushToast("Portfolio created");
+    return id;
+  },
+
+  updatePortfolio: (id, patch) => {
+    const prev = get().portfolios.find((p) => p.id === id);
+    if (!prev) return;
+    set((s) => ({
+      portfolios: s.portfolios.map((p) => (p.id === id ? { ...p, ...patch, id: p.id } : p)),
+    }));
+    get().pushToast("Portfolio updated");
   },
 
   createRisk: (input) => {

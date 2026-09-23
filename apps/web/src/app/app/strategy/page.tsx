@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Field, Modal, PageHeader, TextInput, TextTextarea } from "@/components/ui";
@@ -10,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 
 export default function StrategyPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const objectives = useAppStore((s) => s.objectives);
   const portfolios = useAppStore((s) => s.portfolios);
   const projects = useAppStore((s) => s.projects);
@@ -55,9 +58,13 @@ export default function StrategyPage() {
         <DataTable
           columns={["Code", "Objective", "Owner", "Horizon", "Status", "Progress", "Linked work"]}
           rows={coverage.map(({ objective, linked, portfolios: linkedPortfolios }) => [
-            objective.code,
+            <Link key={`${objective.id}-c`} href={`/app/strategy/view/?id=${objective.id}`} className="font-semibold text-[var(--color-navy)]">
+              {objective.code}
+            </Link>,
             <div key={objective.id}>
-              <div className="font-semibold">{objective.name}</div>
+              <Link href={`/app/strategy/view/?id=${objective.id}`} className="font-semibold text-[var(--color-navy)]">
+                {objective.name}
+              </Link>
               <div className="text-xs text-[var(--color-muted)]">{objective.target}</div>
             </div>,
             objective.owner,
@@ -88,7 +95,7 @@ export default function StrategyPage() {
           className="btn btn-primary"
           onClick={() => {
             if (!name.trim()) return;
-            createObjective({
+            const id = createObjective({
               name: name.trim(),
               owner: user?.name ?? "Dillon Morgan",
               horizon,
@@ -99,6 +106,7 @@ export default function StrategyPage() {
             setName("");
             setTarget("");
             setDescription("");
+            router.push(`/app/strategy/view/?id=${id}`);
           }}
         >
           Save objective
