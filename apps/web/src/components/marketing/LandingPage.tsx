@@ -263,7 +263,10 @@ export function LandingPage() {
         <div className="mkt-hero-sky" aria-hidden="true" />
         <div className="mkt-hero-copy">
           <p className="mkt-kicker">One platform. Endless possibilities.</p>
-          <h1>Turn Projects Into Business Outcomes.</h1>
+          <h1>
+            <span>Turn Projects Into</span>
+            <span>Business Outcomes.</span>
+          </h1>
           <p className="mkt-lead">
             DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
             project portfolio.
@@ -279,24 +282,19 @@ export function LandingPage() {
             </a>
           </div>
         </div>
-        <div className="mkt-hero-stage">
-          <div className="mkt-hero-shot">
-            <img src="/marketing/hero-home.jpg" alt="DMC PMO portfolio home with health, cost, risk, and decisions" />
-          </div>
-          <aside className="mkt-hero-benefits">
-            {BENEFITS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title}>
-                  <span>
-                    <Icon size={16} />
-                  </span>
-                  <p>{item.title}</p>
-                </div>
-              );
-            })}
-          </aside>
-        </div>
+        <aside className="mkt-hero-benefits">
+          {BENEFITS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.title}>
+                <span>
+                  <Icon size={16} />
+                </span>
+                <p>{item.title}</p>
+              </div>
+            );
+          })}
+        </aside>
       </section>
 
       <section className="mkt-band mkt-band-journey" id="journey">
