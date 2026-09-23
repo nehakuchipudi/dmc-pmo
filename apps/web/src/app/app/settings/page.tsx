@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, Field, Modal, PageHeader, StatusPill, Tabs, TextInput, TextSelect } from "@/components/ui";
+import { Avatar, Modal, PageHeader, StatusPill, Tabs } from "@/components/ui";
+import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
-import type { Role } from "@/lib/types";
 
-const ROLES: Role[] = ["admin", "pm", "staff", "finance", "leadership", "client"];
 const SETTINGS_TABS = ["Users", "Lifecycle"];
 
 export default function SettingsPage() {
@@ -34,8 +33,12 @@ export default function SettingsPage() {
   return (
     <div className="fade-in">
       <PageHeader
-        title="Settings"
-        subtitle="Manage team access and the project lifecycle workflow."
+        title={tab === "Users" ? "Users & roles" : "Settings"}
+        subtitle={
+          tab === "Users"
+            ? "Add people, set rates, and decide who can see hours versus budgets."
+            : "Manage team access and the project lifecycle workflow."
+        }
         actions={
           tab === "Users" ? (
           <>
@@ -66,8 +69,10 @@ export default function SettingsPage() {
           <thead>
             <tr>
               <th>User</th>
+              <th>Title</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Finance</th>
               <th>Status</th>
               <th />
             </tr>
@@ -78,11 +83,18 @@ export default function SettingsPage() {
                 <td>
                   <div className="flex items-center gap-2">
                     <Avatar initials={m.initials} src={m.avatarUrl} name={m.name} size={32} />
-                    <span className="font-medium">{m.name}</span>
+                    <div>
+                      <div className="font-medium">{m.name}</div>
+                      {m.department ? <div className="text-xs text-[var(--color-muted)]">{m.department}</div> : null}
+                    </div>
                   </div>
                 </td>
+                <td className="text-[var(--color-muted)]">{m.title || "None"}</td>
                 <td className="text-[var(--color-muted)]">{m.email}</td>
                 <td className="capitalize">{m.role}</td>
+                <td className="text-[var(--color-muted)]">
+                  {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
+                </td>
                 <td>
                   <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
                 </td>
@@ -114,7 +126,7 @@ export default function SettingsPage() {
               Authorized roles can move a project from the header. Invalid transitions stay blocked.
             </p>
             <div className="flex flex-wrap gap-3">
-              {ROLES.filter((role) => role !== "client").map((role) => {
+              {USER_ROLES.filter((role) => role !== "client").map((role) => {
                 const checked = projectWorkflow.changerRoles.includes(role);
                 return (
                   <label key={role} className="flex items-center gap-2 text-sm capitalize">
@@ -179,72 +191,29 @@ export default function SettingsPage() {
         </div>
       ) : null}
 
-      <Modal open={open} title="Add user" onClose={() => setOpen(false)}>
+      <Modal open={open} title="Add user" onClose={() => setOpen(false)} xl>
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            addTeamMember({
-              name: String(fd.get("name") || "New user"),
-              email: String(fd.get("email") || "user@dillonmorgan.com"),
-              role: String(fd.get("role") || "staff") as Role,
-            });
+            const value = readTeamMemberForm(e.currentTarget);
+            addTeamMember(value);
             setOpen(false);
           }}
         >
-          <Field label="Name">
-            <TextInput name="name" required />
-          </Field>
-          <Field label="Email">
-            <TextInput name="email" type="email" required />
-          </Field>
-          <Field label="Role">
-            <TextSelect name="role" defaultValue="staff">
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <button type="submit" className="btn btn-primary">
-            Create user
-          </button>
+          <TeamMemberForm team={team} submitLabel="Create user" />
         </form>
       </Modal>
 
-      <Modal open={!!editing} title="Edit user" onClose={() => setEditId(null)}>
+      <Modal open={!!editing} title="Edit user" onClose={() => setEditId(null)} xl>
         {editing ? (
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              updateTeamMember(editing.id, {
-                name: String(fd.get("name") || editing.name),
-                email: String(fd.get("email") || editing.email),
-                role: String(fd.get("role") || editing.role) as Role,
-              });
+              updateTeamMember(editing.id, readTeamMemberForm(e.currentTarget));
               setEditId(null);
             }}
           >
-            <Field label="Name">
-              <TextInput name="name" defaultValue={editing.name} />
-            </Field>
-            <Field label="Email">
-              <TextInput name="email" type="email" defaultValue={editing.email} />
-            </Field>
-            <Field label="Role">
-              <TextSelect name="role" defaultValue={editing.role}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            <button type="submit" className="btn btn-primary">
-              Save
-            </button>
+            <TeamMemberForm member={editing} team={team} submitLabel="Save user" />
           </form>
         ) : null}
       </Modal>
