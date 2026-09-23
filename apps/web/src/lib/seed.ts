@@ -553,12 +553,12 @@ export const seedTasks: Task[] = [
 ];
 
 export const seedTeam: TeamMember[] = [
-  { id: "tm-dm", name: "Dillon Morgan", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, billRate: 225, avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan" },
-  { id: "tm-md", name: "M. Doyle", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, billRate: 185, avatarUrl: "https://i.pravatar.cc/128?u=m-doyle" },
-  { id: "tm-jk", name: "J. Kim", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, billRate: 145, avatarUrl: "https://i.pravatar.cc/128?u=j-kim" },
-  { id: "tm-sc", name: "S. Cho", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
-  { id: "tm-sa", name: "S. Ahmed", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
-  { id: "tm-ja", name: "J. Alvarez", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
+  { id: "tm-dm", name: "Dillon Morgan", firstName: "Dillon", lastName: "Morgan", title: "Managing Director", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, billRate: 225, costRate: 80, department: "Leadership", username: "dillon", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan" },
+  { id: "tm-md", name: "M. Doyle", firstName: "Morgan", lastName: "Doyle", title: "Delivery Lead", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, billRate: 185, costRate: 65, department: "Delivery", managerId: "tm-dm", username: "mdoyle", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=m-doyle" },
+  { id: "tm-jk", name: "J. Kim", firstName: "Jordan", lastName: "Kim", title: "Consultant", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-md", username: "jkim", financialVisibility: "hours", timezone: "America/New_York", avatarUrl: "https://i.pravatar.cc/128?u=j-kim" },
+  { id: "tm-sc", name: "S. Cho", firstName: "Sam", lastName: "Cho", title: "Project Manager", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-dm", username: "scho", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
+  { id: "tm-sa", name: "S. Ahmed", firstName: "Sara", lastName: "Ahmed", title: "Analyst", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-sc", username: "sahmed", financialVisibility: "hours", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
+  { id: "tm-ja", name: "J. Alvarez", firstName: "Jules", lastName: "Alvarez", title: "Finance Partner", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, costRate: 58, department: "Finance", managerId: "tm-dm", username: "jalvarez", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
 ];
 
 export const seedInvoiceTemplates: InvoiceTemplate[] = [

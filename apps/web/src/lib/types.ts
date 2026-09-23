@@ -273,15 +273,30 @@ export interface Task {
   links: TaskLink[];
 }
 
+export type FinancialVisibility = "hours" | "rates_and_budgets";
+
 export interface TeamMember {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  title?: string;
   email: string;
+  phone?: string;
+  mobile?: string;
   initials: string;
   role: Role;
   active: boolean;
   avatarUrl?: string;
   billRate?: number;
+  costRate?: number;
+  managerId?: string;
+  department?: string;
+  skills?: string;
+  timezone?: string;
+  startDate?: string;
+  username?: string;
+  financialVisibility?: FinancialVisibility;
 }
 
 export interface ProjectRate {

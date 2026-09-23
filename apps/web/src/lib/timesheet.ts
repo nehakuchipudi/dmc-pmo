@@ -104,6 +104,8 @@ export function billRateFor(name: string, team: TeamMember[]) {
 }
 
 export function costRateFor(name: string, team: TeamMember[]) {
+  const member = team.find((item) => item.name === name);
+  if (member?.costRate != null) return member.costRate;
   return Math.round(billRateFor(name, team) * 0.35);
 }
 
