@@ -264,9 +264,8 @@ export function LandingPage() {
         <div className="mkt-hero-copy">
           <p className="mkt-kicker">One platform. Endless possibilities.</p>
           <h1>
-            Turn Projects Into
-            <br />
-            Business Outcomes.
+            <span>Turn Projects Into</span>
+            <span>Business Outcomes.</span>
           </h1>
           <p className="mkt-lead">
             DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
