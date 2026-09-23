@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Field, Modal, PageHeader, TextInput, TextSelect, TextTextarea } from "@/components/ui";
@@ -10,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 
 export default function IdeasPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const ideas = useAppStore((s) => s.ideas);
   const companies = useAppStore((s) => s.companies);
   const objectives = useAppStore((s) => s.objectives);
@@ -50,7 +53,9 @@ export default function IdeasPage() {
           columns={["Idea", "Company", "Score", "Fit / Value / Risk", "Stage", "Ask", "Action"]}
           rows={ideas.map((idea) => [
             <div key={idea.id}>
-              <div className="font-semibold">{idea.name}</div>
+              <Link href={`/app/ideas/view/?id=${idea.id}`} className="font-semibold text-[var(--color-navy)]">
+                {idea.name}
+              </Link>
               <div className="text-xs text-[var(--color-muted)]">{idea.summary}</div>
             </div>,
             idea.companyName ?? "Internal",
@@ -59,6 +64,9 @@ export default function IdeasPage() {
             <Pill key={`${idea.id}-s`} value={idea.stage} />,
             money(idea.requestedBudget),
             <div key={`${idea.id}-a`} className="flex gap-2">
+              <Link href={`/app/ideas/view/?id=${idea.id}`} className="btn btn-ghost text-sm">
+                Open
+              </Link>
               {idea.stage !== "Converted" && idea.stage !== "Deferred" ? (
                 <button type="button" className="btn btn-ghost text-sm" onClick={() => advanceIdea(idea.id)}>
                   Advance
@@ -108,7 +116,7 @@ export default function IdeasPage() {
           className="btn btn-primary"
           onClick={() => {
             if (!name.trim()) return;
-            createIdea({
+            const id = createIdea({
               name: name.trim(),
               summary: summary.trim(),
               submitter: user?.name ?? "Staff",
@@ -119,6 +127,7 @@ export default function IdeasPage() {
             setOpen(false);
             setName("");
             setSummary("");
+            router.push(`/app/ideas/view/?id=${id}`);
           }}
         >
           Submit

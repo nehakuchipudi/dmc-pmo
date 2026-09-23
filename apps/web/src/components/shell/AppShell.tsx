@@ -136,6 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const contacts = useAppStore((s) => s.contacts);
   const portfolios = useAppStore((s) => s.portfolios);
   const ideas = useAppStore((s) => s.ideas);
+  const objectives = useAppStore((s) => s.objectives);
   const invoices = useAppStore((s) => s.invoices);
   const retainers = useAppStore((s) => s.retainers);
   const notifications = useAppStore((s) => s.notifications);
@@ -217,11 +218,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...portfolios.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/portfolios/view/?id=${p.id}`, label: p.name, type: "Portfolio" })),
       ...projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ href: `/app/projects/view/?id=${p.id}`, label: p.name, type: "Project" })),
       ...companies.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/companies/view/?id=${c.id}`, label: c.name, type: "Company" })),
-      ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: "/app/ideas", label: i.name, type: "Idea" })),
+      ...ideas.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ href: `/app/ideas/view/?id=${i.id}`, label: i.name, type: "Idea" })),
+      ...objectives.filter((o) => o.name.toLowerCase().includes(q) || o.code.toLowerCase().includes(q)).map((o) => ({ href: `/app/strategy/view/?id=${o.id}`, label: `${o.code} ${o.name}`, type: "Objective" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
     ].slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, ideas]);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives]);
 
   const recentHits = useMemo(
     () =>
@@ -237,7 +239,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? `/app/portfolios/view/?id=${item.id}`
                   : item.type === "contact"
                       ? `/app/contacts/view/?id=${item.id}`
-                      : "/app/home",
+                      : item.type === "idea"
+                        ? `/app/ideas/view/?id=${item.id}`
+                        : item.type === "objective"
+                          ? `/app/strategy/view/?id=${item.id}`
+                          : "/app/home",
         label: item.label,
         type: item.type.charAt(0).toUpperCase() + item.type.slice(1),
       })),
@@ -256,8 +262,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         invoices,
         retainers,
         portfolios,
+        ideas,
+        objectives,
       }),
-    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios],
+    [pathname, recordId, companies, contacts, projects, tickets, invoices, retainers, portfolios, ideas, objectives],
   );
 
   const companyChoices = useMemo(() => {
@@ -373,7 +381,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="search text-left text-[var(--color-muted)]" onClick={() => setSearchOpen(true)}>
             <span className="inline-flex items-center gap-2 min-w-0">
               <Search size={15} />
-              <span className="truncate">Search portfolios, projects, companies...</span>
+              <span className="truncate">Search ideas, portfolios, strategy...</span>
             </span>
             <kbd className="search-kbd">⌘K</kbd>
           </button>
@@ -496,6 +504,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         ["ticket", "Ticket"],
                         ["milestone", "Milestone"],
                         ["idea", "Idea"],
+                        ["portfolio", "Portfolio"],
+                        ["objective", "Objective"],
                         ["risk", "Risk"],
                       ].map(([k, label]) => (
                         <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
