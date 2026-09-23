@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="PMO portfolio plan and delivery backdrop">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="0.55" stop-color="#0b1a2d"/>
+      <stop offset="1" stop-color="#12243a"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="18%" cy="22%" r="42%">
+      <stop offset="0" stop-color="#3d5a8a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#07111f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="82%" cy="70%" r="46%">
+      <stop offset="0" stop-color="#2a4a6e" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#07111f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="barOn" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6b8ec4"/>
+      <stop offset="1" stop-color="#9bb4d8"/>
+    </linearGradient>
+    <linearGradient id="barGo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4e9b7a"/>
+      <stop offset="1" stop-color="#7cbc9a"/>
+    </linearGradient>
+    <linearGradient id="barWatch" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c4a36a"/>
+      <stop offset="1" stop-color="#e0c48a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#field)"/>
+  <rect width="1600" height="900" fill="url(#glowA)"/>
+  <rect width="1600" height="900" fill="url(#glowB)"/>
+
+  <g stroke="#9bb4d8" stroke-opacity="0.07" stroke-width="1">
+    <path d="M0 120 H1600 M0 200 H1600 M0 280 H1600 M0 360 H1600 M0 440 H1600 M0 520 H1600 M0 600 H1600 M0 680 H1600 M0 760 H1600"/>
+    <path d="M80 0 V900 M200 0 V900 M320 0 V900 M440 0 V900 M560 0 V900 M680 0 V900 M800 0 V900 M920 0 V900 M1040 0 V900 M1160 0 V900 M1280 0 V900 M1400 0 V900 M1520 0 V900"/>
+  </g>
+
+  <g opacity="0.9">
+    <text x="1040" y="168" fill="#c5d4ff" font-family="Manrope, Arial, sans-serif" font-size="13" letter-spacing="1.4">PORTFOLIO PLAN</text>
+    <rect x="1040" y="188" width="460" height="1" fill="#9bb4d8" opacity="0.18"/>
+
+    <text x="1040" y="230" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Strategy</text>
+    <rect x="1140" y="218" width="220" height="16" rx="8" fill="url(#barOn)" opacity="0.7"/>
+
+    <text x="1040" y="274" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Portfolio</text>
+    <rect x="1180" y="262" width="280" height="16" rx="8" fill="url(#barOn)" opacity="0.78"/>
+
+    <text x="1040" y="318" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Projects</text>
+    <rect x="1160" y="306" width="310" height="16" rx="8" fill="url(#barGo)" opacity="0.72"/>
+
+    <text x="1040" y="362" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Capacity</text>
+    <rect x="1200" y="350" width="200" height="16" rx="8" fill="url(#barWatch)" opacity="0.7"/>
+
+    <text x="1040" y="406" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Delivery</text>
+    <rect x="1148" y="394" width="260" height="16" rx="8" fill="url(#barGo)" opacity="0.74"/>
+
+    <text x="1040" y="450" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="12">Outcomes</text>
+    <rect x="1220" y="438" width="160" height="16" rx="8" fill="url(#barOn)" opacity="0.68"/>
+  </g>
+
+  <g fill="none" stroke="#9bb4d8" stroke-opacity="0.28" stroke-width="1.4">
+    <path d="M180 620 C260 540, 340 540, 420 600 C500 660, 580 640, 660 560 C740 480, 820 500, 900 580"/>
+  </g>
+  <g>
+    <circle cx="180" cy="620" r="9" fill="#c5d4ff"/>
+    <circle cx="420" cy="600" r="8" fill="#7cbc9a"/>
+    <circle cx="660" cy="560" r="8" fill="#e0c48a"/>
+    <circle cx="900" cy="580" r="9" fill="#9bb4d8"/>
+    <text x="168" y="652" fill="#c5d4ff" font-family="Manrope, Arial, sans-serif" font-size="11">Goals</text>
+    <text x="396" y="632" fill="#c5d4ff" font-family="Manrope, Arial, sans-serif" font-size="11">Projects</text>
+    <text x="636" y="592" fill="#c5d4ff" font-family="Manrope, Arial, sans-serif" font-size="11">Risk</text>
+    <text x="868" y="612" fill="#c5d4ff" font-family="Manrope, Arial, sans-serif" font-size="11">Value</text>
+  </g>
+
+  <g opacity="0.55">
+    <circle cx="220" cy="210" r="70" fill="none" stroke="#1d3350" stroke-width="16"/>
+    <path d="M220 140 a70 70 0 1 1 -46 18" fill="none" stroke="#7cbc9a" stroke-width="16" stroke-linecap="round"/>
+    <text x="220" y="214" text-anchor="middle" fill="#e8eef7" font-family="Manrope, Arial, sans-serif" font-size="18" font-weight="700">76%</text>
+    <text x="220" y="234" text-anchor="middle" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="10">HEALTH</text>
+  </g>
+
+  <g opacity="0.42">
+    <rect x="86" y="300" width="150" height="64" rx="16" fill="#122033" stroke="#2a4466"/>
+    <text x="106" y="326" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="11">Projects</text>
+    <text x="106" y="350" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="20" font-weight="700">24</text>
+    <rect x="250" y="300" width="150" height="64" rx="16" fill="#122033" stroke="#2a4466"/>
+    <text x="270" y="326" fill="#8ea0b8" font-family="Manrope, Arial, sans-serif" font-size="11">On track</text>
+    <text x="270" y="350" fill="#ffffff" font-family="Manrope, Arial, sans-serif" font-size="20" font-weight="700">18</text>
+  </g>
+</svg>

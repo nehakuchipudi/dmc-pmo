@@ -218,14 +218,14 @@
 .mkt-hero-sky {
   position: absolute;
   inset: 0;
-  background: #07111f url("/marketing/hero-city-night.png") center 88% / 170% auto no-repeat;
+  background: #07111f url("/marketing/hero-pmo.svg") center 42% / cover no-repeat;
 }
 
 .mkt-hero-sky::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 17, 31, 0.22) 0%, rgba(7, 17, 31, 0.08) 36%, rgba(7, 17, 31, 0.02) 58%, rgba(246, 247, 251, 0.58) 86%, #f6f7fb 100%);
+  background: linear-gradient(180deg, rgba(7, 17, 31, 0.28) 0%, rgba(7, 17, 31, 0.12) 34%, rgba(7, 17, 31, 0.04) 58%, rgba(246, 247, 251, 0.62) 86%, #f6f7fb 100%);
 }
 
 .mkt-hero-cover .mkt-hero-copy {
