@@ -418,7 +418,9 @@ export function resolveNamed<T extends { id: string; name: string }>(query: stri
   const ranked = items
     .map((item) => ({ item, score: scoreName(item.name, query) }))
     .sort((a, b) => b.score - a.score);
-  if (ranked[0] && ranked[0].score >= 12) return ranked[0].item;
+  const words = query.split(/\s+/).filter((word) => word.length > 3 && !NAME_STOP.has(word.toLowerCase()));
+  const min = words.length >= 2 ? 32 : 12;
+  if (ranked[0] && ranked[0].score >= min) return ranked[0].item;
   return undefined;
 }
 
@@ -582,7 +584,7 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   if (/\btasks?\b/.test(lower) && isDelete) {
     intents.push({ type: "delete_task", projectQuery, recordQuery: extractTaskName(text) });
   }
-  if (/\btasks?\b/.test(lower) && (isAssign || parseTaskStatus(lower))) {
+  if (/\btasks?\b/.test(lower) && !isDelete && (isAssign || parseTaskStatus(lower))) {
     intents.push({
       type: isAssign ? "assign_task" : "update_task",
       projectQuery,
@@ -1083,14 +1085,14 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       const name = intent.name?.trim() || "New company";
       const id = runner.createCompany({
         name,
-        status: "Prospect",
+        status: "Active",
         accountManager: ctx.actorName,
         industry: "Services",
         billingTerms: "Net 30",
       });
       done(Boolean(id), id ? `Created ${name}` : "Could not create the company", id ? `I created company ${name}.` : "I could not create that company.");
       if (id) {
-        createdCompany = { id, name, status: "Prospect" };
+        createdCompany = { id, name, status: "Active" };
         pushHref(`/app/companies/view/?id=${id}`, `Open ${name}`);
       }
     }
@@ -1585,7 +1587,7 @@ export function workspaceStarters(role?: Role | null): string[] {
     "Set warehouse to On Hold and add a Go-live milestone",
     "Create a company called Northwind and add a contact Dana",
     "Draft an email to Dana Kessler about warehouse status",
-    "Assign J. Kim to the warehouse project team",
+    "Assign S. Cho to the warehouse project team",
   ];
 }
 

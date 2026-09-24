@@ -174,9 +174,28 @@ const assigned = mockRunner();
 runWorkspaceAgent("Assign J. Kim to the warehouse project team", ctx, assigned.runner);
 assert.ok(assigned.calls.some((row) => row.startsWith("member:p-warehouse:tm-jk")));
 
+const cho = mockRunner();
+runWorkspaceAgent("Assign S. Cho to the warehouse project team", {
+  ...ctx,
+  people: [...ctx.people, { id: "tm-sc", name: "S. Cho", email: "scho@dillonmorgan.com", kind: "team" }],
+}, cho.runner);
+assert.ok(cho.calls.some((row) => row.startsWith("member:p-warehouse:tm-sc")));
+
 const removed = mockRunner();
 runWorkspaceAgent("Delete the Review signoff task", ctx, removed.runner);
 assert.ok(removed.calls.includes("delete-task:tk1"));
+assert.equal(removed.calls.some((row) => row.startsWith("status:") || row.includes("update")), false);
+
+const wrongTask = mockRunner();
+runWorkspaceAgent(
+  "Delete the Review signoff task",
+  {
+    ...ctx,
+    tasks: [{ id: "tk6", name: "Client review homepage design", projectId: "p-website", assignee: "J. Kim", status: "Review" }],
+  },
+  wrongTask.runner,
+);
+assert.equal(wrongTask.calls.includes("delete-task:tk6"), false);
 
 const billed = mockRunner();
 runWorkspaceAgent("Generate an invoice for the warehouse project", ctx, billed.runner);
