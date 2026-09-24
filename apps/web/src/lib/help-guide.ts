@@ -423,6 +423,23 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["This page is generated from current workspace data, not a separate model."],
   },
   {
+    id: "workspace-ai",
+    title: "Workspace AI",
+    group: "Insights",
+    audience: "internal",
+    keywords: ["ai", "assistant", "do this", "update status", "add milestone", "workspace ai", "ask ai"],
+    summary:
+      "Ask in Help & Support can change live records. Tell it to update a project status, add a milestone or task, log time, leave a note, or raise a ticket. It uses your role and the same store as the rest of the workspace.",
+    steps: [
+      "Open Help & Support from the left nav, the top bar help icon, or the sparkle AI button.",
+      "Choose Ask.",
+      "Write a request such as Set warehouse to On Hold and add a Go-live milestone.",
+      "If the project or status is missing, answer the follow-up, then it applies the change.",
+      "Open the project link it returns to confirm the record.",
+    ],
+    tips: ["Staff cannot change status or add milestones. The assistant will say so instead of writing."],
+  },
+  {
     id: "automations",
     title: "Automations",
     group: "Insights",

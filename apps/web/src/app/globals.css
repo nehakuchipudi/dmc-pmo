@@ -2836,6 +2836,28 @@ button, input, select, textarea { font: inherit; }
   gap: 6px;
   margin-top: 8px;
 }
+.help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.help-action {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.help-action.is-ok {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.help-action.is-fail {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
 .help-link {
   display: inline-flex;
   border-radius: 999px;
