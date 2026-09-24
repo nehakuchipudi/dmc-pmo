@@ -55,6 +55,7 @@ function mockRunner() {
 
 assert.equal(parseStatus("set it to on hold"), "On Hold");
 assert.equal(looksLikeWorkspaceAction("How do I update project status?"), false);
+assert.equal(looksLikeWorkspaceAction("Set warehouse to Active"), true);
 assert.equal(looksLikeWorkspaceAction("please update the project status and add a new milestone for me"), true);
 
 const parsed = parseWorkspaceIntents("please update the project status and add a new milestone for me", ctx);

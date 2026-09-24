@@ -263,6 +263,7 @@ export function looksLikeWorkspaceAction(raw: string, pending?: AgentPending): b
   if (!text) return false;
   if (pending?.intents.length) return true;
   if (QUESTION_HINT.test(text) && !/\bplease\b/.test(text)) return false;
+  if (ACTION_HINT.test(text) && parseStatus(text)) return true;
   const wantsWrite =
     /\b(status|milestone|phase|workstream|task|note|comment|ticket|time|hours?|invoice)\b/.test(text) && ACTION_HINT.test(text);
   return wantsWrite;
