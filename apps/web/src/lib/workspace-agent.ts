@@ -451,13 +451,114 @@ function extractQuoted(raw: string) {
   return hit ? clean(hit[1]) : undefined;
 }
 
+function looksLikeOtherNoun(cleaned: string, noun: string) {
+  const others: [string, RegExp][] = [
+    ["compan(?:y|ies)", /compan/i],
+    ["projects?", /project/i],
+    ["contacts?", /contact/i],
+    ["tickets?", /ticket/i],
+    ["tasks?", /task/i],
+    ["milestones?", /milestone/i],
+    ["phases?", /phase/i],
+  ];
+  return others.some(([other, self]) => {
+    if (self.test(noun)) return false;
+    return new RegExp(`\\b(?:${other})\\b`, "i").test(cleaned);
+  });
+}
+
 function usableRecordName(name: string, noun: string) {
-  const cleaned = clean(name).replace(/^(a|an|the|new)\s+/i, "");
-  if (!cleaned || /^(a|an|the|new|it|this|that|my|our|to|from|with|for)$/i.test(cleaned)) return undefined;
+  const cleaned = clean(name)
+    .replace(/^(a|an|the|new)\s+/i, "")
+    .replace(/[?!.,;:]+$/g, "")
+    .trim();
+  if (!cleaned) return undefined;
+  if (/^(a|an|the|new|it|this|that|my|our|to|from|with|for|and|or)$/i.test(cleaned)) return undefined;
   if (/^\d+$/.test(cleaned)) return undefined;
   if (new RegExp(`^(?:${noun})s?$`, "i").test(cleaned)) return undefined;
-  if (/\b(status|and|add|create|update|please|project|for me|can you|could you|team|plan|list|page|view|workspace|module|record|details|overview|schedule)\b/i.test(cleaned)) return undefined;
+  if (/^new\s+(company|project|contact|task|milestone|ticket)$/i.test(cleaned)) return undefined;
+  if (/^(and|or|with|plus|then|also)\b/i.test(cleaned)) return undefined;
+  if (/\band\s+(?:a|an|the|new)\b/i.test(cleaned)) return undefined;
+  if (looksLikeOtherNoun(cleaned, noun)) return undefined;
+  const generics = new Set([
+    "status",
+    "team",
+    "plan",
+    "list",
+    "page",
+    "view",
+    "workspace",
+    "module",
+    "record",
+    "details",
+    "overview",
+    "schedule",
+    "please",
+    "company",
+    "project",
+    "contact",
+    "task",
+    "milestone",
+    "phase",
+    "note",
+  ]);
+  const words = cleaned.toLowerCase().split(/\s+/);
+  if (words.every((word) => generics.has(word) || /^(a|an|the|new)$/.test(word))) return undefined;
   return cleaned;
+}
+
+const NAME_TAIL = "(?=\\s+(?:and|with|due|under|plus|then)\\b|[.,;]|$)";
+
+export function extractRecordName(raw: string, noun: string): string | undefined {
+  const patterns = [
+    new RegExp(`(?:${noun})\\s+(?:called|named|titled)\\s+["']?([A-Za-z0-9][\\w .&'/-]{0,60}?)["']?${NAME_TAIL}`, "i"),
+    new RegExp(`(?:called|named|titled)\\s+(?:the\\s+)?(?:${noun})\\s+["']?([A-Za-z0-9][\\w .&'/-]{0,60}?)["']?${NAME_TAIL}`, "i"),
+    new RegExp(`(?:for|on|in)\\s+(?:the\\s+)?(?:${noun})\\s+["']?([A-Za-z0-9][\\w .&'/-]{0,40}?)["']?${NAME_TAIL}`, "i"),
+    new RegExp(`(?:${noun})\\s*[:\\-]\\s*["']?([A-Za-z0-9][\\w .&'/-]{0,60}?)["']?${NAME_TAIL}`, "i"),
+    new RegExp(
+      `(?:add|create|new)\\s+(?:a\\s+)?(?:new\\s+)?["']?([A-Za-z0-9][\\w .&'/-]{0,40}?)["']?\\s+(?:${noun})\\b`,
+      "i",
+    ),
+    new RegExp(`(?:${noun})\\s+["']?([A-Za-z][A-Za-z0-9][\\w .&'/-]{0,40}?)["']?${NAME_TAIL}`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const hit = raw.match(pattern);
+    if (!hit) continue;
+    const named = usableRecordName(hit[1], noun);
+    if (named) return named;
+  }
+  return extractCalled(raw, noun) ?? extractQuoted(raw);
+}
+
+function extractBareName(raw: string): string | undefined {
+  const cleaned = stripPunct(
+    clean(raw).replace(/^(please\s+)?(?:create|add|name|call|use|make)\s+(?:it|them|this|that)?\s*/i, ""),
+  );
+  if (!cleaned || cleaned.length < 2 || cleaned.length > 80) return undefined;
+  if (cleaned.split(/\s+/).length > 8) return undefined;
+  if (QUESTION_HINT.test(cleaned.toLowerCase())) return undefined;
+  if (ACTION_HINT.test(cleaned.toLowerCase()) && MODULE_HINT.test(cleaned.toLowerCase())) return undefined;
+  return usableRecordName(cleaned, "record");
+}
+
+function extractFollowUpNames(raw: string): { company?: string; project?: string; name?: string } {
+  const labeledCompany = extractRecordName(raw, "compan(?:y|ies)");
+  const labeledProject = extractRecordName(raw, "projects?");
+  if (labeledCompany || labeledProject) {
+    return { company: labeledCompany, project: labeledProject, name: labeledProject ?? labeledCompany };
+  }
+  const parts = raw
+    .split(/\s*(?:,|\/|;|\band\b)\s*/i)
+    .map((part) => stripPunct(clean(part)))
+    .filter(Boolean);
+  if (parts.length === 2) {
+    return {
+      company: usableRecordName(parts[0], "compan(?:y|ies)"),
+      project: usableRecordName(parts[1], "projects?"),
+      name: usableRecordName(parts[1], "projects?"),
+    };
+  }
+  return { name: extractBareName(raw) };
 }
 
 const RANDOM_PHASES = ["Discovery", "Design", "Build", "Test", "Launch", "Handover"];
@@ -749,7 +850,7 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
     });
   }
   if (/\bcompan(?:y|ies)\b/.test(lower) && isCreate && !isDelete) {
-    intents.push({ type: "create_company", name: extractCalled(text, "compan(?:y|ies)") ?? extractQuoted(text) });
+    intents.push({ type: "create_company", name: extractRecordName(text, "compan(?:y|ies)") });
   }
   if (/\bcompan(?:y|ies)\b/.test(lower) && /\b(update|rename|set)\b/.test(lower)) {
     intents.push({ type: "update_company", companyQuery, name: extractQuoted(text) });
@@ -757,7 +858,7 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   if (/\bcontacts?\b/.test(lower) && isCreate) {
     intents.push({
       type: "create_contact",
-      name: extractCalled(text, "contacts?") ?? person?.name,
+      name: extractRecordName(text, "contacts?") ?? person?.name,
       companyQuery,
     });
   }
@@ -770,11 +871,15 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
     });
   }
   const wantsCreateProject =
-    /\b(create|add|new)\s+(?:a\s+)?(?:new\s+)?projects?\b/.test(lower) || /\bprojects?\s+(?:called|named)\b/.test(lower);
+    /\b(create|add|new)\s+(?:a\s+)?(?:new\s+)?projects?\b/.test(lower) ||
+    /\bprojects?\s+(?:called|named|titled)\b/.test(lower) ||
+    (isCreate &&
+      /\band\s+(?:a\s+)?(?:new\s+)?projects?\b/.test(lower) &&
+      !/\bprojects?\s+(?:note|status|team|page|view|plan)\b/.test(lower));
   if (wantsCreateProject && !wantsStatus && !/\bstatus\b/.test(lower) && !isRename) {
     intents.push({
       type: "create_project",
-      name: extractLabeledName(text, "projects?"),
+      name: extractRecordName(text, "projects?"),
       companyQuery,
       due: parseRelativeDate(lower),
     });
@@ -943,6 +1048,25 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   return intents;
 }
 
+function isNamedCreate(type: AgentIntentType) {
+  return type === "create_company" || type === "create_project" || type === "create_contact";
+}
+
+function createNounLabel(type: AgentIntentType) {
+  if (type === "create_company") return "company";
+  if (type === "create_project") return "project";
+  if (type === "create_contact") return "contact";
+  return "record";
+}
+
+function followUpNameFor(intent: AgentIntent, follow: { company?: string; project?: string; name?: string }, unnamedCount: number) {
+  if (intent.name?.trim()) return intent.name;
+  if (intent.type === "create_company") return follow.company ?? (unnamedCount === 1 ? follow.name : undefined);
+  if (intent.type === "create_project") return follow.project ?? (unnamedCount === 1 ? follow.name : undefined);
+  if (intent.type === "create_contact") return follow.name ?? follow.company;
+  return follow.name;
+}
+
 function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[], raw: string, ctx: AgentContext): AgentIntent[] {
   const withLast = incoming.map((intent) => ({
     ...intent,
@@ -958,13 +1082,25 @@ function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[]
   const fill = withLast[0];
   const mail = extractEmail(raw, ctx.people ?? []);
   const person = extractPerson(raw, ctx.people ?? []);
+  const follow = extractFollowUpNames(raw);
+  const unnamedCreates = pending.intents.filter((intent) => isNamedCreate(intent.type) && !intent.name?.trim());
+  if (!follow.company && !follow.project && follow.name && unnamedCreates.length > 1) {
+    const companySlot = unnamedCreates.find((intent) => intent.type === "create_company");
+    if (companySlot) follow.company = follow.name;
+    else {
+      const projectSlot = unnamedCreates.find((intent) => intent.type === "create_project");
+      if (projectSlot) follow.project = follow.name;
+    }
+    follow.name = undefined;
+  }
   return pending.intents.map((intent) => ({
     ...intent,
     ...fill,
+    type: intent.type,
     projectQuery: extractProjectQuery(raw, ctx.projects) ?? fill?.projectQuery ?? intent.projectQuery,
     companyQuery: extractCompanyQuery(raw, ctx.companies ?? []) ?? fill?.companyQuery ?? intent.companyQuery,
     status: intent.type === "set_status" ? parseStatus(raw) ?? fill?.status ?? intent.status : intent.status,
-    name: fill?.name ?? extractRenameTo(raw) ?? extractQuoted(raw) ?? intent.name,
+    name: followUpNameFor(intent, follow, unnamedCreates.length) ?? fill?.name ?? extractRenameTo(raw) ?? extractQuoted(raw) ?? intent.name,
     body: fill?.body ?? extractNote(raw) ?? intent.body,
     hours: fill?.hours ?? extractHours(raw) ?? intent.hours,
     assignee: person?.name ?? fill?.assignee ?? intent.assignee,
@@ -972,6 +1108,8 @@ function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[]
     emailSubject: mail.subject ?? fill?.emailSubject ?? intent.emailSubject,
     emailBody: mail.body ?? fill?.emailBody ?? intent.emailBody,
     recordQuery: fill?.recordQuery ?? extractQuoted(raw) ?? intent.recordQuery,
+    companyId: intent.companyId ?? pending.lastCompanyId ?? fill?.companyId,
+    projectId: intent.projectId ?? pending.lastProjectId ?? fill?.projectId,
   }));
 }
 
@@ -1296,7 +1434,8 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
     }
 
     if (intent.type === "create_company") {
-      const name = intent.name?.trim() || "New company";
+      const name = intent.name?.trim();
+      if (!name) continue;
       const id = runner.createCompany({
         name,
         status: "Active",
@@ -1327,7 +1466,8 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
         done(false, "Which company?", "Which company should this contact belong to?");
         continue;
       }
-      const name = intent.name?.trim() || "New contact";
+      const name = intent.name?.trim();
+      if (!name) continue;
       const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, ".")}@${host.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com`;
       const id = runner.createContact({
         name,
@@ -1347,7 +1487,8 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
         done(false, "Which company?", "Which company should own the project?");
         continue;
       }
-      const name = intent.name?.trim() || "New project";
+      const name = intent.name?.trim();
+      if (!name) continue;
       const id = runner.createProject({
         name,
         companyId: host.id,
@@ -1792,10 +1933,30 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
   const memory: AgentPending = {
     intents: [],
     lastProjectId: lastProject?.id ?? ctx.lastProjectId ?? undefined,
-    lastCompanyId: createdCompany?.id,
+    lastCompanyId: createdCompany?.id ?? ctx.pending?.lastCompanyId,
     lastTaskId,
     lastMilestoneId,
   };
+
+  const unnamedCreates = intents.filter((intent) => isNamedCreate(intent.type) && !intent.name?.trim());
+  if (unnamedCreates.length) {
+    const labels = unnamedCreates.map((intent) => createNounLabel(intent.type));
+    const ask =
+      labels.length > 1
+        ? `I did not invent placeholder names. What should I call the ${labels.join(" and the ")}? Reply like: Blue Harbor, Q4 Rollout.`
+        : `What should I name the ${labels[0]}? Reply with the name only.`;
+    return {
+      handled: true,
+      text: lines.length ? `${lines.join("\n\n")}\n\n${ask}` : ask,
+      hrefs,
+      starters:
+        labels.length > 1
+          ? ["Blue Harbor, Q4 Rollout", "Northwind, Website Rebuild"]
+          : ["Northwind", "Test234", "Atlas"],
+      actions,
+      pending: { ...memory, intents: unnamedCreates },
+    };
+  }
 
   if (!lines.length) {
     return {

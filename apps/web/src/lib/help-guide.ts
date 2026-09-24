@@ -438,8 +438,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Email: send or draft a message to a teammate or contact. Drafts land in the automations outbox as Queued. You can also generate a project invoice or run an automation.",
     ],
     tips: [
-      "Say the exact record name: Create a project called Test234, or name the project to Atlas.",
-      "If a name is missing, answer the follow-up. Staff still cannot change status or add milestones.",
+      "Say the exact record name: Create a company Acme and a project Atlas, or Create a project called Test234.",
+      "If a name is missing, AI asks and waits. It will not save New company or New project. Staff still cannot change status or add milestones.",
     ],
   },
   {

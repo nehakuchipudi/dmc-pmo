@@ -256,4 +256,36 @@ const rename = runWorkspaceAgent(
 assert.ok(renamed.calls.includes("rename-project:p-warehouse:Test234"));
 assert.match(rename.text, /Test234/);
 
+const paired = parseWorkspaceIntents("create a company Acme and a project Atlas", ctx);
+assert.equal(paired.find((intent) => intent.type === "create_company")?.name, "Acme");
+assert.equal(paired.find((intent) => intent.type === "create_project")?.name, "Atlas");
+
+const pairedRun = mockRunner();
+const pairedDone = runWorkspaceAgent("create a company Acme and a project Atlas", ctx, pairedRun.runner);
+assert.ok(pairedRun.calls.includes("company:Acme"));
+assert.ok(pairedRun.calls.includes("project:Atlas"));
+assert.equal(pairedRun.calls.some((row) => /New company|New project/.test(row)), false);
+assert.match(pairedDone.text, /Acme/);
+assert.match(pairedDone.text, /Atlas/);
+
+const unnamed = mockRunner();
+const unnamedAsk = runWorkspaceAgent("create a new company and a new project", ctx, unnamed.runner);
+assert.equal(unnamed.calls.length, 0);
+assert.match(unnamedAsk.text, /name/i);
+assert.equal(unnamedAsk.pending?.intents.some((intent) => intent.type === "create_company"), true);
+assert.equal(unnamedAsk.pending?.intents.some((intent) => intent.type === "create_project"), true);
+assert.equal(unnamedAsk.text.includes("New company"), false);
+assert.equal(unnamedAsk.text.includes("New project"), false);
+
+const filled = mockRunner();
+const filledDone = runWorkspaceAgent("Blue Harbor, Q4 Rollout", { ...ctx, pending: unnamedAsk.pending }, filled.runner);
+assert.ok(filled.calls.includes("company:Blue Harbor"));
+assert.ok(filled.calls.includes("project:Q4 Rollout"));
+assert.match(filledDone.text, /Blue Harbor/);
+assert.match(filledDone.text, /Q4 Rollout/);
+
+const northwind = mockRunner();
+runWorkspaceAgent("Create a company called Northwind", ctx, northwind.runner);
+assert.ok(northwind.calls.includes("company:Northwind"));
+
 console.log("workspace-agent.verify ok");
