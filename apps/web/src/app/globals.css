@@ -2606,3 +2606,42 @@ button, input, select, textarea { font: inherit; }
   .activity-date { max-width: none; }
   .contacts-search, .contacts-company { max-width: none; }
 }
+
+.auth-card { box-shadow: var(--shadow-lift); }
+.auth-name-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.auth-note {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-fog);
+  font-size: 0.86rem;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+.auth-note p + p { margin-top: 8px; }
+.auth-note code {
+  font-size: 0.78rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+.auth-demo {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.92rem;
+}
+.auth-demo summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-navy);
+}
+@media (max-width: 640px) {
+  .auth-name-grid { grid-template-columns: 1fr; }
+}

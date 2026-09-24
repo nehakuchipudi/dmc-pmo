@@ -47,6 +47,8 @@ export interface User {
   email: string;
   companyId?: string;
   avatarUrl?: string;
+  entraOid?: string;
+  notifyEmail?: boolean;
 }
 
 export type CompanyAssetKind = "License" | "Hardware" | "Subscription" | "Environment";

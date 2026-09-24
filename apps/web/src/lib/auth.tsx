@@ -8,6 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { findAccount } from "./directory";
+import { entraConfigured, startEntraSignOut } from "./entra";
 import { users } from "./data";
 import type { Role, User } from "./types";
 
@@ -16,6 +18,7 @@ const STORAGE_KEY = "dmc-pmo-user";
 type AuthContextValue = {
   user: User | null;
   setUserId: (id: string) => void;
+  setSessionUser: (next: User) => void;
   logout: () => void;
   isInternal: boolean;
   isClient: boolean;
@@ -23,14 +26,18 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function lookupUser(id: string | null) {
+  if (!id) return null;
+  return findAccount(id) ?? users.find((u) => u.id === id) ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    const found = users.find((u) => u.id === saved) ?? null;
-    setUser(found);
+    setUser(lookupUser(saved));
     setReady(true);
   }, []);
 
@@ -38,14 +45,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       setUserId: (id: string) => {
-        const next = users.find((u) => u.id === id) ?? null;
+        const next = lookupUser(id);
         setUser(next);
         if (next) window.localStorage.setItem(STORAGE_KEY, next.id);
         else window.localStorage.removeItem(STORAGE_KEY);
       },
+      setSessionUser: (next: User) => {
+        setUser(next);
+        window.localStorage.setItem(STORAGE_KEY, next.id);
+      },
       logout: () => {
+        const usedEntra = Boolean(user?.entraOid);
         setUser(null);
         window.localStorage.removeItem(STORAGE_KEY);
+        if (usedEntra && entraConfigured()) {
+          void startEntraSignOut();
+        }
       },
       isInternal: !!user && user.role !== "client",
       isClient: !!user && user.role === "client",
@@ -56,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (!ready) {
     return (
       <div className="grid min-h-screen place-items-center bg-[var(--color-bg)] text-[var(--color-muted)]">
-        Loading Dillon Morgan PMO…
+        Loading Dillon Morgan PMO...
       </div>
     );
   }
