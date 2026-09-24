@@ -104,6 +104,13 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
   },
 ];
 
+function deniedModuleName(pathname: string) {
+  const match = NAV_GROUPS.flatMap((group) => group.items).find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+  return match?.label;
+}
+
 type MenuId = "create" | "profile" | "company" | null;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -618,7 +625,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="content">{routeAllowed ? children : <AccessDenied />}</main>
+        <main className="content">
+          {routeAllowed ? children : <AccessDenied moduleName={deniedModuleName(pathname)} />}
+        </main>
       </div>
 
       <CreateForms
