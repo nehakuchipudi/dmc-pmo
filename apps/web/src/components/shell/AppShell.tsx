@@ -47,6 +47,7 @@ import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
 import { buildAppBreadcrumbs } from "@/components/shell/breadcrumbs";
 import { CommandSearch } from "@/components/shell/CommandSearch";
+import { HelpSupport, HelpTrigger } from "@/components/help/HelpSupport";
 
 const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] }[] = [
   {
@@ -196,6 +197,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearchOpen(true);
+      }
+      if ((e.key === "?" || (e.shiftKey && e.key === "/")) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const target = e.target as HTMLElement;
+        if (target.closest("input, textarea, select, [contenteditable='true']")) return;
+        e.preventDefault();
+        setHelpOpen(true);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -372,10 +379,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             {!collapsed ? <span>Collapse</span> : null}
           </button>
-          <button type="button" className="nav-link w-full" onClick={() => setHelpOpen(true)}>
-            <CircleHelp size={18} />
-            {!collapsed ? <span>Help</span> : null}
-          </button>
+          <HelpTrigger onClick={() => setHelpOpen(true)} collapsed={collapsed} />
           <button
             type="button"
             className="nav-link w-full"
@@ -571,6 +575,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
               ) : null}
             </button>
+            <button type="button" className="icon-btn" aria-label="Help and Support" onClick={() => setHelpOpen(true)}>
+              <CircleHelp size={18} />
+            </button>
             <div className="relative" data-shell-menu>
               <button
                 type="button"
@@ -595,6 +602,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <div className="text-xs text-[var(--color-muted)]">{user.email}</div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setMenu(null);
+                      setHelpOpen(true);
+                    }}
+                  >
+                    <CircleHelp size={15} /> Help & Support
+                  </button>
                   <button
                     type="button"
                     className="menu-row"
@@ -791,17 +808,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </Drawer>
 
-      <Drawer open={helpOpen} title="Help" onClose={() => setHelpOpen(false)}>
-        <div className="space-y-3 text-sm text-[var(--color-muted)]">
-          <p>Home answers whether the firm is on the right work, with the right people, cost, and risk.</p>
-          <p>Create (+) still adds companies, projects, tickets, tasks, ideas, and risks.</p>
-          <p>The company selector scopes Home to that company and defaults new records to it.</p>
-          <p>Client portal users only see their company projects, tickets, billing, and retainers.</p>
-          <Link href="/app/automations" className="btn btn-primary w-full justify-center" onClick={() => setHelpOpen(false)}>
-            Open automations
-          </Link>
-        </div>
-      </Drawer>
+      <HelpSupport open={helpOpen} onClose={() => setHelpOpen(false)} audience="internal" />
     </div>
   );
 }

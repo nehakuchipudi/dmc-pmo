@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ClipboardList, LayoutDashboard, LogOut, Receipt, Search, Ticket } from "lucide-react";
+import { ChevronDown, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Receipt, Search, Ticket } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "@/lib/auth";
 import { Avatar, ConfirmModal } from "@/components/ui";
 import { useAppStore } from "@/lib/store";
 import { CommandSearch } from "@/components/shell/CommandSearch";
+import { HelpSupport, HelpTrigger } from "@/components/help/HelpSupport";
 
 const NAV = [
   { href: "/portal", label: "Projects", icon: LayoutDashboard, exact: true },
@@ -29,6 +30,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!user) router.replace("/login");
@@ -40,6 +42,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearchOpen(true);
+      }
+      if ((e.key === "?" || (e.shiftKey && e.key === "/")) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const target = e.target as HTMLElement;
+        if (target.closest("input, textarea, select, [contenteditable='true']")) return;
+        e.preventDefault();
+        setHelpOpen(true);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -94,7 +102,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="nav-footer text-xs text-white/60 px-3">Powered by Dillon Morgan Consulting</div>
+        <div className="nav-footer space-y-1">
+          <HelpTrigger onClick={() => setHelpOpen(true)} />
+          <div className="px-3 text-xs text-white/60">Powered by Dillon Morgan Consulting</div>
+        </div>
       </aside>
       <div className="main-col">
         <header className="topbar topbar-portal">
@@ -109,7 +120,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </span>
             <kbd className="search-kbd">⌘K</kbd>
           </button>
-          <div className="relative" data-shell-menu>
+          <div className="topbar-actions">
+            <button type="button" className="icon-btn" aria-label="Help and Support" onClick={() => setHelpOpen(true)}>
+              <CircleHelp size={18} />
+            </button>
+            <div className="relative" data-shell-menu>
             <button type="button" className="profile-btn" onClick={() => setProfileOpen((v) => !v)}>
               <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
               <span className="hidden sm:inline text-sm font-medium">{user.name.split(" ")[0]}</span>
@@ -126,6 +141,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <button
                   type="button"
+                  className="menu-row"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    setHelpOpen(true);
+                  }}
+                >
+                  <CircleHelp size={15} /> Help & Support
+                </button>
+                <button
+                  type="button"
                   className="menu-row menu-row-danger"
                   onClick={() => {
                     setProfileOpen(false);
@@ -136,6 +161,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             ) : null}
+            </div>
           </div>
         </header>
         <main className="content">{children}</main>
@@ -156,6 +182,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           setSearch("");
         }}
       />
+      <HelpSupport open={helpOpen} onClose={() => setHelpOpen(false)} audience="portal" />
       <ConfirmModal
         open={signOutOpen}
         title="Sign out"
