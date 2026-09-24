@@ -96,25 +96,76 @@ export function HelpSupport({
       const pending = [...next].reverse().find((message) => message.pending)?.pending;
       if (audience === "internal" && looksLikeWorkspaceAction(question, pending)) {
         const store = useAppStore.getState();
-        const companies = store.companies;
-        const snapshot: AgentProject[] = store.projects.map((project) => ({
+        const projects: AgentProject[] = store.projects.map((project) => ({
           id: project.id,
           name: project.name,
           status: project.status,
           companyId: project.companyId,
-          companyName: companies.find((company) => company.id === project.companyId)?.name ?? project.companyId,
+          companyName: store.companies.find((company) => company.id === project.companyId)?.name ?? project.companyId,
         }));
         const routeId = pathname.includes("/projects/view") ? searchParams.get("id") : null;
         const lastProjectId =
           pending?.intents.find((intent) => intent.projectId)?.projectId ??
-          snapshot.find((project) => question.toLowerCase().includes(project.name.toLowerCase()))?.id ??
+          projects.find((project) => question.toLowerCase().includes(project.name.toLowerCase()))?.id ??
           null;
         const answer = runWorkspaceAgent(
           question,
           {
             role: user?.role,
             actorName: user?.name ?? "Staff",
-            projects: snapshot,
+            actorEmail: user?.email,
+            projects,
+            companies: store.companies.map((company) => ({ id: company.id, name: company.name, status: company.status })),
+            contacts: store.contacts.map((contact) => ({ id: contact.id, name: contact.name })),
+            tasks: store.tasks.map((task) => ({
+              id: task.id,
+              name: task.name,
+              projectId: task.projectId,
+              assignee: task.assignee,
+              status: task.status,
+            })),
+            milestones: store.milestones.map((row) => ({ id: row.id, name: row.name, projectId: row.projectId })),
+            tickets: store.tickets.map((ticket) => ({
+              id: ticket.id,
+              name: ticket.subject,
+              subject: ticket.subject,
+              companyId: ticket.companyId,
+              assignee: ticket.assignee,
+              status: ticket.status,
+            })),
+            invoices: store.invoices.map((invoice) => ({
+              id: invoice.id,
+              name: invoice.title ?? invoice.number,
+              number: invoice.number,
+              companyId: invoice.companyId,
+              status: invoice.status,
+            })),
+            ideas: store.ideas.map((idea) => ({ id: idea.id, name: idea.name })),
+            objectives: store.objectives.map((row) => ({ id: row.id, name: row.name })),
+            portfolios: store.portfolios.map((row) => ({ id: row.id, name: row.name })),
+            retainers: store.retainers.map((row) => ({ id: row.id, name: row.name, companyId: row.companyId })),
+            risks: store.risks.map((row) => ({ id: row.id, name: row.title })),
+            people: [
+              ...store.team.map((row) => ({ id: row.id, name: row.name, email: row.email, kind: "team" as const })),
+              ...store.contacts.map((row) => ({
+                id: row.id,
+                name: row.name,
+                email: row.email,
+                kind: "contact" as const,
+                companyId: row.companyId,
+              })),
+            ],
+            timeEntries: store.timeEntries.map((row) => ({ id: row.id, userName: row.userName, status: row.status })),
+            expenses: store.expenses.map((row) => ({ id: row.id, vendor: row.vendor, status: row.status, projectId: row.projectId })),
+            opportunities: store.opportunities.map((row) => ({ id: row.id, name: row.name })),
+            gates: store.gates.map((row) => ({ id: row.id, name: row.name })),
+            issues: store.issues.map((row) => ({ id: row.id, name: row.title })),
+            allocations: store.allocations.map((row) => ({
+              id: row.id,
+              memberName: row.memberName,
+              projectId: row.projectId,
+            })),
+            automations: store.automations.map((row) => ({ id: row.id, name: row.name })),
             focusCompanyId: store.focusCompanyId,
             routeProjectId: routeId,
             lastProjectId,
@@ -124,10 +175,62 @@ export function HelpSupport({
           {
             setProjectStatus: store.setProjectStatus,
             createMilestone: store.createMilestone,
+            deleteMilestone: store.deleteMilestone,
             createTask: (input) => store.createTask(input),
+            updateTask: store.updateTask,
+            deleteTask: store.deleteTask,
             addProjectNote: store.addProjectNote,
             createTimeEntry: store.createTimeEntry,
             createTicket: store.createTicket,
+            updateTicketStatus: store.updateTicketStatus,
+            updateTicket: store.updateTicket,
+            createCompany: store.createCompany,
+            updateCompany: store.updateCompany,
+            createContact: store.createContact,
+            createProject: store.createProject,
+            deleteProject: store.deleteProject,
+            addProjectMember: store.addProjectMember,
+            createExpense: store.createExpense,
+            approveExpense: store.approveExpense,
+            createOpportunity: store.createOpportunity,
+            advanceOpportunity: store.advanceOpportunity,
+            createRetainer: store.createRetainer,
+            deleteRetainer: store.deleteRetainer,
+            createInvoiceDraft: store.createInvoiceDraft,
+            sendInvoice: store.sendInvoice,
+            payInvoice: store.payInvoice,
+            createIdea: store.createIdea,
+            advanceIdea: store.advanceIdea,
+            convertIdea: store.convertIdea,
+            createPortfolio: store.createPortfolio,
+            createObjective: store.createObjective,
+            createRisk: store.createRisk,
+            createDependency: store.createDependency,
+            decideGate: store.decideGate,
+            approveTimeEntry: store.approveTimeEntry,
+            requestSignoff: store.requestSignoff,
+            approveSignoff: store.approveSignoff,
+            updateContact: store.updateContact,
+            updateProject: store.updateProject,
+            updateInvoice: store.updateInvoice,
+            updateRetainer: store.updateRetainer,
+            updateIdea: store.updateIdea,
+            updatePortfolio: store.updatePortfolio,
+            updateObjective: store.updateObjective,
+            updateRiskStatus: store.updateRiskStatus,
+            updateIssueStatus: store.updateIssueStatus,
+            removeProjectMember: store.removeProjectMember,
+            addTeamMember: (input) =>
+              store.addTeamMember({
+                name: input.name,
+                email: input.email,
+                role: input.role,
+                title: input.title,
+              }),
+            rejectTimeEntry: store.rejectTimeEntry,
+            generateProjectInvoice: store.generateProjectInvoice,
+            runAutomation: store.runAutomation,
+            queueEmail: store.queueEmail,
           },
         );
         if (answer.handled) {
@@ -307,7 +410,7 @@ export function HelpSupport({
                 className="field-input"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ask a question or tell me to update a record..."
+                placeholder="Create, update, delete, assign, or email any record..."
               />
               <button type="submit" className="btn btn-primary" disabled={busy || !draft.trim()} aria-label="Send">
                 <Send size={16} />

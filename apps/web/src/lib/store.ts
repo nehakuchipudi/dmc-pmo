@@ -312,6 +312,7 @@ type AppState = {
   approveExpense: (id: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   updateTicketStatus: (ticketId: string, status: Ticket["status"]) => void;
+  updateTicket: (ticketId: string, patch: Partial<Pick<Ticket, "assignee" | "priority" | "subject">>) => void;
   addTicketMessage: (ticketId: string, author: string, body: string, visibility: "client" | "internal") => void;
   submitTimeEntry: (id: string) => void;
   approveTimeEntry: (id: string) => void;
@@ -346,7 +347,7 @@ type AppState = {
   approveSignoff: (milestoneId: string) => void;
   toggleAutomation: (id: string) => void;
   runAutomation: (id: string) => void;
-  queueEmail: (to: string, subject: string, body: string) => void;
+  queueEmail: (to: string, subject: string, body: string, status?: EmailOutboxItem["status"]) => string;
   createObjective: (input: { name: string; owner: string; horizon: string; target: string; description: string }) => string;
   updateObjective: (id: string, patch: Partial<StrategicObjective>) => void;
   createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string }) => string;
@@ -1859,6 +1860,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast(`Ticket marked ${status}`);
   },
 
+  updateTicket: (ticketId, patch) => {
+    if (!requireCap(get, "update_ticket")) return;
+    const prev = get().tickets.find((t) => t.id === ticketId);
+    const actor = currentUser();
+    if (actor?.role === "staff" && prev && !isAssignedName(actor, prev.assignee)) {
+      get().pushToast("Staff can only update tickets assigned to them.", "danger");
+      return;
+    }
+    set((s) => ({
+      tickets: s.tickets.map((t) => (t.id === ticketId ? { ...t, ...patch } : t)),
+    }));
+    get().pushToast(patch.assignee ? `Ticket assigned to ${patch.assignee}` : "Ticket updated");
+  },
+
   addTicketMessage: (ticketId, author, body, visibility) => {
     if (!requireAny(get, "update_ticket", "add_note")) return;
     set((s) => ({
@@ -2472,13 +2487,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast(`Ran ${rule.name}`);
   },
 
-  queueEmail: (to, subject, body) => {
+  queueEmail: (to, subject, body, status = "Sent") => {
+    const id = uid("e");
     set((s) => ({
       emailOutbox: [
-        { id: uid("e"), to, subject, body, sentAt: displayNow(), status: "Sent" },
+        { id, to, subject, body, sentAt: displayNow(), status },
         ...s.emailOutbox,
       ],
     }));
+    get().pushToast(status === "Queued" ? "Email drafted in the outbox" : "Email sent to the outbox");
+    return id;
   },
 
   createObjective: (input) => {
