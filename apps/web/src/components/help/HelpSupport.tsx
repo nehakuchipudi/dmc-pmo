@@ -105,6 +105,7 @@ export function HelpSupport({
         }));
         const routeId = pathname.includes("/projects/view") ? searchParams.get("id") : null;
         const lastProjectId =
+          pending?.lastProjectId ??
           pending?.intents.find((intent) => intent.projectId)?.projectId ??
           projects.find((project) => question.toLowerCase().includes(project.name.toLowerCase()))?.id ??
           null;
@@ -175,6 +176,7 @@ export function HelpSupport({
           {
             setProjectStatus: store.setProjectStatus,
             createMilestone: store.createMilestone,
+            updateMilestone: store.updateMilestone,
             deleteMilestone: store.deleteMilestone,
             createTask: (input) => store.createTask(input),
             updateTask: store.updateTask,

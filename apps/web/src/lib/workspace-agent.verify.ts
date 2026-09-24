@@ -48,18 +48,27 @@ const ctx: AgentContext = {
 
 function mockRunner() {
   const calls: string[] = [];
+  let milestoneSeq = 0;
   const runner = stubRunner({
     setProjectStatus: (id, status) => {
       calls.push(`status:${id}:${status}`);
       return true;
     },
     createMilestone: (projectId, name, due) => {
+      const id = `m-${++milestoneSeq}`;
       calls.push(`milestone:${projectId}:${name}:${due}`);
-      return "m-new";
+      return id;
     },
     createTask: (input) => {
-      calls.push(`task:${input.projectId}:${input.name}`);
+      calls.push(`task:${input.projectId}:${input.name}:${input.milestoneId ?? ""}`);
       return "tk-new";
+    },
+    createProject: (input) => {
+      calls.push(`project:${input.name}`);
+      return "p-new";
+    },
+    updateProject: (id, patch) => {
+      calls.push(`rename-project:${id}:${patch.name ?? ""}`);
     },
     addProjectNote: (projectId, note) => {
       calls.push(`note:${projectId}:${note.body}`);
@@ -213,5 +222,38 @@ const unassign = mockRunner();
 runWorkspaceAgent("Remove J. Kim from the warehouse project team", ctx, unassign.runner);
 assert.ok(unassign.calls.includes("remove-member:al1"));
 assert.equal(unassign.calls.some((row) => row.startsWith("status:") || row.includes("delete")), false);
+
+assert.equal(looksLikeWorkspaceAction("can you name the project to Test234"), true);
+const named = parseWorkspaceIntents(
+  "for project Test234, can you add 3 milestone/phase and add 2 tasks under 1st milestone and 3 tasks under 3rd phase, just give any random phase and task names",
+  ctx,
+);
+assert.equal(named.filter((intent) => intent.type === "create_project" && intent.name === "Test234").length, 1);
+assert.equal(named.filter((intent) => intent.type === "add_milestone").length, 3);
+assert.equal(named.filter((intent) => intent.type === "add_task").length, 5);
+assert.equal(named.some((intent) => intent.type === "add_milestone" && intent.name === "3"), false);
+assert.equal(named.some((intent) => intent.type === "create_project" && intent.name === "New project"), false);
+
+const built = mockRunner();
+const plan = runWorkspaceAgent(
+  "for project Test234, can you add 3 milestone/phase and add 2 tasks under 1st milestone and 3 tasks under 3rd phase, just give any random phase and task names",
+  ctx,
+  built.runner,
+);
+assert.ok(built.calls.includes("project:Test234"));
+assert.equal(built.calls.filter((row) => row.startsWith("milestone:p-new:")).length, 3);
+assert.equal(built.calls.filter((row) => row.startsWith("task:p-new:") && row.endsWith(":m-1")).length, 2);
+assert.equal(built.calls.filter((row) => row.startsWith("task:p-new:") && row.endsWith(":m-3")).length, 3);
+assert.match(plan.text, /Test234/);
+assert.equal(plan.pending?.lastProjectId, "p-new");
+
+const renamed = mockRunner();
+const rename = runWorkspaceAgent(
+  "can you name the project to Test234",
+  { ...ctx, lastProjectId: "p-warehouse", pending: { intents: [], lastProjectId: "p-warehouse" } },
+  renamed.runner,
+);
+assert.ok(renamed.calls.includes("rename-project:p-warehouse:Test234"));
+assert.match(rename.text, /Test234/);
 
 console.log("workspace-agent.verify ok");

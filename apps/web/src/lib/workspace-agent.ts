@@ -14,6 +14,7 @@ import type {
 export type AgentIntentType =
   | "set_status"
   | "add_milestone"
+  | "update_milestone"
   | "delete_milestone"
   | "add_task"
   | "update_task"
@@ -89,6 +90,9 @@ export interface AgentIntent {
   emailSubject?: string;
   emailBody?: string;
   memberQuery?: string;
+  count?: number;
+  parentOrdinal?: number;
+  milestoneId?: string;
 }
 
 export interface AgentNamed {
@@ -118,6 +122,10 @@ export interface AgentPerson {
 
 export interface AgentPending {
   intents: AgentIntent[];
+  lastProjectId?: string;
+  lastCompanyId?: string;
+  lastTaskId?: string;
+  lastMilestoneId?: string;
 }
 
 export interface AgentActionResult {
@@ -168,8 +176,9 @@ export interface AgentContext {
 export interface WorkspaceRunner {
   setProjectStatus: (projectId: string, status: ProjectStatus) => boolean;
   createMilestone: (projectId: string, name: string, due: string) => string;
+  updateMilestone: (id: string, patch: { name?: string; due?: string }) => void;
   deleteMilestone: (id: string) => void;
-  createTask: (input: { name: string; projectId: string; assignee: string; due: string }) => string;
+  createTask: (input: { name: string; projectId: string; assignee: string; due: string; milestoneId?: string }) => string;
   updateTask: (id: string, patch: { status?: TaskStatus; assignee?: string; name?: string }) => void;
   deleteTask: (id: string) => void;
   addProjectNote: (projectId: string, note: { author: string; body: string; visibility: "internal" | "client" }) => void;
@@ -273,7 +282,7 @@ export interface WorkspaceRunner {
 }
 
 const ACTION_HINT =
-  /\b(update|change|set|move|mark|make|add|create|log|raise|open|put|please|can you|could you|delete|remove|assign|email|mail|draft|send|approve|reject|pay|convert|advance|link|unlink|deactivate|record|generate|rename|close|submit|run)\b/;
+  /\b(update|change|set|move|mark|make|add|create|log|raise|open|put|please|can you|could you|delete|remove|assign|email|mail|draft|send|approve|reject|pay|convert|advance|link|unlink|deactivate|record|generate|rename|retitle|name|call|close|submit|run|edit)\b/;
 const QUESTION_HINT = /^(how|what|where|why|explain|tell me|who)\b/;
 const MODULE_HINT =
   /\b(compan(?:y|ies)|contacts?|projects?|tickets?|tasks?|milestones?|phases?|invoices?|expenses?|retainers?|ideas?|portfolios?|objectives?|risks?|issues?|dependencies|gates?|users?|members?|emails?|notes?|timesheets?|hours?|opportunit(?:y|ies)|signoffs?|status|automations?)\b/;
@@ -444,10 +453,81 @@ function extractQuoted(raw: string) {
 
 function usableRecordName(name: string, noun: string) {
   const cleaned = clean(name).replace(/^(a|an|the|new)\s+/i, "");
-  if (!cleaned || cleaned.toLowerCase() === "new") return undefined;
+  if (!cleaned || /^(a|an|the|new|it|this|that|my|our|to|from|with|for)$/i.test(cleaned)) return undefined;
+  if (/^\d+$/.test(cleaned)) return undefined;
   if (new RegExp(`^(?:${noun})s?$`, "i").test(cleaned)) return undefined;
-  if (/\b(status|and|add|create|update|please|project|for me)\b/i.test(cleaned)) return undefined;
+  if (/\b(status|and|add|create|update|please|project|for me|can you|could you|team|plan|list|page|view|workspace|module|record|details|overview|schedule)\b/i.test(cleaned)) return undefined;
   return cleaned;
+}
+
+const RANDOM_PHASES = ["Discovery", "Design", "Build", "Test", "Launch", "Handover"];
+const RANDOM_TASKS = ["Draft scope", "Confirm owners", "Collect inputs", "Build the work", "Review with client", "Close the loop"];
+
+function generatedPhaseName(index: number, random: boolean) {
+  if (random) return RANDOM_PHASES[index] ?? `Phase ${index + 1}`;
+  return `Phase ${index + 1}`;
+}
+
+function generatedTaskName(index: number, random: boolean) {
+  if (random) return RANDOM_TASKS[index] ?? `Task ${index + 1}`;
+  return `Task ${index + 1}`;
+}
+
+function extractCount(raw: string, noun: string): number | undefined {
+  const hit = raw.match(new RegExp(`\\b(\\d+)\\s+(?:${noun})\\b`, "i"));
+  if (!hit) return undefined;
+  const count = Number(hit[1]);
+  if (!Number.isFinite(count) || count < 1) return undefined;
+  return Math.min(12, Math.round(count));
+}
+
+function extractOrdinal(raw: string): number | undefined {
+  const hit = raw.match(/\b(\d+)(?:st|nd|rd|th)\b/i);
+  if (!hit) return undefined;
+  return Number(hit[1]);
+}
+
+function extractLabeledName(raw: string, noun: string): string | undefined {
+  const called = raw.match(
+    new RegExp(`(?:${noun})\\s+(?:called|named|titled)\\s+["']?([A-Za-z0-9][\\w ./-]{0,60})["']?`, "i"),
+  );
+  if (called) {
+    const named = usableRecordName(called[1], noun);
+    if (named) return named;
+  }
+  const forNoun = raw.match(
+    new RegExp(`(?:for|on|in)\\s+(?:the\\s+)?(?:${noun})\\s+["']?([A-Za-z0-9][\\w ./-]{0,40})["']?`, "i"),
+  );
+  if (forNoun) {
+    const named = usableRecordName(forNoun[1], noun);
+    if (named) return named;
+  }
+  const nounThen = raw.match(new RegExp(`(?:${noun})\\s+["']?([A-Za-z][A-Za-z0-9_-]{1,40})["']?`, "i"));
+  if (nounThen) {
+    const named = usableRecordName(nounThen[1], noun);
+    if (named && !NAME_STOP.has(named.toLowerCase())) return named;
+  }
+  return extractCalled(raw, noun);
+}
+
+function extractRenameTo(raw: string): string | undefined {
+  const quoted = extractQuoted(raw);
+  if (quoted) return quoted;
+  const to = raw.match(/\b(?:to|as)\s+["']?([A-Za-z0-9][\w ./-]{0,60})["']?\s*$/i);
+  if (to) return clean(to[1]);
+  const call = raw.match(/\b(?:call(?:ed)? it|name it)\s+["']?([A-Za-z0-9][\w ./-]{0,60})["']?\s*$/i);
+  if (call) return clean(call[1]);
+  return undefined;
+}
+
+function extractTaskBatches(raw: string): { count: number; parentOrdinal?: number }[] {
+  const batches = [...raw.matchAll(/\b(\d+)\s+tasks?\s+(?:under|in|on|for)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+(?:milestone|phase|workstream)/gi)];
+  if (batches.length) {
+    return batches.map((row) => ({ count: Math.min(12, Number(row[1])), parentOrdinal: Number(row[2]) }));
+  }
+  const count = extractCount(raw, "tasks?");
+  if (count) return [{ count }];
+  return [];
 }
 
 function extractCalled(raw: string, noun: string) {
@@ -465,6 +545,8 @@ function extractCalled(raw: string, noun: string) {
 }
 
 function extractProjectQuery(raw: string, projects: AgentProject[]): string | undefined {
+  const labeled = extractLabeledName(raw, "projects?");
+  if (labeled) return labeled;
   const ranked = projects
     .map((project) => ({ project, score: scoreName(project.name, raw) }))
     .filter((row) => row.score >= 12)
@@ -530,6 +612,7 @@ export function looksLikeWorkspaceAction(raw: string, pending?: AgentPending): b
   const text = raw.trim().toLowerCase();
   if (!text) return false;
   if (pending?.intents.length) return true;
+  if (pending?.lastProjectId && /\b(name|rename|call|edit|change|update|set|add|delete|assign|to)\b/.test(text)) return true;
   if (QUESTION_HINT.test(text) && !/\bplease\b/.test(text)) return false;
   if (ACTION_HINT.test(text) && parseStatus(text)) return true;
   return ACTION_HINT.test(text) && MODULE_HINT.test(text);
@@ -559,6 +642,8 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   const isAssign = /\bassign\b/.test(lower);
   const isEmail = /\b(email|mail|e-mail)\b/.test(lower);
   const isDraft = /\bdraft\b/.test(lower);
+  const isRename = /\b(rename|retitle|name it|call it)\b/.test(lower) || /\bname\s+(?:the|this|it)\b/.test(lower);
+  const wantsRandomNames = /\brandom\b/.test(lower) || /\bany\s+(?:name|names)\b/.test(lower);
 
   const wantsStatus =
     !isEmail &&
@@ -566,25 +651,70 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   if (wantsStatus && !/\btask\b/.test(lower) && !/\bticket\b/.test(lower) && !/\binvoice\b/.test(lower)) {
     intents.push({ type: "set_status", projectQuery, status: parseStatus(lower) });
   }
-  if (/\b(milestone|phase|workstream)\b/.test(lower) && isCreate && !isDelete) {
-    intents.push({ type: "add_milestone", projectQuery, name: extractMilestoneName(text), due: parseRelativeDate(lower) });
+  if (/\b(milestone|phase|workstream)\b/.test(lower) && isCreate && !isDelete && !isRename) {
+    const milestoneCount = extractCount(text, "milestones?|phases?|workstreams?") ?? 1;
+    const explicitName = extractMilestoneName(text);
+    for (let index = 0; index < milestoneCount; index += 1) {
+      intents.push({
+        type: "add_milestone",
+        projectQuery,
+        name: explicitName ?? (milestoneCount > 1 || wantsRandomNames ? generatedPhaseName(index, true) : undefined),
+        due: parseRelativeDate(lower),
+      });
+    }
+  }
+  if (/\b(milestone|phase)\b/.test(lower) && isRename && !isCreate) {
+    intents.push({
+      type: "update_milestone",
+      projectQuery,
+      recordQuery: extractMilestoneName(text),
+      name: extractRenameTo(text),
+    });
   }
   if (/\b(milestone|phase)\b/.test(lower) && isDelete) {
     intents.push({ type: "delete_milestone", projectQuery, recordQuery: extractMilestoneName(text) ?? projectQuery });
   }
-  if (/\btasks?\b/.test(lower) && isCreate && !isDelete && !isAssign) {
+  if (/\btasks?\b/.test(lower) && isCreate && !isDelete && !isAssign && !isRename) {
+    const batches = extractTaskBatches(text);
+    const explicitName = extractTaskName(text);
+    if (batches.length) {
+      let taskIndex = 0;
+      for (const batch of batches) {
+        for (let index = 0; index < batch.count; index += 1) {
+          intents.push({
+            type: "add_task",
+            projectQuery,
+            name: explicitName && batches.length === 1 && batch.count === 1 ? explicitName : generatedTaskName(taskIndex, true),
+            due: parseRelativeDate(lower),
+            assignee: person?.name ?? ctx.actorName,
+            parentOrdinal: batch.parentOrdinal,
+          });
+          taskIndex += 1;
+        }
+      }
+    } else {
+      intents.push({
+        type: "add_task",
+        projectQuery,
+        name: explicitName,
+        due: parseRelativeDate(lower),
+        assignee: person?.name ?? ctx.actorName,
+        parentOrdinal: extractOrdinal(text),
+      });
+    }
+  }
+  if (/\btasks?\b/.test(lower) && isRename && !isCreate) {
     intents.push({
-      type: "add_task",
+      type: "update_task",
       projectQuery,
-      name: extractTaskName(text),
-      due: parseRelativeDate(lower),
-      assignee: person?.name ?? ctx.actorName,
+      recordQuery: extractTaskName(text),
+      name: extractRenameTo(text),
     });
   }
   if (/\btasks?\b/.test(lower) && isDelete) {
     intents.push({ type: "delete_task", projectQuery, recordQuery: extractTaskName(text) });
   }
-  if (/\btasks?\b/.test(lower) && !isDelete && (isAssign || parseTaskStatus(lower))) {
+  if (/\btasks?\b/.test(lower) && !isDelete && !isRename && (isAssign || parseTaskStatus(lower))) {
     intents.push({
       type: isAssign ? "assign_task" : "update_task",
       projectQuery,
@@ -639,10 +769,12 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
       subject: text.match(/\btitle\s+(?:to\s+)?["']?([^"'.]+?)["']?$/i)?.[1],
     });
   }
-  if (/\bprojects?\b/.test(lower) && isCreate && !wantsStatus && !/\bstatus\b/.test(lower)) {
+  const wantsCreateProject =
+    /\b(create|add|new)\s+(?:a\s+)?(?:new\s+)?projects?\b/.test(lower) || /\bprojects?\s+(?:called|named)\b/.test(lower);
+  if (wantsCreateProject && !wantsStatus && !/\bstatus\b/.test(lower) && !isRename) {
     intents.push({
       type: "create_project",
-      name: extractCalled(text, "projects?"),
+      name: extractLabeledName(text, "projects?"),
       companyQuery,
       due: parseRelativeDate(lower),
     });
@@ -650,11 +782,11 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   if (/\bprojects?\b/.test(lower) && isDelete && !/\b(team|member|task|ticket|milestone|contact|user)\b/.test(lower)) {
     intents.push({ type: "delete_project", projectQuery });
   }
-  if (/\bprojects?\b/.test(lower) && /\b(update|rename)\b/.test(lower) && !isCreate && !isDelete && !wantsStatus) {
+  if ((/\bprojects?\b/.test(lower) || isRename) && (isRename || /\b(update|rename)\b/.test(lower)) && !isCreate && !isDelete && !wantsStatus) {
     intents.push({
       type: "update_project",
       projectQuery,
-      name: extractQuoted(text) ?? text.match(/\bto\s+["']?([^"'.]+?)["']?$/i)?.[1],
+      name: extractRenameTo(text) ?? extractQuoted(text),
       assignee: person?.name,
     });
   }
@@ -799,16 +931,31 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
     });
   }
 
+  const mentioned = extractLabeledName(text, "projects?");
+  const known = resolveNamed(mentioned, ctx.projects ?? []);
+  const needsHost = intents.some((intent) =>
+    intent.type === "add_milestone" || intent.type === "add_task" || intent.type === "add_note" || intent.type === "log_time",
+  );
+  if (mentioned && !known && needsHost && !intents.some((intent) => intent.type === "create_project")) {
+    intents.unshift({ type: "create_project", name: mentioned, companyQuery });
+  }
+
   return intents;
 }
 
 function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[], raw: string, ctx: AgentContext): AgentIntent[] {
-  if (!pending?.intents.length) return incoming;
-  if (incoming.length) {
-    const sameFamily = incoming.every((intent) => pending.intents.some((row) => row.type === intent.type));
-    if (!sameFamily) return incoming;
+  const withLast = incoming.map((intent) => ({
+    ...intent,
+    projectId: intent.projectId ?? pending?.lastProjectId,
+    companyId: intent.companyId ?? pending?.lastCompanyId,
+    name: intent.name ?? extractRenameTo(raw),
+  }));
+  if (!pending?.intents.length) return withLast;
+  if (withLast.length) {
+    const sameFamily = withLast.every((intent) => pending.intents.some((row) => row.type === intent.type));
+    if (!sameFamily) return withLast;
   }
-  const fill = incoming[0];
+  const fill = withLast[0];
   const mail = extractEmail(raw, ctx.people ?? []);
   const person = extractPerson(raw, ctx.people ?? []);
   return pending.intents.map((intent) => ({
@@ -817,7 +964,7 @@ function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[]
     projectQuery: extractProjectQuery(raw, ctx.projects) ?? fill?.projectQuery ?? intent.projectQuery,
     companyQuery: extractCompanyQuery(raw, ctx.companies ?? []) ?? fill?.companyQuery ?? intent.companyQuery,
     status: intent.type === "set_status" ? parseStatus(raw) ?? fill?.status ?? intent.status : intent.status,
-    name: fill?.name ?? extractQuoted(raw) ?? intent.name,
+    name: fill?.name ?? extractRenameTo(raw) ?? extractQuoted(raw) ?? intent.name,
     body: fill?.body ?? extractNote(raw) ?? intent.body,
     hours: fill?.hours ?? extractHours(raw) ?? intent.hours,
     assignee: person?.name ?? fill?.assignee ?? intent.assignee,
@@ -831,6 +978,7 @@ function mergePending(pending: AgentPending | undefined, incoming: AgentIntent[]
 function capFor(type: AgentIntentType): Capability | undefined {
   const map: Partial<Record<AgentIntentType, Capability>> = {
     add_milestone: "manage_plan",
+    update_milestone: "manage_plan",
     delete_milestone: "manage_plan",
     add_task: "create_task",
     update_task: "edit_assigned_task",
@@ -938,7 +1086,8 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
     };
   }
 
-  const needsProject = intents.filter((intent) => PROJECT_REQUIRED.has(intent.type));
+  const creatingProject = intents.some((intent) => intent.type === "create_project");
+  const needsProject = intents.filter((intent) => PROJECT_REQUIRED.has(intent.type) && !(creatingProject && (intent.type === "add_milestone" || intent.type === "add_task" || intent.type === "add_note")));
   const unresolved = needsProject.filter((intent) => !resolveProject(intent.projectQuery, ctx));
   if (unresolved.length) {
     return {
@@ -957,8 +1106,12 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
   const actions: AgentActionResult[] = [];
   const hrefs: { href: string; label: string }[] = [];
   const lines: string[] = [];
-  let lastProject: AgentProject | undefined;
+  const workingProjects = [...ctx.projects];
+  const createdMilestones: { id: string; name: string; projectId: string }[] = [];
+  let lastProject: AgentProject | undefined = workingProjects.find((row) => row.id === (ctx.lastProjectId ?? intents.find((intent) => intent.projectId)?.projectId));
   let createdCompany: AgentCompany | undefined;
+  let lastTaskId: string | undefined;
+  let lastMilestoneId: string | undefined;
 
   const pushHref = (href: string, label: string) => {
     if (!hrefs.some((item) => item.href === href)) hrefs.push({ href, label });
@@ -970,7 +1123,13 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
   };
 
   for (const intent of ready) {
-    const project = resolveProject(intent.projectQuery, ctx);
+    const project =
+      (intent.projectId ? workingProjects.find((row) => row.id === intent.projectId) : undefined) ??
+      resolveProject(intent.projectQuery, {
+        ...ctx,
+        projects: workingProjects,
+        lastProjectId: lastProject?.id ?? ctx.lastProjectId,
+      });
     if (project) {
       lastProject = project;
       pushHref(projectHref(project.id), `Open ${project.name}`);
@@ -994,7 +1153,30 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       const name = intent.name?.trim() || "New milestone";
       const due = intent.due ?? addDays(todayIso(), 14);
       const id = runner.createMilestone(project.id, name, due);
+      if (id) {
+        createdMilestones.push({ id, name, projectId: project.id });
+        lastMilestoneId = id;
+      }
       done(Boolean(id), id ? `Added ${name}` : "Could not add the milestone", id ? `I added milestone ${name} on ${project.name}, due ${due}.` : "I could not add that milestone.");
+    }
+
+    if (intent.type === "update_milestone") {
+      const pool = [
+        ...createdMilestones,
+        ...ctx.milestones.filter((row) => !project || row.projectId === project.id),
+      ];
+      const milestone =
+        (intent.parentOrdinal ? createdMilestones[intent.parentOrdinal - 1] : undefined) ??
+        resolveNamed(intent.recordQuery ?? intent.name, pool) ??
+        (lastMilestoneId ? pool.find((row) => row.id === lastMilestoneId) : undefined) ??
+        pool[0];
+      if (!milestone || !intent.name) {
+        done(false, "Which milestone?", "Which milestone should I rename, and to what?");
+        continue;
+      }
+      runner.updateMilestone(milestone.id, { name: intent.name });
+      lastMilestoneId = milestone.id;
+      done(true, `Renamed ${milestone.name}`, `I renamed ${milestone.name} to ${intent.name}.`);
     }
 
     if (intent.type === "delete_milestone") {
@@ -1013,22 +1195,54 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
     if (intent.type === "add_task" && project) {
       const name = intent.name?.trim() || "New task";
       const due = intent.due ?? addDays(todayIso(), 7);
-      const id = runner.createTask({ name, projectId: project.id, assignee: intent.assignee ?? ctx.actorName, due });
-      done(Boolean(id), id ? `Added task ${name}` : "Could not add the task", id ? `I added task ${name} on ${project.name}, due ${due}.` : "I could not add that task.");
+      const parent =
+        intent.milestoneId
+          ? createdMilestones.find((row) => row.id === intent.milestoneId)
+          : intent.parentOrdinal
+            ? createdMilestones[intent.parentOrdinal - 1] ??
+              ctx.milestones.filter((row) => row.projectId === project.id)[intent.parentOrdinal - 1]
+            : undefined;
+      const id = runner.createTask({
+        name,
+        projectId: project.id,
+        assignee: intent.assignee ?? ctx.actorName,
+        due,
+        milestoneId: parent?.id,
+      });
+      if (id) lastTaskId = id;
+      done(
+        Boolean(id),
+        id ? `Added task ${name}` : "Could not add the task",
+        id
+          ? `I added task ${name} on ${project.name}${parent ? ` under ${parent.name}` : ""}, due ${due}.`
+          : "I could not add that task.",
+      );
     }
 
     if (intent.type === "update_task" || intent.type === "assign_task" || intent.type === "delete_task") {
-      const task = resolveNamed(intent.recordQuery ?? intent.name, ctx.tasks.filter((row) => !project || row.projectId === project.id));
-      if (!task) {
+      const task =
+        resolveNamed(intent.recordQuery ?? intent.name, ctx.tasks.filter((row) => !project || row.projectId === project.id)) ??
+        (lastTaskId ? ctx.tasks.find((row) => row.id === lastTaskId) : undefined);
+      if (!task && !(intent.type === "update_task" && lastTaskId && intent.name)) {
         done(false, "Which task?", "Which task should I use? Name it in your next message.");
         continue;
       }
+      const taskId = task?.id ?? lastTaskId;
+      if (!taskId) continue;
       if (intent.type === "delete_task") {
-        runner.deleteTask(task.id);
-        done(true, `Deleted ${task.name}`, `I deleted task ${task.name}.`);
+        runner.deleteTask(taskId);
+        done(true, `Deleted ${task?.name ?? "task"}`, `I deleted task ${task?.name ?? "the task"}.`);
       } else {
-        runner.updateTask(task.id, { status: intent.taskStatus, assignee: intent.assignee });
-        done(true, intent.assignee ? `Assigned ${task.name}` : `Updated ${task.name}`, intent.assignee ? `I assigned ${task.name} to ${intent.assignee}.` : `I updated task ${task.name}.`);
+        runner.updateTask(taskId, { status: intent.taskStatus, assignee: intent.assignee, name: intent.name });
+        done(
+          true,
+          intent.name ? `Renamed ${task?.name ?? "task"}` : intent.assignee ? `Assigned ${task?.name ?? "task"}` : `Updated ${task?.name ?? "task"}`,
+          intent.name
+            ? `I renamed ${task?.name ?? "the task"} to ${intent.name}.`
+            : intent.assignee
+              ? `I assigned ${task?.name ?? "the task"} to ${intent.assignee}.`
+              : `I updated task ${task?.name ?? "the task"}.`,
+        );
       }
     }
 
@@ -1142,7 +1356,11 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
         budgetHours: 80,
       });
       done(Boolean(id), id ? `Created ${name}` : "Could not create the project", id ? `I created project ${name} for ${host.name}.` : "I could not create that project.");
-      if (id) pushHref(projectHref(id), `Open ${name}`);
+      if (id) {
+        lastProject = { id, name, status: "Draft", companyId: host.id, companyName: host.name };
+        workingProjects.unshift(lastProject);
+        pushHref(projectHref(id), `Open ${name}`);
+      }
     }
 
     if (intent.type === "delete_project" && project) {
@@ -1402,9 +1620,19 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       pushHref("/app/contacts", "Open Contacts");
     }
 
-    if (intent.type === "update_project" && project) {
-      runner.updateProject(project.id, { name: intent.name, manager: intent.assignee });
-      done(true, `Updated ${project.name}`, `I updated ${intent.name ?? project.name}.`);
+    if (intent.type === "update_project") {
+      const target = project ?? lastProject;
+      if (!target) {
+        done(false, "Which project?", "Which project should I update?");
+        continue;
+      }
+      runner.updateProject(target.id, { name: intent.name, manager: intent.assignee });
+      if (intent.name) {
+        lastProject = { ...target, name: intent.name };
+        const idx = workingProjects.findIndex((row) => row.id === target.id);
+        if (idx >= 0) workingProjects[idx] = lastProject;
+      }
+      done(true, `Updated ${target.name}`, intent.name ? `I renamed ${target.name} to ${intent.name}.` : `I updated ${target.name}.`);
     }
 
     if (intent.type === "update_invoice") {
@@ -1556,17 +1784,26 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       actions,
       pending: {
         intents: [{ type: "set_status", projectId: statusProject.id, projectQuery: statusProject.name }],
+        lastProjectId: statusProject.id,
       },
     };
   }
 
+  const memory: AgentPending = {
+    intents: [],
+    lastProjectId: lastProject?.id ?? ctx.lastProjectId ?? undefined,
+    lastCompanyId: createdCompany?.id,
+    lastTaskId,
+    lastMilestoneId,
+  };
+
   if (!lines.length) {
     return {
       handled: true,
-      text: "I understood the request but still need a record name, company, or project. Try: Create a company called Northwind, Draft an email to Dana about warehouse, or Delete the Review signoff task.",
+      text: "I understood the request but still need a record name, company, or project. Try: Create a project called Test234, name the project to Atlas, or add 2 tasks under the first milestone.",
       hrefs: [],
       starters: workspaceStarters(ctx.role),
-      pending: { intents },
+      pending: { ...memory, intents },
     };
   }
 
@@ -1576,6 +1813,7 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
     hrefs,
     starters: workspaceStarters(ctx.role),
     actions,
+    pending: memory,
   };
 }
 
@@ -1596,6 +1834,7 @@ export function stubRunner(overrides: Partial<WorkspaceRunner> = {}): WorkspaceR
   return {
     setProjectStatus: () => false,
     createMilestone: () => "",
+    updateMilestone: noop,
     deleteMilestone: noop,
     createTask: () => "",
     updateTask: noop,

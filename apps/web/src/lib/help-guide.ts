@@ -437,7 +437,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Delete or remove: a project, task, milestone, retainer, or project teammate when your role allows it.",
       "Email: send or draft a message to a teammate or contact. Drafts land in the automations outbox as Queued. You can also generate a project invoice or run an automation.",
     ],
-    tips: ["If a name is missing, answer the follow-up. Staff still cannot change status or add milestones."],
+    tips: [
+      "Say the exact record name: Create a project called Test234, or name the project to Atlas.",
+      "If a name is missing, answer the follow-up. Staff still cannot change status or add milestones.",
+    ],
   },
   {
     id: "automations",
