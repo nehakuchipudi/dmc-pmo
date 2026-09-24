@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Field, Modal, PageHeader, TextSelect, TextTextarea } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAppStore } from "@/lib/store";
 import type { CrossDependency } from "@/lib/types";
 
@@ -28,9 +29,11 @@ export default function DependenciesPage() {
         title="Dependencies"
         subtitle="Cross-project holds. Task-level predecessors stay on the project Gantt. This view is for portfolio coordination."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> Record dependency
-          </button>
+          <IfCan cap="create_dependency">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> Record dependency
+            </button>
+          </IfCan>
         }
       />
       <MetricGrid>

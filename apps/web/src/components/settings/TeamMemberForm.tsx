@@ -1,9 +1,11 @@
 "use client";
 
 import { Field, TextInput, TextSelect } from "@/components/ui";
+import { roleLabel } from "@/lib/auth";
+import { USER_ROLES } from "@/lib/rbac";
 import type { FinancialVisibility, Role, TeamMember } from "@/lib/types";
 
-export const USER_ROLES: Role[] = ["admin", "pm", "staff", "finance", "leadership", "client"];
+export { USER_ROLES };
 export const DEPARTMENTS = ["Delivery", "PMO", "Finance", "Leadership", "Operations"];
 export const TIMEZONES = [
   "America/Chicago",
@@ -202,7 +204,7 @@ export function TeamMemberForm({
             <TextSelect name="role" defaultValue={initial.role ?? "staff"}>
               {USER_ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {roleLabel(role)}
                 </option>
               ))}
             </TextSelect>

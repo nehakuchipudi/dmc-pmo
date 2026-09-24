@@ -7,6 +7,7 @@ import { Field, Modal, PageHeader, TextInput, TextSelect, TextTextarea } from "@
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
 import { riskScore } from "@/lib/ppm";
 import { useAppStore } from "@/lib/store";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
 import type { RiskItem } from "@/lib/types";
 
@@ -32,9 +33,11 @@ export default function RisksPage() {
         title="Risks and issues"
         subtitle="Project status pills stay on the project. This register is the formal log: likelihood, impact, owner, and next action."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> Log risk
-          </button>
+          <IfCan cap="create_risk">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> Log risk
+            </button>
+          </IfCan>
         }
       />
       <MetricGrid>

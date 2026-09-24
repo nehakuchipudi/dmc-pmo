@@ -8,6 +8,7 @@ import { Field, Modal, PageHeader, TextInput, TextTextarea } from "@/components/
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { objectiveCoverage } from "@/lib/ppm";
 import { useAppStore } from "@/lib/store";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
 
 export default function StrategyPage() {
@@ -30,9 +31,11 @@ export default function StrategyPage() {
         title="Strategy"
         subtitle="Objectives the portfolio must move. Portfolios and projects attach here so leadership can see alignment, not just activity."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> New objective
-          </button>
+          <IfCan cap="create_objective">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> New objective
+            </button>
+          </IfCan>
         }
       />
       <MetricGrid>

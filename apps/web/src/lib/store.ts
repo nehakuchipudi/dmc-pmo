@@ -27,6 +27,7 @@ import {
   users,
 } from "./seed";
 import { findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
+import { applyTeamRole, can, isAssignedName, type Capability } from "./rbac";
 import { makeActivity } from "./activity";
 import {
   DEFAULT_PROJECT_WORKFLOW,
@@ -403,10 +404,48 @@ function persistProjectWorkflow(workflow: ProjectWorkflow) {
   }
 }
 
+function mergeTeam() {
+  const extras = readAccountExtras().team;
+  const byEmail = new Map(extras.map((m) => [m.email.toLowerCase(), m]));
+  const mergedSeed = seedTeam.map((s) => byEmail.get(s.email.toLowerCase()) ?? s);
+  const extrasOnly = extras.filter((m) => !seedTeam.some((s) => s.email.toLowerCase() === m.email.toLowerCase()));
+  return [...extrasOnly, ...mergedSeed];
+}
+
+function persistTeam(team: TeamMember[]) {
+  const extras = readAccountExtras();
+  writeAccountExtras({ ...extras, team });
+}
+
 function currentUser() {
   if (typeof window === "undefined") return undefined;
   const id = window.localStorage.getItem("dmc-pmo-user");
-  return findAccount(id) ?? users.find((u) => u.id === id);
+  const base = findAccount(id) ?? users.find((u) => u.id === id);
+  if (!base) return undefined;
+  try {
+    return applyTeamRole(base, useAppStore.getState().team) ?? base;
+  } catch {
+    return base;
+  }
+}
+
+function requireCap(get: () => Pick<AppState, "pushToast">, cap: Capability): boolean {
+  if (can(currentUser()?.role, cap)) return true;
+  get().pushToast("Your role cannot do that.", "danger");
+  return false;
+}
+
+function requireAny(get: () => Pick<AppState, "pushToast">, ...caps: Capability[]): boolean {
+  const role = currentUser()?.role;
+  if (caps.some((cap) => can(role, cap))) return true;
+  get().pushToast("Your role cannot do that.", "danger");
+  return false;
+}
+
+function canMutateTask(task: { assignee: string; assigneeInitials?: string }): boolean {
+  const user = currentUser();
+  if (can(user?.role, "manage_plan")) return true;
+  return can(user?.role, "edit_assigned_task") && isAssignedName(user, task.assignee, task.assigneeInitials);
 }
 
 function currentActor() {
@@ -443,10 +482,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tickets: seedTickets,
   ticketMessages: seedTicketMessages,
   tasks: seedTasks,
-  team: [
-    ...readAccountExtras().team.filter((m) => !seedTeam.some((s) => s.email.toLowerCase() === m.email.toLowerCase())),
-    ...seedTeam,
-  ],
+  team: mergeTeam(),
   invoices: seedInvoices,
   invoiceTemplates: seedInvoiceTemplates,
   timeEntries: seedTimeEntries,
@@ -501,6 +537,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     })),
 
   addActivityNote: (companyId, text, projectId) => {
+    if (!requireCap(get, "add_note")) return;
     const project = projectId ? get().projects.find((p) => p.id === projectId) : undefined;
     get().logActivity({
       type: "comment",
@@ -527,6 +564,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createCompany: (input) => {
+    if (!requireCap(get, "create_company")) return "";
     const id = uid("c");
     const managers = input.accountManagers?.filter(Boolean).length
       ? input.accountManagers.filter(Boolean)
@@ -578,6 +616,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateCompany: (id, patch) => {
+    if (!requireCap(get, "edit_company")) return;
     const prev = get().companies.find((c) => c.id === id);
     set((s) => ({
       companies: s.companies.map((c) => (c.id === id ? { ...c, ...patch } : c)),
@@ -596,6 +635,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Company updated");
   },
   addCompanyFile: (companyId, file) => {
+    if (!requireCap(get, "manage_files")) return;
     set((s) => ({
       companies: s.companies.map((c) =>
         c.id === companyId ? { ...c, files: [{ id: uid("cf"), ...file }, ...(c.files ?? [])] } : c,
@@ -616,6 +656,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Attachment added");
   },
   deleteCompanyFile: (companyId, fileId) => {
+    if (!requireCap(get, "manage_files")) return;
     set((s) => ({
       companies: s.companies.map((c) =>
         c.id === companyId ? { ...c, files: (c.files ?? []).filter((f) => f.id !== fileId) } : c,
@@ -624,6 +665,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Attachment removed");
   },
   createCompanyAsset: (input) => {
+    if (!requireCap(get, "edit_company")) return "";
     const id = uid("ca");
     const asset: CompanyAsset = { id, ...input };
     set((s) => ({
@@ -646,17 +688,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
   updateCompanyAsset: (id, patch) => {
+    if (!requireCap(get, "edit_company")) return;
     set((s) => ({
       companyAssets: s.companyAssets.map((a) => (a.id === id ? { ...a, ...patch } : a)),
     }));
   },
   deleteCompanyAsset: (id) => {
+    if (!requireCap(get, "edit_company")) return;
     const asset = get().companyAssets.find((a) => a.id === id);
     set((s) => ({ companyAssets: s.companyAssets.filter((a) => a.id !== id) }));
     if (asset) get().pushToast(`Asset ${asset.name} removed`);
   },
 
   createContact: (input) => {
+    if (!requireCap(get, "create_contact")) return "";
     const id = uid("ct");
     const company = get().companies.find((c) => c.id === input.companyId);
     const { primary, ...fields } = input;
@@ -698,6 +743,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateContact: (id, patch) => {
+    if (!requireCap(get, "edit_contact")) return;
     const prev = get().contacts.find((c) => c.id === id);
     if (!prev) return;
     const { primary, ...fields } = patch;
@@ -762,6 +808,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addContactNote: (contactId, body, author) => {
+    if (!requireAny(get, "edit_contact", "add_note")) return;
     const contact = get().contacts.find((c) => c.id === contactId);
     if (!contact || !body.trim()) return;
     const note: ContactNote = {
@@ -791,6 +838,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setPrimaryContact: (contactId) => {
+    if (!requireCap(get, "edit_contact")) return;
     const contact = get().contacts.find((c) => c.id === contactId);
     if (!contact) return;
     set((s) => ({
@@ -814,6 +862,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   linkContactProject: (contactId, projectId) => {
+    if (!requireCap(get, "edit_contact")) return;
     const contact = get().contacts.find((c) => c.id === contactId);
     const project = get().projects.find((p) => p.id === projectId);
     if (!contact || !project) return;
@@ -842,6 +891,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   unlinkContactProject: (contactId, projectId) => {
+    if (!requireCap(get, "edit_contact")) return;
     const contact = get().contacts.find((c) => c.id === contactId);
     const project = get().projects.find((p) => p.id === projectId);
     if (!contact) return;
@@ -859,6 +909,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createProject: (input) => {
+    if (!requireCap(get, "create_project")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
     if (!company) return "";
     const id = uid("p");
@@ -962,19 +1013,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     return true;
   },
   setProjectWorkflowTransition: (from, to, allowed) => {
+    if (!requireCap(get, "configure_lifecycle")) return;
     const projectWorkflow = toggleWorkflowTransition(get().projectWorkflow, from, to, allowed);
     persistProjectWorkflow(projectWorkflow);
     set({ projectWorkflow });
     get().pushToast(allowed ? `Allowed ${from} to ${to}` : `Blocked ${from} to ${to}`);
   },
   setProjectWorkflowRoles: (roles) => {
-    const projectWorkflow = { ...get().projectWorkflow, changerRoles: roles };
+    if (!requireCap(get, "configure_lifecycle")) return;
+    const changerRoles: Role[] = roles.includes("admin") ? roles : ["admin", ...roles];
+    const projectWorkflow = { ...get().projectWorkflow, changerRoles };
     persistProjectWorkflow(projectWorkflow);
     set({ projectWorkflow });
     get().pushToast("Lifecycle roles updated");
   },
 
   updateProject: (id, patch) => {
+    if (!requireCap(get, "edit_project")) return;
     const prev = get().projects.find((p) => p.id === id);
     const { status: nextStatus, ...rest } = patch;
     if (nextStatus && prev && normalizeProjectStatus(nextStatus) !== normalizeProjectStatus(prev.status)) {
@@ -1020,6 +1075,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteProject: (id) => {
+    if (!requireCap(get, "delete_project")) return;
     const project = get().projects.find((p) => p.id === id);
     set((s) => ({
       projects: s.projects.filter((p) => p.id !== id),
@@ -1035,6 +1091,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   duplicateProject: (id) => {
+    if (!requireCap(get, "create_project")) return "";
     const source = get().projects.find((p) => p.id === id);
     if (!source) return "";
     const newId = uid("p");
@@ -1089,6 +1146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createTicket: (input) => {
+    if (!requireCap(get, "create_ticket")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
     if (!company) return "";
     const number = Math.max(...get().tickets.map((t) => t.number), 1000) + 1;
@@ -1128,6 +1186,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createTask: (input) => {
+    if (!requireCap(get, "create_task")) return "";
     const project = get().projects.find((p) => p.id === input.projectId);
     if (!project) return "";
     const id = uid("tk");
@@ -1173,6 +1232,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateTask: (id, patch) => {
     const prev = get().tasks.find((t) => t.id === id);
+    if (!prev || !canMutateTask(prev)) {
+      get().pushToast("Your role cannot do that.", "danger");
+      return;
+    }
     set((s) => {
       const tasks = s.tasks.map((t) => {
         if (t.id !== id) return t;
@@ -1222,6 +1285,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteTask: (id) => {
+    if (!requireCap(get, "manage_plan")) return;
     set((s) => {
       const remove = new Set([id, ...s.tasks.filter((t) => t.parentTaskId === id).map((t) => t.id)]);
       return { tasks: s.tasks.filter((t) => !remove.has(t.id)) };
@@ -1230,6 +1294,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   reorderTasks: (orderedIds) => {
+    if (!requireCap(get, "manage_plan")) return;
     set((s) => ({
       tasks: s.tasks.map((task) => {
         const index = orderedIds.indexOf(task.id);
@@ -1239,6 +1304,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createMilestone: (projectId, name, due, opts) => {
+    if (!requireCap(get, "manage_plan")) return "";
     const id = uid("m");
     const kind = opts?.kind ?? (opts?.parentId ? "group" : "phase");
     set((s) => ({
@@ -1272,6 +1338,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateMilestone: (id, patch) => {
+    if (!requireCap(get, "manage_plan")) return;
     const prev = get().milestones.find((m) => m.id === id);
     set((s) => ({
       milestones: s.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)),
@@ -1292,6 +1359,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteMilestone: (id) => {
+    if (!requireCap(get, "manage_plan")) return;
     set((s) => {
       const childIds = s.milestones.filter((m) => m.parentId === id).map((m) => m.id);
       const remove = new Set([id, ...childIds]);
@@ -1306,6 +1374,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addTaskLink: (taskId, link) => {
+    const task = get().tasks.find((t) => t.id === taskId);
+    if (!task || !canMutateTask(task)) {
+      get().pushToast("Your role cannot do that.", "danger");
+      return;
+    }
     set((s) => ({
       tasks: s.tasks.map((t) =>
         t.id === taskId ? { ...t, links: [{ id: uid("tl"), ...link }, ...t.links] } : t,
@@ -1315,6 +1388,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   removeTaskLink: (taskId, linkId) => {
+    if (!requireCap(get, "manage_plan")) return;
     set((s) => ({
       tasks: s.tasks.map((t) =>
         t.id === taskId ? { ...t, links: t.links.filter((l) => l.id !== linkId) } : t,
@@ -1323,6 +1397,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   linkFileToTask: (projectId, fileId, taskId) => {
+    if (!requireAny(get, "manage_plan", "manage_files")) return;
     const file = get().projects.find((p) => p.id === projectId)?.files.find((f) => f.id === fileId);
     if (!file) return;
     set((s) => ({
@@ -1362,6 +1437,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateProjectScope: (projectId, scope) => {
+    if (!requireCap(get, "edit_project")) return;
     set((s) => ({
       projects: s.projects.map((p) => (p.id === projectId ? { ...p, scope } : p)),
     }));
@@ -1369,6 +1445,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setProjectRate: (projectId, memberName, hourlyRate) => {
+    if (!requireCap(get, "manage_rates")) return;
     const project = get().projects.find((p) => p.id === projectId);
     if (!project) return;
     const rates = [
@@ -1392,6 +1469,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addTeamMember: (input) => {
+    if (currentUser() && !requireCap(get, "manage_users")) return "";
     const id = uid("tm");
     const member: TeamMember = {
       id,
@@ -1417,6 +1495,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
     };
     set((s) => ({ team: [member, ...s.team] }));
+    persistTeam(get().team);
     get().pushToast(`${member.name} added`);
     return id;
   },
@@ -1474,11 +1553,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
     }
     const extras = readAccountExtras();
-    const extraTeam = get().team.filter((m) => !seedTeam.some((s) => s.email.toLowerCase() === m.email.toLowerCase()));
     const welcomeMail = get().emailOutbox.filter((e) => e.subject.includes("Welcome to DMC PMO"));
     const welcomeNotes = get().notifications.filter((n) => n.title === "Welcome to DMC PMO");
     writeAccountExtras({
-      team: extraTeam,
+      team: get().team,
       mail: [...welcomeMail, ...extras.mail.filter((e) => !welcomeMail.some((w) => w.id === e.id))],
       notes: [...welcomeNotes, ...extras.notes.filter((n) => !welcomeNotes.some((w) => w.id === n.id))],
     });
@@ -1487,17 +1565,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateTeamMember: (id, patch) => {
+    if (!requireCap(get, "manage_users")) return;
     set((s) => ({
       team: s.team.map((m) => (m.id === id ? { ...m, ...patch, initials: patch.name ? initialsFromName(patch.name) : m.initials } : m)),
     }));
+    persistTeam(get().team);
     get().pushToast("Team member updated");
   },
 
   setTeamMemberActive: (id, active) => {
+    if (!requireCap(get, "manage_users")) return;
     set((s) => ({ team: s.team.map((m) => (m.id === id ? { ...m, active } : m)) }));
+    persistTeam(get().team);
     get().pushToast(active ? "Member reactivated" : "Member deactivated", active ? "success" : "danger");
   },
   addProjectMember: (input) => {
+    if (!requireCap(get, "manage_project_team")) return "";
     const project = get().projects.find((p) => p.id === input.projectId);
     const member = get().team.find((m) => m.id === input.memberId);
     if (!project || !member) return "";
@@ -1535,6 +1618,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id;
   },
   updateProjectMember: (id, patch) => {
+    if (!requireCap(get, "manage_project_team")) return;
     const prev = get().allocations.find((row) => row.id === id);
     const nextPatch = { ...patch };
     if (nextPatch.allocationPct !== undefined) {
@@ -1559,6 +1643,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Team assignment updated");
   },
   removeProjectMember: (id) => {
+    if (!requireCap(get, "manage_project_team")) return;
     const prev = get().allocations.find((row) => row.id === id);
     set((s) => ({ allocations: s.allocations.filter((row) => row.id !== id) }));
     if (prev) {
@@ -1578,6 +1663,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createTimeEntry: (input) => {
+    if (!requireCap(get, "log_time")) return "";
+    const actor = currentUser();
+    if (actor?.role === "staff" && input.userName !== actor.name && input.userName !== "J. Kim") {
+      get().pushToast("Staff can only log their own time.", "danger");
+      return "";
+    }
     const project = get().projects.find((p) => p.id === input.projectId);
     if (!project) return "";
     const task = get().tasks.find((t) => t.id === input.taskId);
@@ -1622,6 +1713,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createExpense: (input) => {
+    if (!requireCap(get, "create_expense")) return "";
     const project = get().projects.find((p) => p.id === input.projectId);
     if (!project) return "";
     const id = uid("ex");
@@ -1641,6 +1733,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createOpportunity: (input) => {
+    if (!requireCap(get, "create_opportunity")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
     if (!company) return "";
     const id = uid("o");
@@ -1659,6 +1752,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   advanceOpportunity: (id) => {
+    if (!requireCap(get, "advance_opportunity")) return;
     const order: Opportunity["stage"][] = ["Qualify", "Propose", "Negotiate", "Won"];
     const opp = get().opportunities.find((o) => o.id === id);
     if (!opp || opp.stage === "Won" || opp.stage === "Lost") return;
@@ -1682,6 +1776,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   approveExpense: (id) => {
+    if (!requireCap(get, "approve_expense")) return;
     set((s) => ({
       expenses: s.expenses.map((e) => (e.id === id ? { ...e, status: "Approved" } : e)),
     }));
@@ -1704,6 +1799,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateTaskStatus: (taskId, status) => {
     const task = get().tasks.find((t) => t.id === taskId);
+    if (!task || !canMutateTask(task)) {
+      get().pushToast("Your role cannot do that.", "danger");
+      return;
+    }
     set((s) => {
       const tasks = s.tasks.map((t) =>
         t.id === taskId
@@ -1736,7 +1835,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateTicketStatus: (ticketId, status) => {
+    if (!requireCap(get, "update_ticket")) return;
     const prev = get().tickets.find((t) => t.id === ticketId);
+    const actor = currentUser();
+    if (actor?.role === "staff" && prev && !isAssignedName(actor, prev.assignee)) {
+      get().pushToast("Staff can only update tickets assigned to them.", "danger");
+      return;
+    }
     set((s) => {
       const tickets = s.tickets.map((t) => (t.id === ticketId ? { ...t, status } : t));
       let companies = s.companies;
@@ -1755,6 +1860,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addTicketMessage: (ticketId, author, body, visibility) => {
+    if (!requireAny(get, "update_ticket", "add_note")) return;
     set((s) => ({
       ticketMessages: [
         {
@@ -1772,6 +1878,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   submitTimeEntry: (id) => {
+    if (!requireCap(get, "log_time")) return;
+    const entry = get().timeEntries.find((t) => t.id === id);
+    const actor = currentUser();
+    if (actor?.role === "staff" && entry && entry.userName !== actor.name && entry.userName !== "J. Kim") {
+      get().pushToast("Staff can only submit their own time.", "danger");
+      return;
+    }
     set((s) => ({
       timeEntries: s.timeEntries.map((t) => (t.id === id ? { ...t, status: "Submitted" } : t)),
     }));
@@ -1779,6 +1892,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   approveTimeEntry: (id) => {
+    if (!requireCap(get, "approve_time")) return;
     set((s) => ({
       timeEntries: s.timeEntries.map((t) => (t.id === id ? { ...t, status: "Approved" } : t)),
     }));
@@ -1800,6 +1914,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   rejectTimeEntry: (id) => {
+    if (!requireCap(get, "approve_time")) return;
     set((s) => ({
       timeEntries: s.timeEntries.map((t) => (t.id === id ? { ...t, status: "Rejected" } : t)),
     }));
@@ -1807,6 +1922,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   allocateRetainerHours: (id, hours) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => {
       const retainers = s.retainers.map((r) =>
         r.id === id ? { ...r, usedHours: Math.max(0, r.usedHours + hours) } : r,
@@ -1823,6 +1939,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createInvoiceDraft: (companyId, opts) => {
+    if (!requireCap(get, "create_invoice")) return "";
     const company = get().companies.find((c) => c.id === companyId);
     if (!company) return "";
     const project = opts?.projectId ? get().projects.find((p) => p.id === opts.projectId) : undefined;
@@ -1872,6 +1989,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateInvoice: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
     set((s) => ({
       invoices: s.invoices.map((invoice) => {
         if (invoice.id !== id) return invoice;
@@ -1887,6 +2005,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createInvoiceTemplate: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
     const id = uid("tpl");
     const template: InvoiceTemplate = { ...input, id };
     set((s) => ({ invoiceTemplates: [template, ...s.invoiceTemplates] }));
@@ -1895,6 +2014,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateInvoiceTemplate: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
     set((s) => ({
       invoiceTemplates: s.invoiceTemplates.map((template) => (template.id === id ? { ...template, ...patch } : template)),
     }));
@@ -1902,6 +2022,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   generateProjectInvoice: (projectId) => {
+    if (!requireCap(get, "create_invoice")) return "";
     const project = get().projects.find((p) => p.id === projectId);
     if (!project) return "";
     const materialLines = project.materials.map((m) =>
@@ -1928,6 +2049,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   generatePeriodInvoice: (periodId) => {
+    if (!requireCap(get, "create_invoice")) return "";
     const period = get().retainerPeriods.find((p) => p.id === periodId);
     const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
     if (!period || !retainer) return "";
@@ -1955,6 +2077,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createRetainer: (input) => {
+    if (!requireCap(get, "create_retainer")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
     if (!company) return "";
     const contact = input.contactId ? get().contacts.find((c) => c.id === input.contactId) : undefined;
@@ -1996,6 +2119,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateRetainer: (id, patch) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.map((r) => {
         if (r.id !== id) return r;
@@ -2016,6 +2140,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteRetainer: (id) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.filter((r) => r.id !== id),
       retainerPeriods: s.retainerPeriods.filter((p) => p.retainerId !== id),
@@ -2024,6 +2149,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addRetainerPeriod: (retainerId, start, end, budgetHours) => {
+    if (!requireCap(get, "manage_retainer")) return "";
     const id = uid("rp");
     set((s) => ({
       retainerPeriods: [
@@ -2041,6 +2167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addProjectFile: (projectId, file) => {
+    if (!requireCap(get, "manage_files")) return;
     const project = get().projects.find((p) => p.id === projectId);
     set((s) => ({
       projects: s.projects.map((p) =>
@@ -2063,6 +2190,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteProjectFile: (projectId, fileId) => {
+    if (!requireCap(get, "manage_files")) return;
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, files: p.files.filter((f) => f.id !== fileId) } : p,
@@ -2072,6 +2200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   moveProjectFile: (projectId, fileId, folder) => {
+    if (!requireCap(get, "manage_files")) return;
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -2083,6 +2212,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addProjectNote: (projectId, note) => {
+    if (!requireCap(get, "add_note")) return;
     const project = get().projects.find((p) => p.id === projectId);
     set((s) => ({
       projects: s.projects.map((p) =>
@@ -2111,6 +2241,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addRetainerFile: (retainerId, file) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.map((r) =>
         r.id === retainerId ? { ...r, files: [{ id: uid("f"), ...file }, ...r.files] } : r,
@@ -2120,6 +2251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteRetainerFile: (retainerId, fileId) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.map((r) =>
         r.id === retainerId ? { ...r, files: r.files.filter((f) => f.id !== fileId) } : r,
@@ -2129,6 +2261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   moveRetainerFile: (retainerId, fileId, folder) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.map((r) =>
         r.id === retainerId
@@ -2140,6 +2273,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addRetainerNote: (retainerId, note) => {
+    if (!requireCap(get, "manage_retainer")) return;
     set((s) => ({
       retainers: s.retainers.map((r) =>
         r.id === retainerId
@@ -2154,6 +2288,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addMaterial: (projectId, title, salePrice) => {
+    if (!requireCap(get, "edit_project")) return;
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -2178,6 +2313,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   sendInvoice: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
     const inv = get().invoices.find((i) => i.id === id);
     if (!inv) return;
     set((s) => ({
@@ -2209,6 +2345,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   payInvoice: (id) => {
+    if (!requireCap(get, "pay_invoice")) return;
     const inv = get().invoices.find((i) => i.id === id);
     if (!inv) return;
     if (inv.status === "Draft") {
@@ -2234,6 +2371,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   requestSignoff: (projectId, milestoneName) => {
+    if (!requireCap(get, "edit_project")) return;
     const project = get().projects.find((p) => p.id === projectId);
     const milestone = get().milestones.find(
       (m) => m.projectId === projectId && m.name === milestoneName && m.status !== "Approved",
@@ -2283,6 +2421,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   approveSignoff: (milestoneId) => {
+    if (!requireCap(get, "approve_signoff")) return;
     const milestone = get().milestones.find((m) => m.id === milestoneId);
     const project = milestone ? get().projects.find((p) => p.id === milestone.projectId) : undefined;
     set((s) => ({
@@ -2306,12 +2445,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleAutomation: (id) => {
+    if (!requireCap(get, "manage_automations")) return;
     set((s) => ({
       automations: s.automations.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)),
     }));
   },
 
   runAutomation: (id) => {
+    if (!requireCap(get, "manage_automations")) return;
     const rule = get().automations.find((a) => a.id === id);
     if (!rule) return;
     get().queueEmail("ops@dillonmorgan.com", `Automation ran: ${rule.name}`, rule.action);
@@ -2341,6 +2482,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createObjective: (input) => {
+    if (!requireCap(get, "create_objective")) return "";
     const id = uid("so");
     const objective: StrategicObjective = {
       id,
@@ -2359,6 +2501,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateObjective: (id, patch) => {
+    if (!requireCap(get, "edit_objective")) return;
     const prev = get().objectives.find((o) => o.id === id);
     if (!prev) return;
     const progress =
@@ -2370,6 +2513,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createIdea: (input) => {
+    if (!requireCap(get, "create_idea")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
     const id = uid("idea");
     const idea: Idea = {
@@ -2393,6 +2537,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateIdea: (id, patch) => {
+    if (!requireCap(get, "edit_idea")) return;
     const prev = get().ideas.find((i) => i.id === id);
     if (!prev) return;
     const companyId = patch.companyId === "" ? undefined : (patch.companyId ?? prev.companyId);
@@ -2412,6 +2557,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   advanceIdea: (id) => {
+    if (!requireCap(get, "edit_idea")) return;
     const order: IdeaStage[] = ["Submitted", "Scoring", "Approved", "Converted"];
     const idea = get().ideas.find((i) => i.id === id);
     if (!idea || idea.stage === "Deferred" || idea.stage === "Converted") return;
@@ -2425,6 +2571,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   convertIdea: (id) => {
+    if (!requireCap(get, "convert_idea")) return;
     const idea = get().ideas.find((i) => i.id === id);
     if (!idea || idea.convertedProjectId) return;
     const companyId = idea.companyId ?? get().companies[0]?.id;
@@ -2447,6 +2594,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createPortfolio: (input) => {
+    if (!requireCap(get, "create_portfolio")) return "";
     const id = uid("pf");
     const portfolio: Portfolio = {
       id,
@@ -2464,6 +2612,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updatePortfolio: (id, patch) => {
+    if (!requireCap(get, "edit_portfolio")) return;
     const prev = get().portfolios.find((p) => p.id === id);
     if (!prev) return;
     set((s) => ({
@@ -2473,6 +2622,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createRisk: (input) => {
+    if (!requireCap(get, "create_risk")) return "";
     const id = uid("rk");
     const risk: RiskItem = {
       id,
@@ -2491,16 +2641,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateRiskStatus: (id, status) => {
+    if (!requireCap(get, "update_risk")) return;
     set((s) => ({ risks: s.risks.map((r) => (r.id === id ? { ...r, status } : r)) }));
     get().pushToast(`Risk ${status.toLowerCase()}`);
   },
 
   updateIssueStatus: (id, status) => {
+    if (!requireCap(get, "update_risk")) return;
     set((s) => ({ issues: s.issues.map((i) => (i.id === id ? { ...i, status } : i)) }));
     get().pushToast("Issue updated");
   },
 
   decideGate: (id, status) => {
+    if (!requireCap(get, "decide_governance")) return;
     const gate = get().gates.find((g) => g.id === id);
     const project = gate ? get().projects.find((p) => p.id === gate.projectId) : undefined;
     set((s) => ({ gates: s.gates.map((g) => (g.id === id ? { ...g, status } : g)) }));
@@ -2511,6 +2664,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createDependency: (input) => {
+    if (!requireCap(get, "create_dependency")) return "";
     const id = uid("dep");
     set((s) => ({
       dependencies: [

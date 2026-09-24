@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field, Modal, PageHeader, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 
@@ -22,9 +23,11 @@ export default function SalesPage() {
         title="Sales"
         subtitle="Pipeline and opportunities. Won deals convert into projects."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            New opportunity
-          </button>
+          <IfCan cap="create_opportunity">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              New opportunity
+            </button>
+          </IfCan>
         }
       />
       <div className="panel overflow-hidden">
@@ -51,9 +54,11 @@ export default function SalesPage() {
                 <td>{o.close}</td>
                 <td className="text-right">
                   {o.stage !== "Won" && o.stage !== "Lost" ? (
-                    <button type="button" className="btn btn-primary text-sm" onClick={() => advanceOpportunity(o.id)}>
-                      Advance
-                    </button>
+                    <IfCan cap="advance_opportunity">
+                      <button type="button" className="btn btn-primary text-sm" onClick={() => advanceOpportunity(o.id)}>
+                        Advance
+                      </button>
+                    </IfCan>
                   ) : null}
                 </td>
               </tr>

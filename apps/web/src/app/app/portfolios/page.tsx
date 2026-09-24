@@ -10,6 +10,7 @@ import { Modal, PageHeader } from "@/components/ui";
 import { money } from "@/lib/seed";
 import { portfolioMetrics } from "@/lib/ppm";
 import { useAppStore } from "@/lib/store";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
 
 export default function PortfoliosPage() {
@@ -27,9 +28,11 @@ export default function PortfoliosPage() {
         title="Portfolios"
         subtitle="Investment books, not client accounts. Companies stay in Clients. Portfolios group the work leadership funds and reviews."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> New portfolio
-          </button>
+          <IfCan cap="create_portfolio">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> New portfolio
+            </button>
+          </IfCan>
         }
       />
       <MetricGrid>

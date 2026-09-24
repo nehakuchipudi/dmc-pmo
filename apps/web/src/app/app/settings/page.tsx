@@ -2,15 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { Avatar, Modal, PageHeader, StatusPill, Tabs } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
+import { AccessDenied } from "@/components/shell/AccessDenied";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
+import { roleLabel, useAuth } from "@/lib/auth";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
-import { useAuth } from "@/lib/auth";
+import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 
 const SETTINGS_TABS = ["Users", "Lifecycle"];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const team = useAppStore((s) => s.team);
   const addTeamMember = useAppStore((s) => s.addTeamMember);
   const updateTeamMember = useAppStore((s) => s.updateTeamMember);
@@ -22,7 +25,8 @@ export default function SettingsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [tab, setTab] = useState("Users");
-  const canConfigure = user?.role === "admin";
+  const canConfigure = can("configure_lifecycle");
+  const canManageUsers = can("manage_users");
 
   const rows = useMemo(
     () => team.filter((m) => showInactive || m.active),
@@ -30,13 +34,17 @@ export default function SettingsPage() {
   );
   const editing = team.find((m) => m.id === editId);
 
+  if (!can("view_users")) return <AccessDenied moduleName="Users and roles" />;
+
   return (
     <div className="fade-in">
       <PageHeader
         title={tab === "Users" ? "Users & roles" : "Settings"}
         subtitle={
           tab === "Users"
-            ? "Add people, set rates, and decide who can see hours versus budgets. Sign-in uses Microsoft Entra ID and the email on the record."
+            ? canManageUsers
+              ? "Add people, assign roles, set rates, and decide who can see hours versus budgets."
+              : "Review who is on the workspace and what each role can do. Only an admin can change access."
             : "Manage team access and the project lifecycle workflow."
         }
         actions={
@@ -46,9 +54,11 @@ export default function SettingsPage() {
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
               Show inactive
             </label>
-            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-              + Add user
-            </button>
+            <IfCan cap="manage_users">
+              <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+                + Add user
+              </button>
+            </IfCan>
           </>
           ) : undefined
         }
@@ -58,10 +68,10 @@ export default function SettingsPage() {
 
       {tab === "Users" ? (
       <div>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <RoleCard title="Admin" body="Full project, billing, and user management." />
-        <RoleCard title="PM" body="Own projects: schedule, files, invoices, signoffs." />
-        <RoleCard title="Staff" body="Edit assigned tasks, log time, upload files." />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {ROLE_SUMMARIES.filter((item) => item.role !== "client").map((item) => (
+          <RoleCard key={item.role} title={item.title} body={item.body} />
+        ))}
       </div>
 
       <div className="panel overflow-hidden">
@@ -91,7 +101,7 @@ export default function SettingsPage() {
                 </td>
                 <td className="text-[var(--color-muted)]">{m.title || "None"}</td>
                 <td className="text-[var(--color-muted)]">{m.email}</td>
-                <td className="capitalize">{m.role}</td>
+                <td>{roleLabel(m.role)}</td>
                 <td className="text-[var(--color-muted)]">
                   {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
                 </td>
@@ -99,16 +109,22 @@ export default function SettingsPage() {
                   <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
                 </td>
                 <td className="text-right space-x-2">
-                  <button type="button" className="btn btn-ghost text-sm" onClick={() => setEditId(m.id)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost text-sm"
-                    onClick={() => setTeamMemberActive(m.id, !m.active)}
-                  >
-                    {m.active ? "Deactivate" : "Reactivate"}
-                  </button>
+                  {canManageUsers ? (
+                    <>
+                      <button type="button" className="btn btn-ghost text-sm" onClick={() => setEditId(m.id)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost text-sm"
+                        onClick={() => setTeamMemberActive(m.id, !m.active)}
+                      >
+                        {m.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-[var(--color-muted)]">View only</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -129,11 +145,11 @@ export default function SettingsPage() {
               {USER_ROLES.filter((role) => role !== "client").map((role) => {
                 const checked = projectWorkflow.changerRoles.includes(role);
                 return (
-                  <label key={role} className="flex items-center gap-2 text-sm capitalize">
+                  <label key={role} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
-                      checked={checked}
-                      disabled={!canConfigure}
+                      checked={role === "admin" ? true : checked}
+                      disabled={!canConfigure || role === "admin"}
                       onChange={(e) => {
                         const next = e.target.checked
                           ? [...projectWorkflow.changerRoles, role]
@@ -141,7 +157,7 @@ export default function SettingsPage() {
                         setProjectWorkflowRoles(next);
                       }}
                     />
-                    {role}
+                    {roleLabel(role)}
                   </label>
                 );
               })}

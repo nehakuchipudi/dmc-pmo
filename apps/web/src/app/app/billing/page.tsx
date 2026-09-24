@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { IfCan } from "@/components/auth/IfCan";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -63,9 +64,11 @@ export default function BillingPage() {
             >
               Export CSV
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
-              <Plus size={16} /> New Invoice
-            </button>
+            <IfCan cap="create_invoice">
+              <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
+                <Plus size={16} /> New Invoice
+              </button>
+            </IfCan>
           </>
         }
       />
@@ -159,9 +162,11 @@ export default function BillingPage() {
                   </td>
                   <td className="text-right">
                     {e.status === "Pending" ? (
-                      <button type="button" className="btn btn-primary text-sm" onClick={() => approveExpense(e.id)}>
-                        Approve
-                      </button>
+                      <IfCan cap="approve_expense">
+                        <button type="button" className="btn btn-primary text-sm" onClick={() => approveExpense(e.id)}>
+                          Approve
+                        </button>
+                      </IfCan>
                     ) : null}
                   </td>
                 </tr>

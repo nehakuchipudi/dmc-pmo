@@ -103,7 +103,7 @@ function HealthCard({
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const projects = useAppStore((s) => s.projects);
   const companies = useAppStore((s) => s.companies);
   const companyAssets = useAppStore((s) => s.companyAssets);
@@ -780,7 +780,7 @@ export function ProjectDetail({ id }: { id: string }) {
                         <button type="button" className="btn btn-ghost text-sm" onClick={() => requestSignoff(project.id, m.name)}>
                           Request
                         </button>
-                        {user?.role === "admin" || user?.role === "pm" ? (
+                        {can("approve_signoff") ? (
                           <button type="button" className="btn btn-primary text-sm" onClick={() => approveSignoff(m.id)}>
                             Approve
                           </button>

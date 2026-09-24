@@ -29,7 +29,7 @@ const VIEW_TABS = ["Overview", "Daily", "Weekly"];
 const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export function TimesheetWorkspace() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const entries = useAppStore((s) => s.timeEntries);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
@@ -55,7 +55,7 @@ export function TimesheetWorkspace() {
   const [logDefaults, setLogDefaults] = useState<{ projectId?: string; date?: string; hours?: number; start?: string }>({});
   const [myWorkFilter, setMyWorkFilter] = useState<"Committed" | "Overdue" | "All">("Committed");
 
-  const canApprove = !!user && (user.role === "admin" || user.role === "pm" || user.role === "finance");
+  const canApprove = can("approve_time");
   const staffOnly = user?.role === "staff";
   const people = useMemo(() => {
     const names = new Set(team.filter((m) => m.active).map((m) => m.name));

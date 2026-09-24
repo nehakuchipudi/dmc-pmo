@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IfCan } from "@/components/auth/IfCan";
 import { PageHeader, SideRail, StatusPill, Tabs } from "@/components/ui";
 import { useAppStore } from "@/lib/store";
 
@@ -19,20 +20,22 @@ export default function AutomationsPage() {
         title="Automations"
         subtitle="Triggers, conditions, and email notifications for the firm."
         actions={
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              queueEmail(
-                "ops@dillonmorgan.com",
-                "Test notification from DMC PMO",
-                "This is a simulated email from the notification system.",
-              );
-              pushToast("Test email queued to outbox");
-            }}
-          >
-            Send test email
-          </button>
+          <IfCan cap="manage_automations">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                queueEmail(
+                  "ops@dillonmorgan.com",
+                  "Test notification from DMC PMO",
+                  "This is a simulated email from the notification system.",
+                );
+                pushToast("Test email queued to outbox");
+              }}
+            >
+              Send test email
+            </button>
+          </IfCan>
         }
       />
       <Tabs tabs={["Rules", "Email outbox", "Templates"]} active={tab} onChange={setTab} />
@@ -63,17 +66,19 @@ export default function AutomationsPage() {
                       </StatusPill>
                     </td>
                     <td className="text-right">
-                      <button type="button" className="btn btn-ghost text-sm" onClick={() => toggle(a.id)}>
-                        {a.enabled ? "Disable" : "Enable"}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary text-sm"
-                        disabled={!a.enabled}
-                        onClick={() => run(a.id)}
-                      >
-                        Run now
-                      </button>
+                      <IfCan cap="manage_automations">
+                        <button type="button" className="btn btn-ghost text-sm" onClick={() => toggle(a.id)}>
+                          {a.enabled ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary text-sm"
+                          disabled={!a.enabled}
+                          onClick={() => run(a.id)}
+                        >
+                          Run now
+                        </button>
+                      </IfCan>
                     </td>
                   </tr>
                 ))}

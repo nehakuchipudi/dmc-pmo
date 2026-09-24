@@ -12,6 +12,7 @@ import {
   StatusPill,
   statusTone,
 } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 
@@ -60,9 +61,11 @@ export default function CompaniesPage() {
             >
               Export CSV
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("company")}>
-              <Plus size={16} /> New Company
-            </button>
+            <IfCan cap="create_company">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("company")}>
+                <Plus size={16} /> New Company
+              </button>
+            </IfCan>
           </>
         }
       />

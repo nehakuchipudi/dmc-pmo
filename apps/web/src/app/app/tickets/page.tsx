@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
+import { IfCan } from "@/components/auth/IfCan";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilterChips, PageHeader, SideRail, StatusPill, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -38,9 +39,11 @@ export default function TicketsPage() {
         title="Tickets"
         subtitle="Support and service requests across all clients."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setCreateKind("ticket")}>
-            <Plus size={16} /> New Ticket
-          </button>
+          <IfCan cap="create_ticket">
+            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("ticket")}>
+              <Plus size={16} /> New Ticket
+            </button>
+          </IfCan>
         }
       />
       <FilterChips items={FILTERS} active={filter} onChange={setFilter} />

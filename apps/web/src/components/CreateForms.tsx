@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
+import { canCreateKind } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 
@@ -84,6 +85,16 @@ export function CreateForms({
   }, [kind]);
 
   if (!kind) return null;
+  if (!canCreateKind(user?.role, kind)) {
+    return (
+      <Modal open title="Restricted" onClose={onClose}>
+        <p className="text-sm text-[var(--color-muted)]">Your role cannot create this record.</p>
+        <button type="button" className="btn btn-primary mt-3" onClick={onClose}>
+          Close
+        </button>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"} wide={kind === "portfolio"}>

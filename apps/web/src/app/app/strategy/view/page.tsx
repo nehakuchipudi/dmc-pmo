@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { ObjectiveEditForm } from "@/components/ppm/PpmRecordForms";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { RecordFact } from "@/components/records/RecordChrome";
+import { IfCan } from "@/components/auth/IfCan";
 import { Modal, PageHeader } from "@/components/ui";
 import { objectiveCoverage } from "@/lib/ppm";
 import { useAppStore } from "@/lib/store";
@@ -46,9 +47,11 @@ function StrategyView() {
         subtitle={objective.target}
         actions={
           <>
-            <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
-              Edit details
-            </button>
+            <IfCan cap="edit_objective">
+              <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
+                Edit details
+              </button>
+            </IfCan>
             <Link href="/app/strategy" className="btn btn-ghost">
               All objectives
             </Link>
