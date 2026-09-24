@@ -406,7 +406,7 @@ export function scoreName(name: string, query: string) {
   const words = q.split(/\s+/).filter((word) => word.length > 3 && !NAME_STOP.has(word));
   let score = 0;
   for (const word of words) {
-    if (new RegExp(`\\b${word}\\b`).test(hay) || hay.includes(word)) score += 16;
+    if (new RegExp(`\\b${word}\\b`).test(hay)) score += 16;
   }
   return score;
 }
