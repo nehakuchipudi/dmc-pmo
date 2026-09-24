@@ -1,5 +1,5 @@
 import { initialsFromName, users as seedUsers } from "./seed";
-import type { Role, User } from "./types";
+import type { EmailOutboxItem, NotificationItem, Role, TeamMember, User } from "./types";
 
 const DIRECTORY_KEY = "dmc-pmo-directory";
 const PENDING_KEY = "dmc-pmo-pending-signup";
@@ -84,6 +84,35 @@ export function upsertDirectoryUser(input: {
 export function savePendingSignup(pending: PendingSignup) {
   if (typeof window === "undefined") return;
   window.sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+}
+
+const EXTRAS_KEY = "dmc-pmo-account-extras";
+
+export type AccountExtras = {
+  team: TeamMember[];
+  mail: EmailOutboxItem[];
+  notes: NotificationItem[];
+};
+
+export function readAccountExtras(): AccountExtras {
+  if (typeof window === "undefined") return { team: [], mail: [], notes: [] };
+  try {
+    const raw = window.localStorage.getItem(EXTRAS_KEY);
+    if (!raw) return { team: [], mail: [], notes: [] };
+    const parsed = JSON.parse(raw) as AccountExtras;
+    return {
+      team: parsed.team ?? [],
+      mail: parsed.mail ?? [],
+      notes: parsed.notes ?? [],
+    };
+  } catch {
+    return { team: [], mail: [], notes: [] };
+  }
+}
+
+export function writeAccountExtras(extras: AccountExtras) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(EXTRAS_KEY, JSON.stringify(extras));
 }
 
 export function takePendingSignup(): PendingSignup | null {

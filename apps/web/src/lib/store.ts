@@ -26,7 +26,7 @@ import {
   uid,
   users,
 } from "./seed";
-import { findAccount, findAccountByEmail, upsertDirectoryUser } from "./directory";
+import { findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
 import { makeActivity } from "./activity";
 import {
   DEFAULT_PROJECT_WORKFLOW,
@@ -443,16 +443,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   tickets: seedTickets,
   ticketMessages: seedTicketMessages,
   tasks: seedTasks,
-  team: seedTeam,
+  team: [
+    ...readAccountExtras().team.filter((m) => !seedTeam.some((s) => s.email.toLowerCase() === m.email.toLowerCase())),
+    ...seedTeam,
+  ],
   invoices: seedInvoices,
   invoiceTemplates: seedInvoiceTemplates,
   timeEntries: seedTimeEntries,
-  notifications: seedNotifications,
+  notifications: [...readAccountExtras().notes, ...seedNotifications],
   activities: seedActivities,
   retainers: seedRetainers,
   retainerPeriods: seedRetainerPeriods,
   automations: seedAutomations,
-  emailOutbox: seedEmailOutbox,
+  emailOutbox: [...readAccountExtras().mail, ...seedEmailOutbox],
   expenses: seedExpenses,
   opportunities: seedOpportunities,
   objectives: seedObjectives,
@@ -1470,6 +1473,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         ],
       }));
     }
+    const extras = readAccountExtras();
+    const extraTeam = get().team.filter((m) => !seedTeam.some((s) => s.email.toLowerCase() === m.email.toLowerCase()));
+    const welcomeMail = get().emailOutbox.filter((e) => e.subject.includes("Welcome to DMC PMO"));
+    const welcomeNotes = get().notifications.filter((n) => n.title === "Welcome to DMC PMO");
+    writeAccountExtras({
+      team: extraTeam,
+      mail: [...welcomeMail, ...extras.mail.filter((e) => !welcomeMail.some((w) => w.id === e.id))],
+      notes: [...welcomeNotes, ...extras.notes.filter((n) => !welcomeNotes.some((w) => w.id === n.id))],
+    });
     get().pushToast(isNew ? `Account ready for ${email}` : `Signed in as ${email}`);
     return user;
   },
