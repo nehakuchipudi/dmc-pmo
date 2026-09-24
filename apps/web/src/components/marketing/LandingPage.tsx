@@ -220,7 +220,7 @@ export function LandingPage() {
               <Link href="/login" className="mkt-text-link">
                 Sign in
               </Link>
-              <Link href="/login" className="mkt-cta mkt-cta-sm">
+              <Link href="/signup" className="mkt-cta mkt-cta-sm">
                 Get Started
               </Link>
             </>
@@ -426,6 +426,7 @@ export function LandingPage() {
           <a href="#faq">FAQ</a>
           <a href="#demo">Request a demo</a>
           <Link href="/login">Sign in</Link>
+          <Link href="/signup">Create account</Link>
         </div>
         <span>© 2026 DMC PMO</span>
       </footer>

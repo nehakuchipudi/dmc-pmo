@@ -36,7 +36,7 @@ export default function SettingsPage() {
         title={tab === "Users" ? "Users & roles" : "Settings"}
         subtitle={
           tab === "Users"
-            ? "Add people, set rates, and decide who can see hours versus budgets."
+            ? "Add people, set rates, and decide who can see hours versus budgets. Sign-in uses Microsoft Entra ID and the email on the record."
             : "Manage team access and the project lifecycle workflow."
         }
         actions={

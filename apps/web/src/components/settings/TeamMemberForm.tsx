@@ -218,7 +218,7 @@ export function TeamMemberForm({
           </Field>
         </div>
         <p className="user-create-note">
-          This person signs in with the workspace demo login. Production will use Microsoft Entra ID.
+          They sign in with Microsoft Entra ID using this email. New people can also create an account from Sign up.
         </p>
       </section>
 

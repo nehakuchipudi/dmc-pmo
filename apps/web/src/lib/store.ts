@@ -26,6 +26,7 @@ import {
   uid,
   users,
 } from "./seed";
+import { findAccount, findAccountByEmail, upsertDirectoryUser } from "./directory";
 import { makeActivity } from "./activity";
 import {
   DEFAULT_PROJECT_WORKFLOW,
@@ -93,6 +94,7 @@ import type {
   TaskStatus,
   TeamMember,
   Ticket,
+  User,
   TicketMessage,
   TimeEntry,
 } from "./types";
@@ -280,6 +282,14 @@ type AppState = {
   updateProjectScope: (projectId: string, scope: ProjectScope) => void;
   team: TeamMember[];
   addTeamMember: (input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean }) => string;
+  registerAccount: (input: {
+    name: string;
+    email: string;
+    role?: Role;
+    companyId?: string;
+    entraOid?: string;
+    notifyEmail?: boolean;
+  }) => User;
   updateTeamMember: (id: string, patch: Partial<TeamMember>) => void;
   setTeamMemberActive: (id: string, active: boolean) => void;
   addProjectMember: (input: {
@@ -396,7 +406,7 @@ function persistProjectWorkflow(workflow: ProjectWorkflow) {
 function currentUser() {
   if (typeof window === "undefined") return undefined;
   const id = window.localStorage.getItem("dmc-pmo-user");
-  return users.find((u) => u.id === id);
+  return findAccount(id) ?? users.find((u) => u.id === id);
 }
 
 function currentActor() {
@@ -1406,6 +1416,62 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ team: [member, ...s.team] }));
     get().pushToast(`${member.name} added`);
     return id;
+  },
+
+  registerAccount: (input) => {
+    const email = input.email.trim().toLowerCase();
+    const name = input.name.trim() || email;
+    const role = input.role ?? "staff";
+    const notifyEmail = input.notifyEmail ?? true;
+    const isNew = !findAccountByEmail(email);
+    const user = upsertDirectoryUser({
+      name,
+      email,
+      role,
+      companyId: input.companyId,
+      entraOid: input.entraOid,
+      notifyEmail,
+    });
+    const alreadyOnTeam = get().team.some((m) => m.email.toLowerCase() === email);
+    if (role !== "client" && !alreadyOnTeam) {
+      const [firstName, ...rest] = name.split(" ");
+      get().addTeamMember({
+        name,
+        firstName,
+        lastName: rest.join(" "),
+        title: role === "admin" ? "Administrator" : "Team member",
+        email,
+        role,
+        billRate: 0,
+        costRate: 0,
+        department: "PMO",
+        username: email.split("@")[0],
+        financialVisibility: "hours",
+        avatarUrl: user.avatarUrl,
+      });
+    }
+    if (isNew && notifyEmail) {
+      get().queueEmail(
+        email,
+        "Welcome to DMC PMO",
+        `Hi ${name.split(" ")[0] || "there"},\n\nYour DMC PMO account is ready. We will send workspace notifications to ${email}. Sign in with Microsoft Entra ID using this same address.\n\nOpen the workspace: ${typeof window !== "undefined" ? window.location.origin : ""}/login/\n`,
+      );
+      set((s) => ({
+        notifications: [
+          {
+            id: uid("n"),
+            title: "Welcome to DMC PMO",
+            body: `Account created for ${email}. Notifications will go to this address.`,
+            createdAt: displayNow(),
+            read: false,
+            href: "/app/settings",
+          },
+          ...s.notifications,
+        ],
+      }));
+    }
+    get().pushToast(isNew ? `Account ready for ${email}` : `Signed in as ${email}`);
+    return user;
   },
 
   updateTeamMember: (id, patch) => {
