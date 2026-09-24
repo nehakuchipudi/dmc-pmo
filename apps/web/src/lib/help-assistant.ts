@@ -12,6 +12,8 @@ export interface HelpChatMessage {
   hrefs?: { href: string; label: string }[];
   articleId?: string;
   starters?: string[];
+  pending?: import("./workspace-agent").AgentPending;
+  actions?: { ok: boolean; label: string }[];
 }
 
 export interface HelpAnswer {
@@ -149,9 +151,14 @@ function roleAnswer(role: Role | undefined | null, query: string): HelpAnswer | 
 function greeting(role?: Role | null): HelpAnswer {
   const who = role ? ` You are signed in as ${roleLabel(role)}.` : "";
   return {
-    text: `I am the DMC PMO guide. Ask about any module, how to create a record, or what your role can do.${who}`,
+    text: `I am the DMC PMO guide. Ask how a module works, or tell me to change a record and I will do it when your role allows.${who}`,
     hrefs: [],
-    starters: ["How do I create an invoice?", "How do I log time?", "What can my role do?", "Explain the project workspace"],
+    starters: [
+      "Set warehouse to On Hold and add a Go-live milestone",
+      "How do I create an invoice?",
+      "What can my role do?",
+      "Explain the project workspace",
+    ],
   };
 }
 

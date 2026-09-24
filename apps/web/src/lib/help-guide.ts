@@ -423,6 +423,26 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["This page is generated from current workspace data, not a separate model."],
   },
   {
+    id: "workspace-ai",
+    title: "Workspace AI",
+    group: "Insights",
+    audience: "internal",
+    keywords: ["ai", "assistant", "do this", "update status", "add milestone", "workspace ai", "ask ai", "email", "delete", "assign"],
+    summary:
+      "Ask AI can create, update, delete, assign, and email across every module: companies, contacts, projects, plan, tasks, tickets, time, billing, retainers, sales, ideas, portfolios, strategy, risks, governance, and the email outbox. It uses your role and the same store as the rest of the workspace.",
+    steps: [
+      "Open Workspace AI from the sparkle button, or Help & Support then Ask AI.",
+      "Create: a company, contact, project, task, milestone, ticket, invoice, idea, portfolio, objective, risk, retainer, opportunity, or user.",
+      "Update: project status, task or ticket status, assignments, approvals, payments, signoffs, risks, issues, invoices, and record names.",
+      "Delete or remove: a project, task, milestone, retainer, or project teammate when your role allows it.",
+      "Email: send or draft a message to a teammate or contact. Drafts land in the automations outbox as Queued. You can also generate a project invoice or run an automation.",
+    ],
+    tips: [
+      "Say the exact record name: Create a company Acme and a project Atlas, or Create a project called Test234.",
+      "If a name is missing, AI asks and waits. It will not save New company or New project. Staff still cannot change status or add milestones.",
+    ],
+  },
+  {
     id: "automations",
     title: "Automations",
     group: "Insights",

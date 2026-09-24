@@ -128,6 +128,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpTab, setHelpTab] = useState<"guide" | "chat">("guide");
+
+  function openHelp(tab: "guide" | "chat" = "guide") {
+    setHelpTab(tab);
+    setHelpOpen(true);
+  }
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -202,7 +208,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const target = e.target as HTMLElement;
         if (target.closest("input, textarea, select, [contenteditable='true']")) return;
         e.preventDefault();
-        setHelpOpen(true);
+        openHelp("guide");
       }
     }
     window.addEventListener("keydown", onKey);
@@ -379,7 +385,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             {!collapsed ? <span>Collapse</span> : null}
           </button>
-          <HelpTrigger onClick={() => setHelpOpen(true)} collapsed={collapsed} />
+          <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
           <button
             type="button"
             className="nav-link w-full"
@@ -575,7 +581,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
               ) : null}
             </button>
-            <button type="button" className="icon-btn" aria-label="Help and Support" onClick={() => setHelpOpen(true)}>
+            <button type="button" className="icon-btn" aria-label="Workspace AI" onClick={() => openHelp("chat")}>
+              <Sparkles size={18} />
+            </button>
+            <button type="button" className="icon-btn" aria-label="Help and Support" onClick={() => openHelp("guide")}>
               <CircleHelp size={18} />
             </button>
             <div className="relative" data-shell-menu>
@@ -607,10 +616,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className="menu-row"
                     onClick={() => {
                       setMenu(null);
-                      setHelpOpen(true);
+                      openHelp("guide");
                     }}
                   >
                     <CircleHelp size={15} /> Help & Support
+                  </button>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setMenu(null);
+                      openHelp("chat");
+                    }}
+                  >
+                    <Sparkles size={15} /> Workspace AI
                   </button>
                   <button
                     type="button"
@@ -808,7 +827,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </Drawer>
 
-      <HelpSupport open={helpOpen} onClose={() => setHelpOpen(false)} audience="internal" />
+      <HelpSupport open={helpOpen} onClose={() => setHelpOpen(false)} audience="internal" startTab={helpTab} />
     </div>
   );
 }

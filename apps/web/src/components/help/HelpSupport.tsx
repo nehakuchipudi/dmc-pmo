@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, CircleHelp, MessageSquare, Send, X } from "lucide-react";
+import { BookOpen, CircleHelp, MessageSquare, Send, Sparkles, X } from "lucide-react";
 import { clsx } from "clsx";
 import { roleLabel, useAuth } from "@/lib/auth";
 import { answerHelpQuestion, helpStarters, type HelpChatMessage } from "@/lib/help-assistant";
 import { HELP_GROUPS, articlesForAudience, type HelpAudience } from "@/lib/help-guide";
+import { useAppStore } from "@/lib/store";
+import { looksLikeWorkspaceAction, runWorkspaceAgent, workspaceStarters, type AgentProject } from "@/lib/workspace-agent";
 
 function uid() {
   return `h-${Math.random().toString(36).slice(2, 10)}`;
@@ -16,13 +19,17 @@ export function HelpSupport({
   open,
   onClose,
   audience = "internal",
+  startTab = "guide",
 }: {
   open: boolean;
   onClose: () => void;
   audience?: HelpAudience;
+  startTab?: "guide" | "chat";
 }) {
   const { user, can: canDo } = useAuth();
-  const [tab, setTab] = useState<"guide" | "chat">("guide");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<"guide" | "chat">(startTab);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>("home");
   const [draft, setDraft] = useState("");
@@ -44,10 +51,16 @@ export function HelpSupport({
 
   useEffect(() => {
     if (!open) return;
+    setTab(startTab);
+  }, [open, startTab]);
+
+  useEffect(() => {
+    if (!open) return;
     setMessages((prev) => {
       if (prev.length) return prev;
       const welcome = answerHelpQuestion("hello", [], { role: user?.role, audience });
-      return [{ id: uid(), role: "assistant", text: welcome.text, hrefs: welcome.hrefs, starters: welcome.starters }];
+      const starters = audience === "internal" ? workspaceStarters(user?.role) : welcome.starters;
+      return [{ id: uid(), role: "assistant", text: welcome.text, hrefs: welcome.hrefs, starters }];
     });
   }, [open, audience, user?.role]);
 
@@ -80,6 +93,165 @@ export function HelpSupport({
     setDraft("");
     setBusy(true);
     window.setTimeout(() => {
+      const pending = [...next].reverse().find((message) => message.pending)?.pending;
+      if (audience === "internal" && looksLikeWorkspaceAction(question, pending)) {
+        const store = useAppStore.getState();
+        const projects: AgentProject[] = store.projects.map((project) => ({
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          companyId: project.companyId,
+          companyName: store.companies.find((company) => company.id === project.companyId)?.name ?? project.companyId,
+        }));
+        const routeId = pathname.includes("/projects/view") ? searchParams.get("id") : null;
+        const lastProjectId =
+          pending?.lastProjectId ??
+          pending?.intents.find((intent) => intent.projectId)?.projectId ??
+          projects.find((project) => question.toLowerCase().includes(project.name.toLowerCase()))?.id ??
+          null;
+        const answer = runWorkspaceAgent(
+          question,
+          {
+            role: user?.role,
+            actorName: user?.name ?? "Staff",
+            actorEmail: user?.email,
+            projects,
+            companies: store.companies.map((company) => ({ id: company.id, name: company.name, status: company.status })),
+            contacts: store.contacts.map((contact) => ({ id: contact.id, name: contact.name })),
+            tasks: store.tasks.map((task) => ({
+              id: task.id,
+              name: task.name,
+              projectId: task.projectId,
+              assignee: task.assignee,
+              status: task.status,
+            })),
+            milestones: store.milestones.map((row) => ({ id: row.id, name: row.name, projectId: row.projectId })),
+            tickets: store.tickets.map((ticket) => ({
+              id: ticket.id,
+              name: ticket.subject,
+              subject: ticket.subject,
+              companyId: ticket.companyId,
+              assignee: ticket.assignee,
+              status: ticket.status,
+            })),
+            invoices: store.invoices.map((invoice) => ({
+              id: invoice.id,
+              name: invoice.title ?? invoice.number,
+              number: invoice.number,
+              companyId: invoice.companyId,
+              status: invoice.status,
+            })),
+            ideas: store.ideas.map((idea) => ({ id: idea.id, name: idea.name })),
+            objectives: store.objectives.map((row) => ({ id: row.id, name: row.name })),
+            portfolios: store.portfolios.map((row) => ({ id: row.id, name: row.name })),
+            retainers: store.retainers.map((row) => ({ id: row.id, name: row.name, companyId: row.companyId })),
+            risks: store.risks.map((row) => ({ id: row.id, name: row.title })),
+            people: [
+              ...store.team.map((row) => ({ id: row.id, name: row.name, email: row.email, kind: "team" as const })),
+              ...store.contacts.map((row) => ({
+                id: row.id,
+                name: row.name,
+                email: row.email,
+                kind: "contact" as const,
+                companyId: row.companyId,
+              })),
+            ],
+            timeEntries: store.timeEntries.map((row) => ({ id: row.id, userName: row.userName, status: row.status })),
+            expenses: store.expenses.map((row) => ({ id: row.id, vendor: row.vendor, status: row.status, projectId: row.projectId })),
+            opportunities: store.opportunities.map((row) => ({ id: row.id, name: row.name })),
+            gates: store.gates.map((row) => ({ id: row.id, name: row.name })),
+            issues: store.issues.map((row) => ({ id: row.id, name: row.title })),
+            allocations: store.allocations.map((row) => ({
+              id: row.id,
+              memberName: row.memberName,
+              projectId: row.projectId,
+            })),
+            automations: store.automations.map((row) => ({ id: row.id, name: row.name })),
+            focusCompanyId: store.focusCompanyId,
+            routeProjectId: routeId,
+            lastProjectId,
+            pending,
+            workflow: store.projectWorkflow,
+          },
+          {
+            setProjectStatus: store.setProjectStatus,
+            createMilestone: store.createMilestone,
+            updateMilestone: store.updateMilestone,
+            deleteMilestone: store.deleteMilestone,
+            createTask: (input) => store.createTask(input),
+            updateTask: store.updateTask,
+            deleteTask: store.deleteTask,
+            addProjectNote: store.addProjectNote,
+            createTimeEntry: store.createTimeEntry,
+            createTicket: store.createTicket,
+            updateTicketStatus: store.updateTicketStatus,
+            updateTicket: store.updateTicket,
+            createCompany: store.createCompany,
+            updateCompany: store.updateCompany,
+            createContact: store.createContact,
+            createProject: store.createProject,
+            deleteProject: store.deleteProject,
+            addProjectMember: store.addProjectMember,
+            createExpense: store.createExpense,
+            approveExpense: store.approveExpense,
+            createOpportunity: store.createOpportunity,
+            advanceOpportunity: store.advanceOpportunity,
+            createRetainer: store.createRetainer,
+            deleteRetainer: store.deleteRetainer,
+            createInvoiceDraft: store.createInvoiceDraft,
+            sendInvoice: store.sendInvoice,
+            payInvoice: store.payInvoice,
+            createIdea: store.createIdea,
+            advanceIdea: store.advanceIdea,
+            convertIdea: store.convertIdea,
+            createPortfolio: store.createPortfolio,
+            createObjective: store.createObjective,
+            createRisk: store.createRisk,
+            createDependency: store.createDependency,
+            decideGate: store.decideGate,
+            approveTimeEntry: store.approveTimeEntry,
+            requestSignoff: store.requestSignoff,
+            approveSignoff: store.approveSignoff,
+            updateContact: store.updateContact,
+            updateProject: store.updateProject,
+            updateInvoice: store.updateInvoice,
+            updateRetainer: store.updateRetainer,
+            updateIdea: store.updateIdea,
+            updatePortfolio: store.updatePortfolio,
+            updateObjective: store.updateObjective,
+            updateRiskStatus: store.updateRiskStatus,
+            updateIssueStatus: store.updateIssueStatus,
+            removeProjectMember: store.removeProjectMember,
+            addTeamMember: (input) =>
+              store.addTeamMember({
+                name: input.name,
+                email: input.email,
+                role: input.role,
+                title: input.title,
+              }),
+            rejectTimeEntry: store.rejectTimeEntry,
+            generateProjectInvoice: store.generateProjectInvoice,
+            runAutomation: store.runAutomation,
+            queueEmail: store.queueEmail,
+          },
+        );
+        if (answer.handled) {
+          setMessages([
+            ...next,
+            {
+              id: uid(),
+              role: "assistant",
+              text: answer.text,
+              hrefs: answer.hrefs,
+              starters: answer.starters,
+              pending: answer.pending,
+              actions: answer.actions,
+            },
+          ]);
+          setBusy(false);
+          return;
+        }
+      }
       const answer = answerHelpQuestion(question, next, { role: user?.role, audience });
       setMessages([
         ...next,
@@ -99,7 +271,7 @@ export function HelpSupport({
   if (!open) return null;
 
   const lastStarters = [...messages].reverse().find((message) => message.role === "assistant" && message.starters?.length)?.starters;
-  const starters = lastStarters?.length ? lastStarters : helpStarters(user?.role);
+  const starters = lastStarters?.length ? lastStarters : audience === "internal" ? workspaceStarters(user?.role) : helpStarters(user?.role);
 
   return (
     <div className="help-backdrop" onClick={onClose}>
@@ -107,7 +279,7 @@ export function HelpSupport({
         <div className="help-head">
           <div>
             <div className="help-kicker">
-              <CircleHelp size={16} /> Help & Support
+              <Sparkles size={16} /> Help, Support & AI
             </div>
             <h2>DMC PMO guide</h2>
             <p>{user ? `${roleLabel(user.role)} · ${user.name}` : "Workspace guide"}</p>
@@ -122,7 +294,7 @@ export function HelpSupport({
             <BookOpen size={15} /> Guide
           </button>
           <button type="button" className={clsx("help-tab", tab === "chat" && "is-active")} onClick={() => setTab("chat")}>
-            <MessageSquare size={15} /> Ask
+            <MessageSquare size={15} /> Ask AI
           </button>
         </div>
 
@@ -196,6 +368,15 @@ export function HelpSupport({
               {messages.map((message) => (
                 <div key={message.id} className={clsx("help-bubble", message.role === "user" ? "is-user" : "is-bot")}>
                   <div className="help-bubble-text">{message.text}</div>
+                  {message.actions?.length ? (
+                    <div className="help-actions">
+                      {message.actions.map((action) => (
+                        <span key={action.label} className={clsx("help-action", action.ok ? "is-ok" : "is-fail")}>
+                          {action.ok ? "Done" : "Blocked"} · {action.label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   {message.hrefs?.length ? (
                     <div className="help-links">
                       {message.hrefs.map((link) => (
@@ -207,7 +388,11 @@ export function HelpSupport({
                   ) : null}
                 </div>
               ))}
-              {busy ? <div className="help-bubble is-bot is-typing">Looking through the workspace guide...</div> : null}
+              {busy ? (
+                <div className="help-bubble is-bot is-typing">
+                  {audience === "internal" ? "Working in the workspace..." : "Looking through the workspace guide..."}
+                </div>
+              ) : null}
             </div>
             <div className="help-starters">
               {starters.map((item) => (
@@ -227,7 +412,7 @@ export function HelpSupport({
                 className="field-input"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ask how a module works..."
+                placeholder="Create, update, delete, assign, or email any record..."
               />
               <button type="submit" className="btn btn-primary" disabled={busy || !draft.trim()} aria-label="Send">
                 <Send size={16} />
