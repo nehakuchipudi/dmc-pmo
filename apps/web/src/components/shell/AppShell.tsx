@@ -41,6 +41,8 @@ import { clsx } from "clsx";
 import { roleLabel, useAuth } from "@/lib/auth";
 import { Avatar, ConfirmModal, Drawer, Field, Modal, TextSelect, TextTextarea } from "@/components/ui";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { AccessDenied } from "@/components/shell/AccessDenied";
+import { canAccessHref, canCreateKind } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
 import { buildAppBreadcrumbs } from "@/components/shell/breadcrumbs";
@@ -105,7 +107,7 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
 type MenuId = "create" | "profile" | "company" | null;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, isInternal, logout } = useAuth();
+  const { user, isInternal, logout, can } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -222,8 +224,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...objectives.filter((o) => o.name.toLowerCase().includes(q) || o.code.toLowerCase().includes(q)).map((o) => ({ href: `/app/strategy/view/?id=${o.id}`, label: `${o.code} ${o.name}`, type: "Objective" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
-    ].slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives]);
+    ].filter((hit) => canAccessHref(user?.role, hit.href)).slice(0, 8);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, user]);
 
   const recentHits = useMemo(
     () =>
@@ -275,6 +277,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canAccessHref(user.role, item.href)),
+  })).filter((group) => group.items.length);
+  const routeAllowed = canAccessHref(user.role, pathname);
+  const activityCreates = (
+    [
+      ["time", "Log time"],
+      ["task", "Task"],
+      ["expense", "Expense"],
+    ] as const
+  ).filter(([kind]) => canCreateKind(user.role, kind));
+  const operationCreates = (
+    [
+      ["company", "Company"],
+      ["contact", "Contact"],
+      ["project", "Project"],
+      ["ticket", "Ticket"],
+      ["milestone", "Milestone"],
+      ["idea", "Idea"],
+      ["portfolio", "Portfolio"],
+      ["objective", "Objective"],
+      ["risk", "Risk"],
+    ] as const
+  ).filter(([kind]) => canCreateKind(user.role, kind));
+  const canCreateAnything = activityCreates.length + operationCreates.length > 0 || can("add_note");
+
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
   const unread = notifications.filter((n) => !n.read).length;
@@ -315,7 +344,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </div>
         <nav>
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.label}>
               {!collapsed ? <div className="nav-group">{group.label}</div> : null}
               {group.items.map((item) => {
@@ -464,6 +493,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {mm}:{ss} Stop & log
               </button>
             ) : null}
+            {canCreateAnything ? (
             <div className="relative" data-shell-menu>
               <button type="button" className="icon-btn icon-btn-primary" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
                 <Plus size={18} />
@@ -473,15 +503,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <div className="menu-heading">Activities</div>
-                      {[
-                        ["time", "Log time"],
-                        ["task", "Task"],
-                        ["expense", "Expense"],
-                      ].map(([k, label]) => (
+                      {activityCreates.map(([k, label]) => (
                         <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
                           {label}
                         </button>
                       ))}
+                      {can("add_note") ? (
                       <button
                         type="button"
                         className="menu-row"
@@ -494,20 +521,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       >
                         Note
                       </button>
+                      ) : null}
                     </div>
                     <div>
                       <div className="menu-heading">Operations</div>
-                      {[
-                        ["company", "Company"],
-                        ["contact", "Contact"],
-                        ["project", "Project"],
-                        ["ticket", "Ticket"],
-                        ["milestone", "Milestone"],
-                        ["idea", "Idea"],
-                        ["portfolio", "Portfolio"],
-                        ["objective", "Objective"],
-                        ["risk", "Risk"],
-                      ].map(([k, label]) => (
+                      {operationCreates.map(([k, label]) => (
                         <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
                           {label}
                         </button>
@@ -518,12 +536,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
+            ) : null}
             <button type="button" className="icon-btn" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
               <Briefcase size={18} />
             </button>
             <button type="button" className="icon-btn" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
               <CalendarDays size={18} />
             </button>
+            {can("log_time") ? (
             <button
               type="button"
               className={clsx("icon-btn", timerRunning && "active-soft")}
@@ -535,6 +555,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Clock3 size={18} />
             </button>
+            ) : null}
             <button type="button" className="icon-btn relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
               <Bell size={18} />
               {unread ? (
@@ -577,9 +598,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     <Settings size={15} /> Settings
                   </button>
+                  {can("view_users") ? (
                   <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
                     <Users size={15} /> Users and roles
                   </Link>
+                  ) : null}
                   <button
                     type="button"
                     className="menu-row menu-row-danger"
@@ -595,7 +618,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="content">{children}</main>
+        <main className="content">{routeAllowed ? children : <AccessDenied />}</main>
       </div>
 
       <CreateForms
@@ -677,9 +700,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
           {!myTasks.length ? <p className="text-sm text-[var(--color-muted)]">No open tasks.</p> : null}
+          {can("create_task") ? (
           <button type="button" className="btn btn-primary w-full justify-center" onClick={() => { setTasksOpen(false); openCreate("task"); }}>
             New task
           </button>
+          ) : null}
         </div>
       </Drawer>
 
@@ -744,12 +769,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Friday timesheet reminder</span>
             <input type="checkbox" defaultChecked />
           </label>
+          {can("view_users") ? (
           <Link href="/app/settings" className="btn btn-primary w-full justify-center" onClick={() => setSettingsOpen(false)}>
             Users and lifecycle
           </Link>
+          ) : null}
+          {can("view_automations") ? (
           <Link href="/app/automations" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
             Manage automations
           </Link>
+          ) : null}
         </div>
       </Drawer>
 

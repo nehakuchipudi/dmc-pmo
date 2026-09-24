@@ -15,6 +15,7 @@ import {
   TextSelect,
   statusTone,
 } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
 import { formatDisplayDate } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import type { RetainerType } from "@/lib/types";
@@ -49,9 +50,11 @@ export default function RetainersPage() {
         title="Retainers"
         subtitle="Recurring contracts with periods, usage, invoices, and linked contacts."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> New retainer
-          </button>
+          <IfCan cap="create_retainer">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> New retainer
+            </button>
+          </IfCan>
         }
       />
       <FilterChips items={FILTERS} active={filter} onChange={setFilter} />

@@ -64,6 +64,22 @@ export const users: User[] = [
     avatarUrl: "https://i.pravatar.cc/128?u=j-kim",
   },
   {
+    id: "u-finance",
+    name: "J. Alvarez",
+    initials: "JA",
+    role: "finance",
+    email: "jalvarez@dillonmorgan.com",
+    avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez",
+  },
+  {
+    id: "u-lead",
+    name: "P. Rivera",
+    initials: "PR",
+    role: "leadership",
+    email: "privera@dillonmorgan.com",
+    avatarUrl: "https://i.pravatar.cc/128?u=p-rivera",
+  },
+  {
     id: "u-client",
     name: "Dana Kessler",
     initials: "DK",
@@ -559,6 +575,7 @@ export const seedTeam: TeamMember[] = [
   { id: "tm-sc", name: "S. Cho", firstName: "Sam", lastName: "Cho", title: "Project Manager", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-dm", username: "scho", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
   { id: "tm-sa", name: "S. Ahmed", firstName: "Sara", lastName: "Ahmed", title: "Analyst", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-sc", username: "sahmed", financialVisibility: "hours", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
   { id: "tm-ja", name: "J. Alvarez", firstName: "Jules", lastName: "Alvarez", title: "Finance Partner", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, costRate: 58, department: "Finance", managerId: "tm-dm", username: "jalvarez", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
+  { id: "tm-pr", name: "P. Rivera", firstName: "Pat", lastName: "Rivera", title: "PMO Director", email: "privera@dillonmorgan.com", initials: "PR", role: "leadership", active: true, billRate: 210, costRate: 75, department: "Leadership", managerId: "tm-dm", username: "privera", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=p-rivera" },
 ];
 
 export const seedInvoiceTemplates: InvoiceTemplate[] = [

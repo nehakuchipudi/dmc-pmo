@@ -10,12 +10,16 @@ import { initialsFromName } from "@/lib/seed";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
+import { IfCan } from "@/components/auth/IfCan";
+import { useAuth } from "@/lib/auth";
+import { hiddenMoney } from "@/lib/rbac";
 import { isOpenProjectStatus, isWatchLifecycle } from "@/lib/project-lifecycle";
 
 const FILTERS = ["All open projects", "My projects", "At risk", "Recently created"];
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { user, can, canSeeFinancials } = useAuth();
   const projects = useAppStore((s) => s.projects);
   const companies = useAppStore((s) => s.companies);
   const deleteProject = useAppStore((s) => s.deleteProject);
@@ -30,11 +34,11 @@ export default function ProjectsPage() {
   const [editId, setEditId] = useState<string | null>(null);
 
   const rows = useMemo(() => {
-    if (filter === "My projects") return projects.filter((p) => p.manager === "M. Doyle");
+    if (filter === "My projects") return projects.filter((p) => p.manager === user?.name || p.manager.includes(user?.name.split(" ").slice(-1)[0] ?? "Doyle"));
     if (filter === "At risk") return projects.filter((p) => isWatchLifecycle(p.status));
     if (filter === "Recently created") return [...projects];
     return projects.filter((p) => isOpenProjectStatus(p.status));
-  }, [filter, projects]);
+  }, [filter, projects, user]);
 
   const editing = projects.find((p) => p.id === editId);
 
@@ -65,9 +69,11 @@ export default function ProjectsPage() {
             >
               Export
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
-              <Plus size={16} /> New project
-            </button>
+            <IfCan cap="create_project">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
+                <Plus size={16} /> New project
+              </button>
+            </IfCan>
           </>
         }
       />
@@ -121,7 +127,7 @@ export default function ProjectsPage() {
                   <StatusPill tone={statusTone(p.status)}>{p.status}</StatusPill>
                 </td>
                 <td>{formatDisplayDate(p.due)}</td>
-                <td className="tabular-nums">{money(p.budgetAmount)}</td>
+                <td className="tabular-nums">{hiddenMoney(canSeeFinancials, money(p.budgetAmount))}</td>
                 <td className="row-actions text-right">
                   <button
                     type="button"
@@ -133,9 +139,12 @@ export default function ProjectsPage() {
                   </button>
                   {menuId === p.id ? (
                     <div className="row-menu">
+                      {can("edit_project") ? (
                       <button type="button" onClick={() => { setEditId(p.id); setMenuId(null); }}>
                         Edit project
                       </button>
+                      ) : null}
+                      {can("create_project") ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -146,6 +155,8 @@ export default function ProjectsPage() {
                       >
                         Duplicate
                       </button>
+                      ) : null}
+                      {can("create_invoice") ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -156,6 +167,7 @@ export default function ProjectsPage() {
                       >
                         Generate invoice
                       </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => {
@@ -170,6 +182,7 @@ export default function ProjectsPage() {
                       >
                         Email update
                       </button>
+                      {can("delete_project") ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -179,6 +192,7 @@ export default function ProjectsPage() {
                       >
                         Delete
                       </button>
+                      ) : null}
                     </div>
                   ) : null}
                 </td>

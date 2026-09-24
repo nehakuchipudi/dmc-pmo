@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { IdeaEditForm } from "@/components/ppm/PpmRecordForms";
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
 import { RecordFact } from "@/components/records/RecordChrome";
+import { IfCan } from "@/components/auth/IfCan";
 import { Modal, PageHeader } from "@/components/ui";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
@@ -53,18 +54,24 @@ function IdeaView() {
         actions={
           <>
             {canAdvance ? (
-              <button type="button" className="btn btn-ghost" onClick={() => advanceIdea(idea.id)}>
-                Advance
-              </button>
+              <IfCan cap="edit_idea">
+                <button type="button" className="btn btn-ghost" onClick={() => advanceIdea(idea.id)}>
+                  Advance
+                </button>
+              </IfCan>
             ) : null}
             {idea.stage === "Approved" ? (
-              <button type="button" className="btn btn-ghost" onClick={() => convertIdea(idea.id)}>
-                Convert
-              </button>
+              <IfCan cap="convert_idea">
+                <button type="button" className="btn btn-ghost" onClick={() => convertIdea(idea.id)}>
+                  Convert
+                </button>
+              </IfCan>
             ) : null}
-            <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
-              Edit details
-            </button>
+            <IfCan cap="edit_idea">
+              <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
+                Edit details
+              </button>
+            </IfCan>
             <Link href="/app/ideas" className="btn btn-ghost">
               All ideas
             </Link>

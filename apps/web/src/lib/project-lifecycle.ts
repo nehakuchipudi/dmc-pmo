@@ -36,6 +36,7 @@ export function normalizeProjectStatus(status: string): ProjectStatus {
 }
 
 export function canChangeProjectStatus(role: Role | undefined, workflow: ProjectWorkflow) {
+  if (role === "admin") return true;
   return !!role && workflow.changerRoles.includes(role);
 }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAppStore } from "@/lib/store";
 
 export default function GovernancePage() {
@@ -41,14 +42,16 @@ export default function GovernancePage() {
             gate.status === "Approved" || gate.status === "Rejected" ? (
               "Decided"
             ) : (
-              <div className="flex gap-2">
-                <button type="button" className="btn btn-primary text-sm" onClick={() => decideGate(gate.id, "Approved")}>
-                  Approve
-                </button>
-                <button type="button" className="btn btn-ghost text-sm" onClick={() => decideGate(gate.id, "Rejected")}>
-                  Reject
-                </button>
-              </div>
+              <IfCan cap="decide_governance">
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-primary text-sm" onClick={() => decideGate(gate.id, "Approved")}>
+                    Approve
+                  </button>
+                  <button type="button" className="btn btn-ghost text-sm" onClick={() => decideGate(gate.id, "Rejected")}>
+                    Reject
+                  </button>
+                </div>
+              </IfCan>
             ),
           ])}
         />

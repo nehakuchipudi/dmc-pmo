@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Star, X } from "lucide-react";
+import { IfCan } from "@/components/auth/IfCan";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
@@ -257,9 +258,11 @@ export function CompanyDetail({ id }: { id: string }) {
               <Star size={16} fill={company.favorite ? "currentColor" : "none"} />
               Favorite
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
-              New project
-            </button>
+            <IfCan cap="create_project">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
+                New project
+              </button>
+            </IfCan>
           </>
         }
         rail={
@@ -754,9 +757,11 @@ export function CompanyDetail({ id }: { id: string }) {
         {tab === "Work" && (
           <div className="panel overflow-hidden">
             <div className="flex justify-end p-3">
-              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
-                New project
-              </button>
+              <IfCan cap="create_project">
+                <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
+                  New project
+                </button>
+              </IfCan>
             </div>
             <table className="table">
               <thead>
@@ -1062,9 +1067,11 @@ export function CompanyDetail({ id }: { id: string }) {
                 >
                   Export CSV
                 </button>
-                <button type="button" className="btn btn-primary" onClick={() => setInvoiceOpen(true)}>
-                  New invoice
-                </button>
+                <IfCan cap="create_invoice">
+                  <button type="button" className="btn btn-primary" onClick={() => setInvoiceOpen(true)}>
+                    New invoice
+                  </button>
+                </IfCan>
               </div>
               <table className="table">
                 <thead>

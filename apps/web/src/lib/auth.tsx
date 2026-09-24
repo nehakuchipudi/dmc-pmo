@@ -11,6 +11,8 @@ import {
 import { findAccount } from "./directory";
 import { entraConfigured, startEntraSignOut } from "./entra";
 import { users } from "./data";
+import { applyTeamRole, can as roleCan, canSeeFinancials as roleSeesMoney, type Capability } from "./rbac";
+import { useAppStore } from "./store";
 import type { Role, User } from "./types";
 
 const STORAGE_KEY = "dmc-pmo-user";
@@ -22,6 +24,8 @@ type AuthContextValue = {
   logout: () => void;
   isInternal: boolean;
   isClient: boolean;
+  can: (cap: Capability) => boolean;
+  canSeeFinancials: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,6 +38,8 @@ function lookupUser(id: string | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const team = useAppStore((s) => s.team);
+  const resolved = useMemo(() => applyTeamRole(user, team), [user, team]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -43,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
+      user: resolved,
       setUserId: (id: string) => {
         const next = lookupUser(id);
         setUser(next);
@@ -55,17 +61,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.localStorage.setItem(STORAGE_KEY, next.id);
       },
       logout: () => {
-        const usedEntra = Boolean(user?.entraOid);
+        const usedEntra = Boolean(resolved?.entraOid);
         setUser(null);
         window.localStorage.removeItem(STORAGE_KEY);
         if (usedEntra && entraConfigured()) {
           void startEntraSignOut();
         }
       },
-      isInternal: !!user && user.role !== "client",
-      isClient: !!user && user.role === "client",
+      isInternal: !!resolved && resolved.role !== "client",
+      isClient: !!resolved && resolved.role === "client",
+      can: (cap: Capability) => roleCan(resolved?.role, cap),
+      canSeeFinancials: roleSeesMoney(resolved, team),
     }),
-    [user],
+    [resolved, team],
   );
 
   if (!ready) {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
+import { IfCan } from "@/components/auth/IfCan";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { Avatar, FilterChips, PageHeader, StatusPill, statusTone } from "@/components/ui";
 import type { TaskStatus } from "@/lib/types";
@@ -55,9 +56,11 @@ export default function WorkPage() {
         actions={
           <>
             <Link href="/app/timesheets" className="btn btn-ghost">Daily Timesheet</Link>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("task")}>
-              <Plus size={16} /> New Task
-            </button>
+            <IfCan cap="create_task">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("task")}>
+                <Plus size={16} /> New Task
+              </button>
+            </IfCan>
           </>
         }
       />

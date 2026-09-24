@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { RecordFact } from "@/components/records/RecordChrome";
+import { IfCan } from "@/components/auth/IfCan";
 import { Modal, PageHeader } from "@/components/ui";
 import { money } from "@/lib/seed";
 import { portfolioMetrics } from "@/lib/ppm";
@@ -46,9 +47,11 @@ function PortfolioView() {
         subtitle={portfolio.description}
         actions={
           <>
-            <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
-              Edit details
-            </button>
+            <IfCan cap="edit_portfolio">
+              <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
+                Edit details
+              </button>
+            </IfCan>
             <Link href="/app/portfolios" className="btn btn-ghost">
               All portfolios
             </Link>

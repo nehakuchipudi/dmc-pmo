@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { Avatar, FilterChips, PageHeader, SideRail, StatusPill, statusTone } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
 import { contactMatches, isPrimaryContact } from "@/lib/contacts";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -61,9 +62,11 @@ export default function ContactsPage() {
             >
               Export CSV
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateKind("contact")}>
-              <Plus size={16} /> New Contact
-            </button>
+            <IfCan cap="create_contact">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("contact")}>
+                <Plus size={16} /> New Contact
+              </button>
+            </IfCan>
           </>
         }
       />

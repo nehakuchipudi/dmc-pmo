@@ -8,6 +8,7 @@ import { Field, Modal, PageHeader, TextInput, TextSelect, TextTextarea } from "@
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
 
 export default function IdeasPage() {
@@ -32,9 +33,11 @@ export default function IdeasPage() {
         title="Ideas"
         subtitle="Demand intake before a project exists. Score for strategic fit, value, and risk, then convert the ones that belong in a portfolio."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={16} /> Submit idea
-          </button>
+          <IfCan cap="create_idea">
+            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> Submit idea
+            </button>
+          </IfCan>
         }
       />
       <MetricGrid>
@@ -68,14 +71,18 @@ export default function IdeasPage() {
                 Open
               </Link>
               {idea.stage !== "Converted" && idea.stage !== "Deferred" ? (
-                <button type="button" className="btn btn-ghost text-sm" onClick={() => advanceIdea(idea.id)}>
-                  Advance
-                </button>
+                <IfCan cap="edit_idea">
+                  <button type="button" className="btn btn-ghost text-sm" onClick={() => advanceIdea(idea.id)}>
+                    Advance
+                  </button>
+                </IfCan>
               ) : null}
               {idea.stage === "Approved" ? (
-                <button type="button" className="btn btn-primary text-sm" onClick={() => convertIdea(idea.id)}>
-                  Convert
-                </button>
+                <IfCan cap="convert_idea">
+                  <button type="button" className="btn btn-primary text-sm" onClick={() => convertIdea(idea.id)}>
+                    Convert
+                  </button>
+                </IfCan>
               ) : null}
             </div>,
           ])}

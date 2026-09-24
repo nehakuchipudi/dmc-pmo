@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { IfCan } from "@/components/auth/IfCan";
 import { PageHeader, StatusPill, statusTone } from "@/components/ui";
 import { invoiceTotals } from "@/lib/invoice";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -43,9 +44,11 @@ export function InvoiceDetail({ id }: { id: string }) {
             <button type="button" className="btn btn-ghost" onClick={() => exportInvoicePdf(invoice)}>
               Export PDF
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => sendInvoice(invoice.id)}>
-              Send to client
-            </button>
+            <IfCan cap="manage_invoice">
+              <button type="button" className="btn btn-ghost" onClick={() => sendInvoice(invoice.id)}>
+                Send to client
+              </button>
+            </IfCan>
             <button
               type="button"
               className="btn btn-ghost"
@@ -61,9 +64,11 @@ export function InvoiceDetail({ id }: { id: string }) {
               Send reminder
             </button>
             {invoice.status === "Sent" || invoice.status === "Overdue" ? (
-              <button type="button" className="btn btn-primary" onClick={() => payInvoice(invoice.id)}>
-                Record payment
-              </button>
+              <IfCan cap="pay_invoice">
+                <button type="button" className="btn btn-primary" onClick={() => payInvoice(invoice.id)}>
+                  Record payment
+                </button>
+              </IfCan>
             ) : null}
           </>
         }
