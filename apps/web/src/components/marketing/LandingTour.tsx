@@ -241,28 +241,7 @@ export function LandingTour({ clips }: { clips: readonly TourClip[] }) {
           <em>{clip.title}</em>
           <span>{clip.caption}</span>
         </div>
-        <div className="mkt-playlist" aria-label="Module playlist">
-          {clips.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              className={clsx(i === index && "active")}
-              onClick={() => goTo(i)}
-            >
-              <img src={item.poster} alt="" />
-              <span>{item.label}</span>
-              {i === index ? (
-                <b className="mkt-playlist-bar" aria-hidden="true">
-                  <i style={{ width: `${progress}%` }} />
-                </b>
-              ) : null}
-            </button>
-          ))}
-        </div>
       </div>
-      <p className="mkt-watch-note">
-        Pause, seek, or pick a tab. When a clip ends, the next module starts.
-      </p>
     </section>
   );
 }
