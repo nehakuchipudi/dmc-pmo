@@ -254,6 +254,20 @@ export function LandingPage() {
               <a href="#demo" onClick={() => setMenuOpen(false)}>
                 Request a demo
               </a>
+              {user ? (
+                <Link href={appHref} onClick={() => setMenuOpen(false)}>
+                  Open workspace
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMenuOpen(false)}>
+                    Sign in
+                  </Link>
+                  <Link href="/signup" onClick={() => setMenuOpen(false)}>
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         ) : null}

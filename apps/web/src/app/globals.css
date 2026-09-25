@@ -80,6 +80,8 @@ button, input, select, textarea { font: inherit; }
   display: grid;
   grid-template-columns: 236px 1fr;
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: hidden;
   background: var(--color-fog);
 }
 .app-shell.collapsed { grid-template-columns: 76px 1fr; }
@@ -664,6 +666,7 @@ button, input, select, textarea { font: inherit; }
 }
 
 .panel {
+  min-width: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -758,6 +761,11 @@ button, input, select, textarea { font: inherit; }
   border-bottom-color: var(--color-gold);
 }
 
+.table-wrap {
+  overflow-x: auto;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
 .table { width: 100%; border-collapse: collapse; }
 .table th {
   text-align: left;
@@ -2560,6 +2568,7 @@ button, input, select, textarea { font: inherit; }
     width: min(272px, 86vw);
     height: 100vh;
     transform: translateX(-110%);
+    z-index: 40;
   }
   .app-shell.nav-open .sidebar { transform: translateX(0); }
   .shell-scrim {
@@ -2570,7 +2579,8 @@ button, input, select, textarea { font: inherit; }
     background: rgba(36, 52, 71, 0.4);
     z-index: 35;
   }
-  .topbar, .topbar-portal { grid-template-columns: auto 1fr auto; }
+  .topbar, .topbar-portal { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .topbar-actions { min-width: 0; }
   .icon-btn.topbar-menu { display: inline-grid; }
   .search-kbd, .context-label { display: none; }
   .context-btn { max-width: 44px; padding-right: 8px; }
@@ -2591,10 +2601,20 @@ button, input, select, textarea { font: inherit; }
   .insights-health, .insights-kpis, .insights-split { grid-template-columns: 1fr; }
   .insight-compare-row { grid-template-columns: 1fr; }
   .kanban { grid-template-columns: 1fr; }
-  .content { padding: 16px; }
-  .topbar { padding: 10px 12px; }
-  .search { padding-left: 12px; }
-  .create-popover, .context-popover { width: min(320px, calc(100vw - 24px)); }
+  .content { padding: 16px; min-width: 0; }
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .crumb-bar { display: none; }
+  .topbar-secondary,
+  .topbar-timer { display: none; }
+  .topbar-actions { gap: 6px; }
+  .profile-btn { max-width: 44px; padding: 4px; }
+  .search { padding: 8px 10px 8px 12px; min-width: 0; }
+  .search .truncate { max-width: 18ch; }
+  .create-popover, .context-popover, .profile-popover, .menu-popover { width: min(320px, calc(100vw - 24px)); }
   .gantt-grid { grid-template-columns: 1fr; }
   .files-layout { grid-template-columns: 1fr; }
   .files-rail { border-right: 0; border-bottom: 1px solid var(--color-border); }
@@ -2605,6 +2625,17 @@ button, input, select, textarea { font: inherit; }
   .activity-composer { flex-direction: column; align-items: stretch; }
   .activity-date { max-width: none; }
   .contacts-search, .contacts-company { max-width: none; }
+  .modal-backdrop { padding: 12px; align-items: start; }
+  .modal-panel,
+  .modal-wide,
+  .modal-xl {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+  .help-panel {
+    width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 .auth-card { box-shadow: var(--shadow-lift); }
@@ -2890,5 +2921,6 @@ button, input, select, textarea { font: inherit; }
   gap: 8px;
 }
 @media (max-width: 720px) {
-  .help-panel { width: 100%; }
+  .help-head { padding: 16px 16px 12px; }
+  .help-tabs, .help-guide, .help-chat { padding-left: 16px; padding-right: 16px; }
 }

@@ -1391,7 +1391,10 @@
   .mkt-features { grid-template-columns: 1fr 1fr; }
   .mkt-product { grid-template-columns: 1fr; }
   .mkt-product-side { display: none; }
+  .mkt-nav { padding: 12px 16px; gap: 10px; }
   .mkt-nav-links { display: none; }
+  .mkt-nav-actions .mkt-text-link,
+  .mkt-nav-actions .mkt-cta { display: none; }
   .mkt-nav-toggle { display: inline-flex; }
   .mkt-hero-split {
     grid-template-columns: 1fr;
@@ -1417,9 +1420,19 @@
 
 @media (max-width: 640px) {
   .mkt-features { grid-template-columns: 1fr; }
-  .mkt-footer { flex-direction: column; }
+  .mkt-footer { flex-direction: column; padding: 18px 16px; }
+  .mkt-footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 14px;
+  }
   .mkt-hero-copy h1,
   .mkt-hero-cover h1 {
     font-size: clamp(1.7rem, 8vw, 2.2rem);
   }
+  .mkt-hero-actions .mkt-cta,
+  .mkt-hero-actions .mkt-ghost {
+    width: 100%;
+  }
+  .mkt-band { padding: 56px 16px; }
 }
