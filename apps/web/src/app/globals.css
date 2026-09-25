@@ -2632,8 +2632,11 @@ button, input, select, textarea { font: inherit; }
     width: min(100%, calc(100vw - 24px));
     max-height: calc(100dvh - 24px);
   }
+  .help-backdrop { place-items: stretch; }
   .help-panel {
     width: 100%;
+    height: 100%;
+    border-left: 0;
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
