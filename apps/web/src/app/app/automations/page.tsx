@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IfCan } from "@/components/auth/IfCan";
+import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
 import { PageHeader, SideRail, StatusPill, Tabs } from "@/components/ui";
 import { useAppStore } from "@/lib/store";
 
@@ -38,7 +39,7 @@ export default function AutomationsPage() {
           </IfCan>
         }
       />
-      <Tabs tabs={["Rules", "Email outbox", "Templates"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["Rules", "Email outbox", "Email domain", "Templates"]} active={tab} onChange={setTab} />
       {tab === "Rules" ? (
         <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
           <div className="panel overflow-hidden">
@@ -94,6 +95,9 @@ export default function AutomationsPage() {
       ) : null}
       {tab === "Email outbox" ? (
         <div className="panel overflow-hidden">
+          <p className="px-4 pt-4 text-sm text-[var(--color-muted)]">
+            Outbox is what DMC PMO queued. Sending identity comes from Email domain / DNS records.
+          </p>
           <table className="table">
             <thead>
               <tr>
@@ -121,6 +125,7 @@ export default function AutomationsPage() {
           </table>
         </div>
       ) : null}
+      {tab === "Email domain" ? <EmailDomainRecords /> : null}
       {tab === "Templates" ? (
         <div className="grid gap-3 md:grid-cols-2">
           {[

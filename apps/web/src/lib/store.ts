@@ -49,6 +49,15 @@ import {
   seedRisks,
 } from "./ppm-seed";
 import { ideaComposite } from "./ppm";
+import {
+  buildDnsRecords,
+  domainStatus,
+  inspectDnsRecords,
+  loadEmailDomains,
+  localPart,
+  normalizeDomain,
+  persistEmailDomains,
+} from "./email-domain";
 import type {
   ActivityItem,
   ActivityType,
@@ -60,6 +69,7 @@ import type {
   Contact,
   ContactNote,
   CrossDependency,
+  EmailDomain,
   EmailOutboxItem,
   Expense,
   GateStatus,
@@ -203,6 +213,7 @@ type AppState = {
   retainerPeriods: RetainerPeriod[];
   automations: AutomationRule[];
   emailOutbox: EmailOutboxItem[];
+  emailDomains: EmailDomain[];
   expenses: Expense[];
   opportunities: Opportunity[];
   objectives: StrategicObjective[];
@@ -348,6 +359,10 @@ type AppState = {
   toggleAutomation: (id: string) => void;
   runAutomation: (id: string) => void;
   queueEmail: (to: string, subject: string, body: string, status?: EmailOutboxItem["status"]) => string;
+  addEmailDomain: (input: { domain: string; fromName: string; fromEmail: string }) => string | undefined;
+  removeEmailDomain: (id: string) => void;
+  setPrimaryEmailDomain: (id: string) => void;
+  checkEmailDomain: (id: string) => Promise<EmailDomain | undefined>;
   createObjective: (input: { name: string; owner: string; horizon: string; target: string; description: string }) => string;
   updateObjective: (id: string, patch: Partial<StrategicObjective>) => void;
   createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string }) => string;
@@ -493,6 +508,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   retainerPeriods: seedRetainerPeriods,
   automations: seedAutomations,
   emailOutbox: [...readAccountExtras().mail, ...seedEmailOutbox],
+  emailDomains: loadEmailDomains(),
   expenses: seedExpenses,
   opportunities: seedOpportunities,
   objectives: seedObjectives,
@@ -2485,6 +2501,75 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
     }));
     get().pushToast(`Ran ${rule.name}`);
+  },
+
+  addEmailDomain: (input) => {
+    if (!requireAny(get, "manage_automations", "manage_users")) return undefined;
+    const domain = normalizeDomain(input.domain);
+    if (!domain) {
+      get().pushToast("Enter a valid domain such as dillonmorgan.com.", "danger");
+      return undefined;
+    }
+    if (get().emailDomains.some((row) => row.domain === domain)) {
+      get().pushToast("That domain is already on the list.", "danger");
+      return undefined;
+    }
+    const id = uid("ed");
+    const row: EmailDomain = {
+      id,
+      domain,
+      fromName: input.fromName.trim() || "DMC PMO",
+      fromEmail: `${localPart(input.fromEmail.split("@")[0] || "notifications")}@${domain}`,
+      primary: get().emailDomains.length === 0,
+      status: "Not checked",
+      records: buildDnsRecords(domain),
+    };
+    set((s) => {
+      const emailDomains = [...s.emailDomains, row];
+      persistEmailDomains(emailDomains);
+      return { emailDomains };
+    });
+    get().pushToast(`Added ${domain}`);
+    return id;
+  },
+
+  removeEmailDomain: (id) => {
+    if (!requireAny(get, "manage_automations", "manage_users")) return;
+    set((s) => {
+      const remaining = s.emailDomains.filter((row) => row.id !== id).map((row) => ({ ...row }));
+      if (remaining.length && !remaining.some((row) => row.primary)) remaining[0] = { ...remaining[0], primary: true };
+      persistEmailDomains(remaining);
+      return { emailDomains: remaining };
+    });
+    get().pushToast("Email domain removed");
+  },
+
+  setPrimaryEmailDomain: (id) => {
+    if (!requireAny(get, "manage_automations", "manage_users")) return;
+    set((s) => {
+      const emailDomains = s.emailDomains.map((row) => ({ ...row, primary: row.id === id }));
+      persistEmailDomains(emailDomains);
+      return { emailDomains };
+    });
+    get().pushToast("Sending domain updated");
+  },
+
+  checkEmailDomain: async (id) => {
+    const current = get().emailDomains.find((row) => row.id === id);
+    if (!current) return undefined;
+    const records = await inspectDnsRecords(current.records);
+    const status = domainStatus(records);
+    const next: EmailDomain = { ...current, records, status, lastChecked: displayNow() };
+    set((s) => {
+      const emailDomains = s.emailDomains.map((row) => (row.id === id ? next : row));
+      persistEmailDomains(emailDomains);
+      return { emailDomains };
+    });
+    get().pushToast(
+      status === "Verified" ? `${current.domain} is verified.` : `${current.domain} is ${status.toLowerCase()}.`,
+      status === "Verified" ? "success" : status === "Partial" ? "info" : "danger",
+    );
+    return next;
   },
 
   queueEmail: (to, subject, body, status = "Sent") => {

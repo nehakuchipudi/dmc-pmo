@@ -460,6 +460,27 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Only Admin can toggle or run automations."],
   },
   {
+    id: "email-domain",
+    title: "Email Domain / DNS Records",
+    group: "Admin",
+    href: "/app/settings",
+    audience: "internal",
+    viewCap: "view_users",
+    keywords: ["email domain", "dns", "spf", "dkim", "dmarc", "sending domain", "spam"],
+    summary:
+      "An email domain is the part after @. DNS records are public notes at your domain host that prove DMC PMO may send invoices, welcome mail, and reminders as your company.",
+    steps: [
+      "Open Settings, then Email domain, or Automations then Email domain.",
+      "Add the domain you send from, such as dillonmorgan.com.",
+      "Copy the SPF, DKIM, and DMARC values into your DNS host (Cloudflare, GoDaddy, or Microsoft 365).",
+      "Click Check records. Verified means inboxes can see all three. Partial means some are live. Missing means none were found.",
+    ],
+    tips: [
+      "SPF lists approved senders. DKIM signs the message. DMARC says what to do if those checks fail.",
+      "Without these records, Gmail and Outlook often put DMC PMO mail in spam.",
+    ],
+  },
+  {
     id: "users",
     title: "Users and roles",
     group: "Admin",
