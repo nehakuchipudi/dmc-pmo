@@ -844,6 +844,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Manage automations
           </Link>
           ) : null}
+          {can("view_users") ? (
+          <Link href="/app/settings" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
+            Email domain / DNS records
+          </Link>
+          ) : null}
         </div>
       </Drawer>
 

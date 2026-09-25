@@ -25,13 +25,13 @@ export function StatusPill({
 
 export function statusTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {
   const s = status.toLowerCase();
-  if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent", "completed", "opened", "invoiced", "healthy", "achieved", "converted"].includes(s)) {
+  if (["active", "on track", "paid", "approved", "resolved", "enabled", "done", "sent", "completed", "opened", "invoiced", "healthy", "achieved", "converted", "verified", "found"].includes(s)) {
     return "success";
   }
-  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "planning", "watch", "scoring", "mitigating", "in review", "lagging"].includes(s)) {
+  if (["prospect", "at risk", "in progress", "review", "awaiting your review", "awaiting signoff", "submitted", "draft", "pending", "qualify", "propose", "negotiate", "planned", "planning", "watch", "scoring", "mitigating", "in review", "lagging", "partial"].includes(s)) {
     return "warning";
   }
-  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked", "cancelled"].includes(s)) {
+  if (["overdue", "overdue inv.", "urgent", "rejected", "failed", "critical", "blocked", "cancelled", "missing"].includes(s)) {
     return "danger";
   }
   if (["open", "high", "medium", "queued", "upcoming", "deferred", "on hold"].includes(s)) return "info";

@@ -463,6 +463,32 @@ export interface EmailOutboxItem {
   status: "Queued" | "Sent" | "Failed";
 }
 
+export type DnsRecordKind = "spf" | "dkim" | "dmarc";
+export type DnsRecordType = "TXT" | "CNAME";
+export type EmailDomainStatus = "Not checked" | "Missing" | "Partial" | "Verified";
+
+export interface DnsRecord {
+  kind: DnsRecordKind;
+  type: DnsRecordType;
+  host: string;
+  name: string;
+  value: string;
+  purpose: string;
+  found?: boolean;
+  foundValue?: string;
+}
+
+export interface EmailDomain {
+  id: string;
+  domain: string;
+  fromName: string;
+  fromEmail: string;
+  primary: boolean;
+  status: EmailDomainStatus;
+  records: DnsRecord[];
+  lastChecked?: string;
+}
+
 export interface Expense {
   id: string;
   vendor: string;

@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { Avatar, Modal, PageHeader, StatusPill, Tabs } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { AccessDenied } from "@/components/shell/AccessDenied";
+import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
 import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 
-const SETTINGS_TABS = ["Users", "Lifecycle"];
+const SETTINGS_TABS = ["Users", "Lifecycle", "Email domain"];
 
 export default function SettingsPage() {
   const { can } = useAuth();
@@ -39,12 +40,14 @@ export default function SettingsPage() {
   return (
     <div className="fade-in">
       <PageHeader
-        title={tab === "Users" ? "Users & roles" : "Settings"}
+        title={tab === "Users" ? "Users & roles" : tab === "Email domain" ? "Email domain / DNS records" : "Settings"}
         subtitle={
           tab === "Users"
             ? canManageUsers
               ? "Add people, assign roles, set rates, and decide who can see hours versus budgets."
               : "Review who is on the workspace and what each role can do. Only an admin can change access."
+            : tab === "Email domain"
+              ? "Prove DMC PMO may send invoices and reminders as your company, so inboxes do not treat them as spam."
             : "Manage team access and the project lifecycle workflow."
         }
         actions={
@@ -206,6 +209,8 @@ export default function SettingsPage() {
           </div>
         </div>
       ) : null}
+
+      {tab === "Email domain" ? <EmailDomainRecords /> : null}
 
       <Modal open={open} title="Add user" onClose={() => setOpen(false)} xl>
         <form
