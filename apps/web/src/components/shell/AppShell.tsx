@@ -498,7 +498,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {timerRunning ? (
               <button
                 type="button"
-                className="btn btn-ghost text-sm"
+                className="btn btn-ghost text-sm topbar-timer"
                 onClick={() => {
                   const elapsedHours = Math.max(0.25, Math.round((seconds / 3600) * 4) / 4);
                   setTimerRunning(false);
@@ -554,16 +554,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <button type="button" className="icon-btn" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
+            <button type="button" className="icon-btn topbar-secondary" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
               <Briefcase size={18} />
             </button>
-            <button type="button" className="icon-btn" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
+            <button type="button" className="icon-btn topbar-secondary" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
               <CalendarDays size={18} />
             </button>
             {can("log_time") ? (
             <button
               type="button"
-              className={clsx("icon-btn", timerRunning && "active-soft")}
+              className={clsx("icon-btn topbar-secondary", timerRunning && "active-soft")}
               aria-label="Time"
               onClick={() => {
                 setTimerRunning(true);
@@ -584,7 +584,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button type="button" className="icon-btn" aria-label="Workspace AI" onClick={() => openHelp("chat")}>
               <Sparkles size={18} />
             </button>
-            <button type="button" className="icon-btn" aria-label="Help and Support" onClick={() => openHelp("guide")}>
+            <button type="button" className="icon-btn topbar-secondary" aria-label="Help and Support" onClick={() => openHelp("guide")}>
               <CircleHelp size={18} />
             </button>
             <div className="relative" data-shell-menu>
@@ -630,6 +630,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     }}
                   >
                     <Sparkles size={15} /> Workspace AI
+                  </button>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setMenu(null);
+                      setTasksOpen(true);
+                    }}
+                  >
+                    <Briefcase size={15} /> My tasks
+                  </button>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setMenu(null);
+                      setScheduleOpen(true);
+                    }}
+                  >
+                    <CalendarDays size={15} /> My schedule
                   </button>
                   <button
                     type="button"
