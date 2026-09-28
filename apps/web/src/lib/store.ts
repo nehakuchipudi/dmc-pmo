@@ -37,6 +37,7 @@ import {
   toggleWorkflowTransition,
 } from "./project-lifecycle";
 import { weeklyHoursFromAllocation } from "./project-team";
+import { mentionedPeople } from "./mentions";
 import {
   OWNER_ROLE,
   memberAssignmentBody,
@@ -2431,6 +2432,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         entityLabel: project.name,
         href: `/app/projects/view/?id=${projectId}`,
       });
+      const tagged = mentionedPeople(note.body, get().team);
+      if (tagged.length) {
+        const href = `/app/projects/view/?id=${projectId}`;
+        const notes = tagged.map((member) => ({
+          id: uid("n"),
+          title: `${note.author} tagged you`,
+          body: `${note.author} mentioned @${member.name.replace(/\s+/g, "")} on ${project.name}.`,
+          createdAt: displayNow(),
+          read: false,
+          href,
+        }));
+        set((s) => ({ notifications: [...notes, ...s.notifications] }));
+        const extras = readAccountExtras();
+        writeAccountExtras({ ...extras, notes: [...notes, ...extras.notes] });
+      }
     }
     get().pushToast("Note added");
   },

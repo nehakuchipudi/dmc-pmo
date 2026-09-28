@@ -686,6 +686,7 @@ export function CompanyDetail({ id }: { id: string }) {
             <ActivityStream
               items={activity}
               placeholder="Post to the company stream"
+              mentionPeople={team.filter((member) => member.active)}
               onPost={(text) => addActivityNote(company.id, text)}
             />
           </div>
