@@ -1710,7 +1710,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       startDate: input.startDate,
       username: input.username,
       financialVisibility: input.financialVisibility,
-      avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
+      avatarUrl: undefined,
       notifyEmail: input.notifyEmail,
       invitedAt: sendInvite ? displayNow() : input.invitedAt,
     };

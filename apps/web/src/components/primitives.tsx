@@ -38,13 +38,12 @@ export function statusTone(status: string): "success" | "warning" | "danger" | "
   return "neutral";
 }
 
-export function avatarUrlFor(seed: string) {
-  return `https://i.pravatar.cc/128?u=${encodeURIComponent(seed)}`;
+export function avatarUrlFor(_seed: string) {
+  return "";
 }
 
 export function Avatar({
   initials,
-  src,
   name,
   size = 34,
 }: {
@@ -53,29 +52,9 @@ export function Avatar({
   name?: string;
   size?: number;
 }) {
-  const photo = src || (name ? avatarUrlFor(name) : undefined);
   return (
     <span className="avatar" style={{ width: size, height: size }} title={name}>
-      {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="avatar-photo"
-          src={photo}
-          alt={name ?? initials}
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-            const parent = e.currentTarget.parentElement;
-            if (parent && !parent.querySelector("[data-fallback]")) {
-              const span = document.createElement("span");
-              span.dataset.fallback = "1";
-              span.textContent = initials;
-              parent.appendChild(span);
-            }
-          }}
-        />
-      ) : (
-        initials
-      )}
+      {initials}
     </span>
   );
 }

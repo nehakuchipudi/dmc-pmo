@@ -266,7 +266,6 @@ export function ProjectTeamPanel({
                 <div className="team-card-who">
                   <Avatar
                     initials={card.member?.initials ?? initialsFor(name)}
-                    src={card.member?.avatarUrl}
                     name={name}
                     size={40}
                   />
@@ -365,7 +364,7 @@ export function ProjectTeamPanel({
             {contributors.map((member) => (
               <div key={member.id} className="team-contributor">
                 <div className="team-card-who">
-                  <Avatar initials={member.initials} src={member.avatarUrl} name={member.name} size={32} />
+                  <Avatar initials={member.initials} name={member.name} size={32} />
                   <div>
                     <div className="team-card-name">{member.name}</div>
                     <div className="team-card-role">{member.role}</div>
@@ -511,7 +510,6 @@ export function ProjectTeamPreview({
             <div key={card.allocation.id} className={`team-preview-card is-${card.utilizationLevel}`}>
               <Avatar
                 initials={card.member?.initials ?? initialsFor(name)}
-                src={card.member?.avatarUrl}
                 name={name}
                 size={28}
               />
@@ -567,7 +565,6 @@ export function ProjectTeamRail({
             <span className={`team-dot is-${card.utilizationLevel}`} aria-hidden />
             <Avatar
               initials={card.member?.initials ?? initialsFor(name)}
-              src={card.member?.avatarUrl}
               name={name}
               size={26}
             />

@@ -73,7 +73,7 @@ export function upsertDirectoryUser(input: {
     companyId: input.companyId ?? existing?.companyId,
     entraOid: input.entraOid ?? existing?.entraOid,
     notifyEmail: input.notifyEmail ?? existing?.notifyEmail ?? true,
-    avatarUrl: existing?.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
+    avatarUrl: undefined,
   };
   const others = readDirectory().filter((u) => u.id !== next.id);
   const isSeed = seedUsers.some((u) => u.id === next.id);
