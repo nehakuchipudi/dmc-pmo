@@ -11,6 +11,11 @@ export function contactProjects(contact: Contact, projects: Project[]) {
   return companyProjects.filter((p) => linked.has(p.id));
 }
 
+export function formatPhoneDisplay(phone?: string) {
+  if (!phone) return "";
+  return phone.replace(/ /g, "\u00a0");
+}
+
 export function contactMatches(contact: Contact, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return true;

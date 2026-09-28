@@ -2332,7 +2332,35 @@ button, input, select, textarea { font: inherit; }
 .contacts-search { max-width: 280px; flex: 1 1 220px; }
 .contacts-company { max-width: 220px; }
 .contact-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.contacts-phone { white-space: nowrap; }
+.contacts-phone, .contacts-nowrap { white-space: nowrap; }
+.contacts-record { overflow: hidden; }
+.contacts-record-table { min-width: 920px; }
+.contacts-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.contacts-primary-tag {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-fog);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.contacts-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+.contacts-record-actions .btn { white-space: nowrap; }
 .contact-overview { display: grid; gap: 14px; }
 
 .activity-stream { display: grid; gap: 14px; }

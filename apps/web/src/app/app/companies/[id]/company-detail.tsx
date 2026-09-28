@@ -22,6 +22,7 @@ import {
   TextSelect,
 } from "@/components/ui";
 import { COMPANY_KINDS, companyKindOf } from "@/lib/cip";
+import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
@@ -693,13 +694,14 @@ export function CompanyDetail({ id }: { id: string }) {
         )}
 
         {tab === "Contacts" && (
-          <div className="panel overflow-hidden">
+          <div className="panel contacts-record">
             <div className="flex justify-end p-3">
               <button type="button" className="btn btn-primary" onClick={() => setCreateKind("contact")}>
                 + Contact
               </button>
             </div>
-            <table className="table">
+            <div className="table-wrap">
+            <table className="table contacts-record-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -707,45 +709,45 @@ export function CompanyDetail({ id }: { id: string }) {
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Portal</th>
-                  <th />
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {companyContacts.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-medium">
-                      <Link href={`/app/contacts/view/?id=${c.id}`} className="text-[var(--color-navy)]">
-                        {c.name}
-                      </Link>
-                      {primary?.id === c.id ? <span className="ml-2 text-xs text-[var(--color-muted)]">Primary</span> : null}
-                    </td>
-                    <td>{c.title}</td>
                     <td>
+                      <div className="contacts-name-cell">
+                        <Link href={`/app/contacts/view/?id=${c.id}`} className="font-medium text-[var(--color-navy)]">
+                          {c.name}
+                        </Link>
+                        {primary?.id === c.id ? <span className="contacts-primary-tag">Primary</span> : null}
+                      </div>
+                    </td>
+                    <td className="contacts-nowrap">{c.title}</td>
+                    <td className="contacts-nowrap">
                       <a href={`mailto:${c.email}`} className="text-[var(--color-navy)]">
                         {c.email}
                       </a>
                     </td>
-                    <td>
+                    <td className="contacts-phone">
                       {c.phone ? (
                         <a href={`tel:${c.phone.replace(/\s+/g, "")}`} className="text-[var(--color-navy)]">
-                          {c.phone}
+                          {formatPhoneDisplay(c.phone)}
                         </a>
                       ) : (
                         "None"
                       )}
                     </td>
-                    <td>
+                    <td className="contacts-nowrap">
                       <TonePill value={c.portal} />
                     </td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <ContactActions contact={c} compact />
-                        {primary?.id === c.id ? null : (
-                          <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
-                            Set primary
-                          </button>
-                        )}
-                      </div>
+                    <td className="contacts-record-actions">
+                      <ContactActions contact={c} compact />
+                      {primary?.id === c.id ? null : (
+                        <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
+                          Set primary
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -758,6 +760,7 @@ export function CompanyDetail({ id }: { id: string }) {
                 ) : null}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

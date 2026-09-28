@@ -7,7 +7,7 @@ import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { Avatar, FilterChips, PageHeader, SideRail, StatusPill, statusTone } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
-import { contactMatches, isPrimaryContact } from "@/lib/contacts";
+import { contactMatches, formatPhoneDisplay, isPrimaryContact } from "@/lib/contacts";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 
@@ -144,7 +144,7 @@ export default function ContactsPage() {
                     </td>
                     <td>{c.title}</td>
                     <td className="text-[var(--color-muted)]">{c.email}</td>
-                    <td className="contacts-phone text-[var(--color-muted)]">{c.phone || "None"}</td>
+                    <td className="contacts-phone text-[var(--color-muted)]">{c.phone ? formatPhoneDisplay(c.phone) : "None"}</td>
                     <td>
                       <StatusPill tone={statusTone(c.portal)}>{c.portal}</StatusPill>
                     </td>
