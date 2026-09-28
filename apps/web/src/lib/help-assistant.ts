@@ -2,6 +2,7 @@ import { can, type Capability } from "./rbac";
 import type { Role } from "./types";
 import { HELP_ARTICLES, ROLE_HELP, type HelpArticle, type HelpAudience } from "./help-guide";
 import { roleLabel } from "./help-labels";
+import { answerProductKnowledge, askAiCapabilityText, fallbackProductAnswer } from "./product-knowledge";
 
 export type HelpChatRole = "user" | "assistant";
 
@@ -149,15 +150,14 @@ function roleAnswer(role: Role | undefined | null, query: string): HelpAnswer | 
 }
 
 function greeting(role?: Role | null): HelpAnswer {
-  const who = role ? ` You are signed in as ${roleLabel(role)}.` : "";
   return {
-    text: `I am the DMC PMO guide. Ask how a module works, or tell me to change a record and I will do it when your role allows.${who}`,
+    text: askAiCapabilityText(role),
     hrefs: [],
     starters: [
+      "How do Strategy, Ideas, Portfolios, and Projects connect?",
       "Set warehouse to On Hold and add a Go-live milestone",
-      "How do I create an invoice?",
+      "What is the status of Downtown Sidewalk Connector?",
       "What can my role do?",
-      "Explain the project workspace",
     ],
   };
 }
@@ -188,18 +188,25 @@ export function answerHelpQuestion(
     }))
     .sort((a, b) => b.score - a.score);
 
+  const knowledge = audience === "portal" ? null : answerProductKnowledge(rawQuestion, { role });
+  if (knowledge?.topicId === "ppm-chain" && /connect|relation|between|flow|align|chain/.test(raw)) {
+    return { text: knowledge.text, hrefs: knowledge.hrefs, articleId: "strategy", starters: knowledge.starters };
+  }
+  if (knowledge?.topicId === "ask-ai" && /what can you do|ask ai|workspace ai/.test(raw)) {
+    return { text: knowledge.text, hrefs: knowledge.hrefs, articleId: "workspace-ai", starters: knowledge.starters };
+  }
   const best = ranked[0];
   if (!best || best.score < 4) {
+    if (knowledge) {
+      return {
+        text: knowledge.text,
+        hrefs: knowledge.hrefs,
+        articleId: knowledge.topicId,
+        starters: knowledge.starters,
+      };
+    }
     if (roleHit) return roleHit;
-    const open = visibleArticles(audience, role)
-      .slice(0, 6)
-      .map((article) => article.title)
-      .join(", ");
-    return {
-      text: `I did not find that exact topic. Try naming a module such as Projects, Timesheets, Billing, Ideas, or Users and roles. You can open ${open || "Home"} from the left nav.`,
-      hrefs: [{ href: audience === "portal" ? "/portal" : "/app/home", label: audience === "portal" ? "Open portal" : "Open Home" }],
-      starters: ["Explain Home", "How do I create a project?", "What can my role do?"],
-    };
+    return fallbackProductAnswer(role);
   }
 
   const extras = ranked

@@ -107,10 +107,13 @@ export interface AgentProject {
   status: ProjectStatus;
   companyId: string;
   companyName: string;
+  manager?: string;
 }
 
 export interface AgentCompany extends AgentNamed {
   status: string;
+  primaryContactId?: string;
+  accountManager?: string;
 }
 
 export interface AgentPerson {
@@ -149,7 +152,7 @@ export interface AgentContext {
   actorEmail?: string;
   projects: AgentProject[];
   companies: AgentCompany[];
-  contacts: AgentNamed[];
+  contacts: (AgentNamed & { title?: string; email?: string; companyId?: string; companyName?: string })[];
   tasks: (AgentNamed & { projectId: string; assignee: string; status: TaskStatus })[];
   milestones: (AgentNamed & { projectId: string })[];
   tickets: (AgentNamed & { id: string; subject: string; companyId: string; assignee: string; status: TicketStatus })[];
@@ -285,8 +288,11 @@ export interface WorkspaceRunner {
 const ACTION_HINT =
   /\b(update|change|set|move|mark|make|add|create|log|raise|open|put|please|can you|could you|delete|remove|assign|email|mail|draft|send|approve|reject|pay|convert|advance|link|unlink|deactivate|record|generate|rename|retitle|name|call|close|submit|run|edit)\b/;
 const QUESTION_HINT = /^(how|what|where|why|explain|tell me|who)\b/;
+const HOW_TO_HINT = /^how\s+(do|can|does|to|should|would|is)\b/;
+const LOOKUP_HINT =
+  /\b(what is|what's|whats|which|who is|who's|where is|how many|list|show me|find|status of|tell me about|summarize|overview of|what's going on|what are|who are)\b/;
 const MODULE_HINT =
-  /\b(compan(?:y|ies)|contacts?|projects?|tickets?|tasks?|milestones?|phases?|invoices?|expenses?|retainers?|ideas?|portfolios?|objectives?|risks?|issues?|dependencies|gates?|users?|members?|emails?|notes?|timesheets?|hours?|opportunit(?:y|ies)|signoffs?|status|automations?)\b/;
+  /\b(compan(?:y|ies)|contacts?|projects?|tickets?|tasks?|milestones?|phases?|invoices?|expenses?|retainers?|ideas?|portfolios?|objectives?|risks?|issues?|dependencies|gates?|users?|members?|emails?|notes?|timesheets?|hours?|opportunit(?:y|ies)|signoffs?|status|automations?|billing|sales|strategy|plan|schedule)\b/;
 
 const STATUS_ALIASES: { match: RegExp; status: ProjectStatus }[] = [
   { match: /\bat\s+risk\b|\brisk\b|\boverdue\b/, status: "At Risk" },
@@ -405,6 +411,15 @@ const NAME_STOP = new Set([
   "invoice",
   "called",
   "named",
+  "primary",
+  "about",
+  "does",
+  "many",
+  "have",
+  "open",
+  "live",
+  "which",
+  "what",
 ]);
 
 export function scoreName(name: string, query: string) {
@@ -710,6 +725,49 @@ function extractEmail(raw: string, people: AgentPerson[]): { to?: string; subjec
   };
 }
 
+function namedPools(ctx?: Pick<AgentContext, "projects" | "companies" | "contacts" | "people" | "ideas" | "invoices" | "tickets">) {
+  if (!ctx) return [];
+  return [
+    ...(ctx.projects ?? []),
+    ...(ctx.companies ?? []),
+    ...(ctx.contacts ?? []),
+    ...(ctx.people ?? []),
+    ...(ctx.ideas ?? []),
+    ...(ctx.invoices ?? []),
+    ...(ctx.tickets ?? []),
+  ];
+}
+
+export function mentionsNamedRecord(
+  raw: string,
+  ctx?: Pick<AgentContext, "projects" | "companies" | "contacts" | "people" | "ideas" | "invoices" | "tickets">,
+) {
+  return namedPools(ctx).some((item) => scoreName(item.name, raw) >= 16);
+}
+
+export function looksLikeWorkspaceLookup(
+  raw: string,
+  ctx?: Pick<AgentContext, "projects" | "companies" | "contacts" | "people" | "ideas" | "invoices" | "tickets">,
+): boolean {
+  const text = raw.trim().toLowerCase();
+  if (!text) return false;
+  if (HOW_TO_HINT.test(text) && !LOOKUP_HINT.test(text)) return false;
+  if (/^explain\b/.test(text) && !mentionsNamedRecord(text, ctx)) return false;
+  if (LOOKUP_HINT.test(text) && (MODULE_HINT.test(text) || mentionsNamedRecord(text, ctx))) return true;
+  if (mentionsNamedRecord(text, ctx) && /\b(status|owner|contact|team|budget|due|progress|tickets?|invoices?|primary)\b/.test(text)) {
+    return true;
+  }
+  return false;
+}
+
+export function looksLikeWorkspaceRequest(
+  raw: string,
+  pending?: AgentPending,
+  ctx?: Pick<AgentContext, "projects" | "companies" | "contacts" | "people" | "ideas" | "invoices" | "tickets">,
+): boolean {
+  return looksLikeWorkspaceAction(raw, pending) || looksLikeWorkspaceLookup(raw, ctx);
+}
+
 export function looksLikeWorkspaceAction(raw: string, pending?: AgentPending): boolean {
   const text = raw.trim().toLowerCase();
   if (!text) return false;
@@ -747,8 +805,10 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
   const isRename = /\b(rename|retitle|name it|call it)\b/.test(lower) || /\bname\s+(?:the|this|it)\b/.test(lower);
   const wantsRandomNames = /\brandom\b/.test(lower) || /\bany\s+(?:name|names)\b/.test(lower);
 
+  const isLookupQuestion = HOW_TO_HINT.test(lower) || /^(what|who|where|which|how many)\b/.test(lower);
   const wantsStatus =
     !isEmail &&
+    !isLookupQuestion &&
     (/\bstatus\b/.test(lower) || /\b(set|move|mark|make)\b.+\b(active|hold|risk|draft|planning|complete|cancel)/.test(lower));
   if (wantsStatus && !/\btask\b/.test(lower) && !/\bticket\b/.test(lower) && !/\binvoice\b/.test(lower)) {
     intents.push({ type: "set_status", projectQuery, status: parseStatus(lower) });
@@ -1210,11 +1270,166 @@ function emptyLists(ctx: AgentContext): AgentContext {
   };
 }
 
+function hrefForLookup(kind: "project" | "company" | "contact" | "ticket" | "invoice" | "idea" | "objective" | "portfolio", id: string) {
+  const routes = {
+    project: `/app/projects/view/?id=${id}`,
+    company: `/app/companies/view/?id=${id}`,
+    contact: `/app/contacts/view/?id=${id}`,
+    ticket: `/app/tickets/view/?id=${id}`,
+    invoice: `/app/billing/view/?id=${id}`,
+    idea: `/app/ideas/view/?id=${id}`,
+    objective: `/app/strategy/view/?id=${id}`,
+    portfolio: `/app/portfolios/view/?id=${id}`,
+  };
+  return routes[kind];
+}
+
+export function answerWorkspaceLookup(raw: string, rawCtx: AgentContext): AgentAnswer {
+  const ctx = emptyLists(rawCtx);
+  const text = raw.toLowerCase();
+  const hrefs: { href: string; label: string }[] = [];
+  const lines: string[] = [];
+  const project = resolveProject(extractProjectQuery(text, ctx.projects) ?? raw, ctx);
+  const company = resolveNamed(extractCompanyQuery(text, ctx.companies) ?? raw, ctx.companies);
+  const contact = resolveNamed(raw, ctx.contacts);
+  const person = extractPerson(raw, ctx.people);
+  const idea = resolveNamed(raw, ctx.ideas);
+  const invoice = resolveNamed(raw, ctx.invoices);
+  const ticket = resolveNamed(raw, ctx.tickets);
+  const wantsCount = /\bhow many\b/.test(text);
+  const wantsList = /\b(list|show|what are|which)\b/.test(text);
+
+  const scopedCompany = company ?? (project ? ctx.companies.find((row) => row.id === project.companyId) : undefined);
+  const scopedProjects = scopedCompany ? ctx.projects.filter((row) => row.companyId === scopedCompany.id) : ctx.projects;
+  const scopedContacts = scopedCompany ? ctx.contacts.filter((row) => row.companyId === scopedCompany.id) : ctx.contacts;
+  const scopedInvoices = scopedCompany ? ctx.invoices.filter((row) => row.companyId === scopedCompany.id) : ctx.invoices;
+  const scopedTickets = scopedCompany ? ctx.tickets.filter((row) => row.companyId === scopedCompany.id) : ctx.tickets;
+
+  if (wantsCount && /\bprojects?\b/.test(text)) {
+    const open = scopedProjects.filter((row) => row.status !== "Completed" && row.status !== "Cancelled");
+    lines.push(
+      scopedCompany
+        ? `${scopedCompany.name} has ${scopedProjects.length} projects, ${open.length} open.`
+        : `The workspace has ${ctx.projects.length} projects, ${open.length} open.`,
+    );
+  }
+  if (wantsCount && /\b(contacts?|people)\b/.test(text)) {
+    lines.push(
+      scopedCompany
+        ? `${scopedCompany.name} has ${scopedContacts.length} contacts.`
+        : `The workspace has ${ctx.contacts.length} contacts.`,
+    );
+  }
+  if (wantsCount && /\btickets?\b/.test(text)) {
+    const open = scopedTickets.filter((row) => row.status !== "Resolved");
+    lines.push(
+      scopedCompany
+        ? `${scopedCompany.name} has ${open.length} open tickets.`
+        : `The workspace has ${open.length} open tickets.`,
+    );
+  }
+  if (wantsCount && /\binvoices?\b/.test(text)) {
+    const overdue = scopedInvoices.filter((row) => row.status === "Overdue");
+    lines.push(
+      scopedCompany
+        ? `${scopedCompany.name} has ${scopedInvoices.length} invoices, ${overdue.length} overdue.`
+        : `The workspace has ${scopedInvoices.length} invoices, ${overdue.length} overdue.`,
+    );
+  }
+  if ((wantsList || wantsCount) && /\bprojects?\b/.test(text) && scopedProjects.length) {
+    lines.push(
+      `Projects${scopedCompany ? ` at ${scopedCompany.name}` : ""}: ${scopedProjects
+        .slice(0, 8)
+        .map((row) => `${row.name} (${row.status})`)
+        .join(", ")}.`,
+    );
+    scopedProjects.slice(0, 3).forEach((row) => hrefs.push({ href: hrefForLookup("project", row.id), label: row.name }));
+  }
+  if (wantsList && /\b(contacts?|people)\b/.test(text) && scopedContacts.length) {
+    lines.push(
+      `Contacts${scopedCompany ? ` at ${scopedCompany.name}` : ""}: ${scopedContacts
+        .slice(0, 8)
+        .map((row) => row.name)
+        .join(", ")}.`,
+    );
+  }
+  if (wantsList && /\binvoices?\b/.test(text) && scopedInvoices.length) {
+    const rows = /\boverdue\b/.test(text) ? scopedInvoices.filter((row) => row.status === "Overdue") : scopedInvoices;
+    lines.push(`Invoices: ${rows.slice(0, 8).map((row) => `${row.number} (${row.status})`).join(", ") || "none"}.`);
+  }
+
+  if (project) {
+    const tasks = ctx.tasks.filter((row) => row.projectId === project.id);
+    const openTasks = tasks.filter((row) => row.status !== "Done");
+    const team = ctx.allocations.filter((row) => row.projectId === project.id).map((row) => row.memberName);
+    lines.push(
+      `${project.name} is ${project.status} at ${project.companyName}${project.manager ? `, managed by ${project.manager}` : ""}. ${openTasks.length} open tasks${team.length ? `, team ${team.join(", ")}` : ""}.`,
+    );
+    hrefs.push({ href: hrefForLookup("project", project.id), label: `Open ${project.name}` });
+  }
+
+  if (scopedCompany && (company || /\b(compan|primary|contact|rowlett|client)\b/.test(text))) {
+    const primary = scopedCompany.primaryContactId
+      ? ctx.contacts.find((row) => row.id === scopedCompany.primaryContactId)
+      : scopedContacts[0];
+    lines.push(
+      `${scopedCompany.name} is ${scopedCompany.status}${scopedCompany.accountManager ? `, account manager ${scopedCompany.accountManager}` : ""}. ${scopedProjects.length} projects, ${scopedContacts.length} contacts${primary ? `, primary ${primary.name}` : ""}.`,
+    );
+    hrefs.push({ href: hrefForLookup("company", scopedCompany.id), label: `Open ${scopedCompany.name}` });
+  }
+
+  if (contact) {
+    lines.push(
+      `${contact.name}${contact.title ? `, ${contact.title}` : ""}${contact.companyName ? ` at ${contact.companyName}` : ""}${contact.email ? `, ${contact.email}` : ""}.`,
+    );
+    hrefs.push({ href: hrefForLookup("contact", contact.id), label: `Open ${contact.name}` });
+  } else if (person) {
+    lines.push(`${person.name} (${person.kind}) ${person.email}.`);
+  }
+
+  if (idea) {
+    lines.push(`${idea.name} is an idea in demand intake. Advance it, then convert it to a project when approved.`);
+    hrefs.push({ href: hrefForLookup("idea", idea.id), label: `Open ${idea.name}` });
+  }
+  if (invoice) {
+    const host = ctx.companies.find((row) => row.id === invoice.companyId);
+    lines.push(`${invoice.number} is ${invoice.status}${host ? ` for ${host.name}` : ""}.`);
+    hrefs.push({ href: hrefForLookup("invoice", invoice.id), label: invoice.number });
+  }
+  if (ticket) {
+    lines.push(`${ticket.subject} is ${ticket.status}, assigned to ${ticket.assignee}.`);
+    hrefs.push({ href: hrefForLookup("ticket", ticket.id), label: ticket.subject });
+  }
+
+  const uniqueLines = [...new Set(lines)];
+  const uniqueHrefs = hrefs.filter((link, index) => hrefs.findIndex((row) => row.href === link.href) === index);
+  if (!uniqueLines.length) {
+    return {
+      handled: true,
+      text: "I could not match that to a workspace record. Name a company, project, contact, ticket, invoice, or idea, or tell me to create or update one.",
+      hrefs: ctx.projects.slice(0, 3).map((row) => ({ href: hrefForLookup("project", row.id), label: row.name })),
+      starters: workspaceStarters(ctx.role),
+    };
+  }
+
+  return {
+    handled: true,
+    text: uniqueLines.join("\n\n"),
+    hrefs: uniqueHrefs.slice(0, 6),
+    starters: [
+      project ? `Set ${project.name} to On Hold` : "What projects are open?",
+      scopedCompany ? `List contacts at ${scopedCompany.name}` : "How many open tickets?",
+      "Create a task on that project",
+    ],
+  };
+}
+
 export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: WorkspaceRunner): AgentAnswer {
   const ctx = emptyLists(rawCtx);
   const incoming = parseWorkspaceIntents(raw, ctx);
   const intents = mergePending(ctx.pending, incoming, raw, ctx);
   if (!intents.length) {
+    if (looksLikeWorkspaceLookup(raw, ctx)) return answerWorkspaceLookup(raw, ctx);
     return { handled: false, text: "", hrefs: [], starters: [] };
   }
 
@@ -1994,10 +2209,10 @@ export function workspaceStarters(role?: Role | null): string[] {
   if (role === "finance") return ["Draft an invoice for Cascade", "Approve the pending expense", "Email billing@client.com about INV-2291"];
   if (role === "client") return ["How do I raise a ticket?", "Where are my invoices?"];
   return [
+    "How do Strategy, Ideas, Portfolios, and Projects connect?",
+    "What is the status of Downtown Sidewalk Connector?",
     "Set warehouse to On Hold and add a Go-live milestone",
     "Create a company called Northwind and add a contact Dana",
-    "Draft an email to Dana Kessler about warehouse status",
-    "Assign S. Cho to the warehouse project team",
   ];
 }
 

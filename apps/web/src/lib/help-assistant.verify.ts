@@ -28,7 +28,16 @@ const portal = answerHelpQuestion("How do I raise a ticket?", [], { role: "clien
 assert.equal(portal.articleId, "portal-tickets");
 
 const miss = answerHelpQuestion("what is the weather in paris", [], { role: "pm" });
-assert.match(miss.text, /did not find/i);
+assert.match(miss.text, /DMC PMO/i);
+assert.doesNotMatch(miss.text, /did not find/i);
+
+const chain = answerHelpQuestion("How do Strategy, Ideas, Portfolios, and Projects connect?", [], { role: "admin" });
+assert.match(chain.text, /Strategy sets the objective/i);
+assert.match(chain.text, /Ideas capture demand/i);
+assert.match(chain.text, /Portfolios fund/i);
+
+const canDo = answerHelpQuestion("What can you do?", [], { role: "admin" });
+assert.match(canDo.text, /Ask AI/i);
 
 assert.ok(helpStarters("finance").some((item) => /invoice/i.test(item)));
 assert.ok(helpStarters("client").some((item) => /ticket/i.test(item)));
