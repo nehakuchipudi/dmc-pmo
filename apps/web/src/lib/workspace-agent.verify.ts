@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { DEFAULT_PROJECT_WORKFLOW } from "./project-lifecycle";
 import {
   looksLikeWorkspaceAction,
+  looksLikeWorkspaceLookup,
+  looksLikeWorkspaceRequest,
   parseStatus,
   parseWorkspaceIntents,
   resolveProject,
@@ -124,6 +126,10 @@ function mockRunner() {
 
 assert.equal(parseStatus("set it to on hold"), "On Hold");
 assert.equal(looksLikeWorkspaceAction("How do I update project status?"), false);
+assert.equal(looksLikeWorkspaceLookup("How do I update project status?"), false);
+assert.equal(looksLikeWorkspaceLookup("what is the status of warehouse", ctx), true);
+assert.equal(looksLikeWorkspaceLookup("how many projects does Cascade have", ctx), true);
+assert.equal(looksLikeWorkspaceRequest("what is the status of warehouse", undefined, ctx), true);
 assert.equal(looksLikeWorkspaceAction("Set warehouse to Active"), true);
 assert.equal(looksLikeWorkspaceAction("please update the project status and add a new milestone for me"), true);
 assert.equal(looksLikeWorkspaceAction("Draft an email to Dana Kessler about warehouse"), true);
@@ -293,5 +299,58 @@ assert.match(filledDone.text, /Q4 Rollout/);
 const northwind = mockRunner();
 runWorkspaceAgent("Create a company called Northwind", ctx, northwind.runner);
 assert.ok(northwind.calls.includes("company:Northwind"));
+
+const statusAsk = runWorkspaceAgent("what is the status of warehouse", ctx, stubRunner());
+assert.equal(statusAsk.handled, true);
+assert.match(statusAsk.text, /Q3 Warehouse Rollout/);
+assert.match(statusAsk.text, /Active/);
+assert.equal(statusAsk.text.includes("I set"), false);
+
+const countAsk = runWorkspaceAgent("how many projects does Cascade have", ctx, stubRunner());
+assert.match(countAsk.text, /2 projects/);
+
+const whoAsk = runWorkspaceAgent("who is Dana Kessler", ctx, stubRunner());
+assert.match(whoAsk.text, /Dana Kessler/);
+
+const rowlettCtx: AgentContext = {
+  ...ctx,
+  companies: [
+    ...ctx.companies,
+    {
+      id: "c-rowlett",
+      name: "City of Rowlett Public Works",
+      status: "Active",
+      primaryContactId: "ct-rowlett-sponsor",
+      accountManager: "A. Chen",
+    },
+  ],
+  contacts: [
+    ...ctx.contacts,
+    {
+      id: "ct-rowlett-sponsor",
+      name: "Public Works Director",
+      title: "Project Sponsor",
+      email: "pw.director@rowletttx.gov",
+      companyId: "c-rowlett",
+      companyName: "City of Rowlett Public Works",
+    },
+  ],
+  projects: [
+    ...ctx.projects,
+    {
+      id: "p-sidewalk",
+      name: "Downtown Sidewalk Connector",
+      status: "Active",
+      companyId: "c-rowlett",
+      companyName: "City of Rowlett Public Works",
+      manager: "A. Chen",
+    },
+  ],
+};
+const sidewalk = runWorkspaceAgent("What is the status of Downtown Sidewalk Connector", rowlettCtx, stubRunner());
+assert.match(sidewalk.text, /Downtown Sidewalk Connector/);
+assert.match(sidewalk.text, /Active/);
+const rowlett = runWorkspaceAgent("Who is the primary contact for Rowlett", rowlettCtx, stubRunner());
+assert.match(rowlett.text, /Public Works Director/);
 
 console.log("workspace-agent.verify ok");

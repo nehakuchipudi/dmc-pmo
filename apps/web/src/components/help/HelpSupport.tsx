@@ -9,7 +9,7 @@ import { roleLabel, useAuth } from "@/lib/auth";
 import { answerHelpQuestion, helpStarters, type HelpChatMessage } from "@/lib/help-assistant";
 import { HELP_GROUPS, articlesForAudience, type HelpAudience } from "@/lib/help-guide";
 import { useAppStore } from "@/lib/store";
-import { looksLikeWorkspaceAction, runWorkspaceAgent, workspaceStarters, type AgentProject } from "@/lib/workspace-agent";
+import { looksLikeWorkspaceRequest, runWorkspaceAgent, workspaceStarters, type AgentProject } from "@/lib/workspace-agent";
 
 function uid() {
   return `h-${Math.random().toString(36).slice(2, 10)}`;
@@ -94,15 +94,76 @@ export function HelpSupport({
     setBusy(true);
     window.setTimeout(() => {
       const pending = [...next].reverse().find((message) => message.pending)?.pending;
-      if (audience === "internal" && looksLikeWorkspaceAction(question, pending)) {
+      if (audience === "internal") {
         const store = useAppStore.getState();
         const projects: AgentProject[] = store.projects.map((project) => ({
           id: project.id,
           name: project.name,
           status: project.status,
           companyId: project.companyId,
-          companyName: store.companies.find((company) => company.id === project.companyId)?.name ?? project.companyId,
+          companyName: store.companies.find((company) => company.id === project.companyId)?.name ?? project.companyName ?? project.companyId,
+          manager: project.manager,
         }));
+        const lookupCtx = {
+          projects,
+          companies: store.companies.map((company) => ({
+            id: company.id,
+            name: company.name,
+            status: company.status,
+            primaryContactId: company.primaryContactId,
+            accountManager: company.accountManager,
+          })),
+          contacts: store.contacts.map((contact) => ({
+            id: contact.id,
+            name: contact.name,
+            title: contact.title,
+            email: contact.email,
+            companyId: contact.companyId,
+            companyName: contact.companyName,
+          })),
+          people: [
+            ...store.team.map((row) => ({ id: row.id, name: row.name, email: row.email, kind: "team" as const })),
+            ...store.contacts.map((row) => ({
+              id: row.id,
+              name: row.name,
+              email: row.email,
+              kind: "contact" as const,
+              companyId: row.companyId,
+            })),
+          ],
+          ideas: store.ideas.map((idea) => ({ id: idea.id, name: idea.name })),
+          invoices: store.invoices.map((invoice) => ({
+            id: invoice.id,
+            name: invoice.title ?? invoice.number,
+            number: invoice.number,
+            companyId: invoice.companyId,
+            status: invoice.status,
+          })),
+          tickets: store.tickets.map((ticket) => ({
+            id: ticket.id,
+            name: ticket.subject,
+            subject: ticket.subject,
+            companyId: ticket.companyId,
+            assignee: ticket.assignee,
+            status: ticket.status,
+          })),
+        };
+        if (!looksLikeWorkspaceRequest(question, pending, lookupCtx)) {
+          const answer = answerHelpQuestion(question, next, { role: user?.role, audience });
+          setMessages([
+            ...next,
+            {
+              id: uid(),
+              role: "assistant",
+              text: answer.text,
+              hrefs: answer.hrefs,
+              articleId: answer.articleId,
+              starters: answer.starters,
+            },
+          ]);
+          setBusy(false);
+          return;
+        }
         const routeId = pathname.includes("/projects/view") ? searchParams.get("id") : null;
         const lastProjectId =
           pending?.lastProjectId ??
@@ -116,8 +177,8 @@ export function HelpSupport({
             actorName: user?.name ?? "Staff",
             actorEmail: user?.email,
             projects,
-            companies: store.companies.map((company) => ({ id: company.id, name: company.name, status: company.status })),
-            contacts: store.contacts.map((contact) => ({ id: contact.id, name: contact.name })),
+            companies: lookupCtx.companies,
+            contacts: lookupCtx.contacts,
             tasks: store.tasks.map((task) => ({
               id: task.id,
               name: task.name,
@@ -412,7 +473,7 @@ export function HelpSupport({
                 className="field-input"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Create, update, delete, assign, or email any record..."
+                placeholder="Ask how the tool works, look up a record, or tell me to change one..."
               />
               <button type="submit" className="btn btn-primary" disabled={busy || !draft.trim()} aria-label="Send">
                 <Send size={16} />
