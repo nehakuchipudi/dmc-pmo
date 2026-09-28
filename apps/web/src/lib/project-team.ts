@@ -2,6 +2,7 @@ import type { ResourceAllocation, Task, TeamMember, TimeEntry } from "./types";
 import { allocationByMember } from "./ppm";
 
 export const PROJECT_ROLES = [
+  "Owner",
   "Project Manager",
   "Tech Lead",
   "Developer",

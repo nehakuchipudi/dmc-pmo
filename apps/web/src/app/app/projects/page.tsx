@@ -88,7 +88,7 @@ export default function ProjectsPage() {
             <tr>
               <th>Project</th>
               <th>Company</th>
-              <th>Manager</th>
+              <th>Owner</th>
               <th>Progress</th>
               <th>Status</th>
               <th>Due</th>
@@ -234,7 +234,7 @@ export default function ProjectsPage() {
                 ))}
               </TextSelect>
             </Field>
-            <Field label="Manager">
+            <Field label="Owner">
               <TextInput name="manager" defaultValue={editing.manager} />
             </Field>
             <Field label="Status">

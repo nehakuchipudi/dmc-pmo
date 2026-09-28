@@ -90,7 +90,7 @@ function mockRunner() {
       return "ct-new";
     },
     addProjectMember: (input) => {
-      calls.push(`member:${input.projectId}:${input.memberId}`);
+      calls.push(`member:${input.projectId}:${input.memberId}:${input.projectRole}`);
       return "al-new";
     },
     queueEmail: (to, subject, _body, status) => {
@@ -189,6 +189,12 @@ runWorkspaceAgent("Assign S. Cho to the warehouse project team", {
   people: [...ctx.people, { id: "tm-sc", name: "S. Cho", email: "scho@dillonmorgan.com", kind: "team" }],
 }, cho.runner);
 assert.ok(cho.calls.some((row) => row.startsWith("member:p-warehouse:tm-sc")));
+
+const ownerAssign = parseWorkspaceIntents("assign J. Kim as owner on the warehouse project team", ctx);
+assert.equal(ownerAssign.find((intent) => intent.type === "assign_member")?.projectRole, "Owner");
+const ownerRun = mockRunner();
+runWorkspaceAgent("assign J. Kim as owner on the warehouse project team", ctx, ownerRun.runner);
+assert.ok(ownerRun.calls.some((row) => row === "member:p-warehouse:tm-jk:Owner"));
 
 const removed = mockRunner();
 runWorkspaceAgent("Delete the Review signoff task", ctx, removed.runner);

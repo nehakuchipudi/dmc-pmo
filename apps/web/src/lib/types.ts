@@ -313,6 +313,7 @@ export interface TeamMember {
   startDate?: string;
   username?: string;
   financialVisibility?: FinancialVisibility;
+  notifyEmail?: boolean;
 }
 
 export interface ProjectRate {

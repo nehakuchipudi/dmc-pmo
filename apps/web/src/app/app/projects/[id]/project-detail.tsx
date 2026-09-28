@@ -307,7 +307,7 @@ export function ProjectDetail({ id }: { id: string }) {
           <>
             <TonePill value={project.status} />
             <TonePill value={health} />
-            <span>PM {project.manager}</span>
+            <span>Owner {project.manager}</span>
             <span>{project.companyName}</span>
             <span>{project.projectType}</span>
             <span>
@@ -396,7 +396,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     </Link>
                   </RecordFact>
                 ) : null}
-                <RecordFact label="Manager">{project.manager}</RecordFact>
+                <RecordFact label="Owner">{project.manager}</RecordFact>
                 <RecordFact label="Type">{project.projectType}</RecordFact>
                 {project.requestId ? <RecordFact label="Request">{project.requestId}</RecordFact> : null}
                 {project.location ? <RecordFact label="Location">{project.location}</RecordFact> : null}
@@ -445,7 +445,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   <div className="text-sm font-medium">{project.companyName}</div>
                 </div>
                 <div>
-                  <div className="metric-label">Project manager</div>
+                  <div className="metric-label">Owner</div>
                   <div className="text-sm font-medium">{project.manager}</div>
                 </div>
                 <div>
@@ -1183,7 +1183,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   <div className="text-sm font-medium">{project.projectType}</div>
                 </div>
                 <div>
-                  <div className="metric-label">Manager</div>
+                  <div className="metric-label">Owner</div>
                   <div className="text-sm font-medium">{project.manager}</div>
                 </div>
                 <div>
@@ -1294,7 +1294,7 @@ export function ProjectDetail({ id }: { id: string }) {
               ))}
             </TextSelect>
           </Field>
-          <Field label="Manager">
+          <Field label="Owner">
             <TextInput name="manager" defaultValue={project.manager} />
           </Field>
           <Field label="Type">

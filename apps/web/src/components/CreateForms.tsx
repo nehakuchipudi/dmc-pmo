@@ -449,17 +449,32 @@ function ProjectForm({
 }: {
   companies: { id: string; name: string }[];
   defaultCompanyId?: string;
-  onSubmit: (v: { name: string; companyId: string; manager: string; due: string; budgetHours: number }) => void;
+  onSubmit: (v: { name: string; companyId: string; manager: string; ownerEmail?: string; due: string; budgetHours: number }) => void;
 }) {
+  const { user } = useAuth();
+  const team = useAppStore((s) => s.team).filter((member) => member.active);
+  const preferred =
+    team.find((member) => member.email.toLowerCase() === user?.email?.toLowerCase()) ??
+    team.find((member) => member.name === user?.name) ??
+    team[0];
   const [name, setName] = useState("");
   const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
+  const [ownerId, setOwnerId] = useState(preferred?.id ?? "");
   const [due, setDue] = useState("2026-09-30");
+  const owner = team.find((member) => member.id === ownerId) ?? preferred;
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onSubmit({ name: name.trim(), companyId, manager: "M. Doyle", due, budgetHours: 120 });
+        onSubmit({
+          name: name.trim(),
+          companyId,
+          manager: owner?.name ?? user?.name ?? "Unassigned",
+          ownerEmail: owner?.email,
+          due,
+          budgetHours: 120,
+        });
       }}
     >
       <Field label="Project name">
@@ -474,6 +489,18 @@ function ProjectForm({
           ))}
         </TextSelect>
       </Field>
+      <Field label="Owner">
+        <TextSelect value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          {team.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name} ({member.email})
+            </option>
+          ))}
+        </TextSelect>
+      </Field>
+      <p className="mb-3 text-xs text-[var(--color-muted)]">
+        We email the owner at {owner?.email || "their address"} as soon as the project is created.
+      </p>
       <Field label="Due date">
         <TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </Field>
