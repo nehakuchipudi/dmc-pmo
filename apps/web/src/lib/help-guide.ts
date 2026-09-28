@@ -117,7 +117,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Projects is the delivery workspace. Each project has overview, team, schedule, insights, tasks, activity, files, expenses, rates, billing, assets, and details.",
     steps: [
       "Open Projects and filter All open, My projects, At risk, or Recently created.",
-      "Click a project name to open the workspace.",
+      "Click a project name to open the workspace. On Activity, type @ to tag a teammate such as @A.Chen.",
       "Use New project from the list, Create (+), or a company page.",
       "Change lifecycle status from the project header if your role is allowed.",
       "Row actions can edit, duplicate, generate an invoice, email an update, or delete, based on role.",
@@ -137,6 +137,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     steps: [
       "Open a project and choose Schedule.",
       "Add a phase or group, then add tasks under it.",
+      "In Split view, drag the arrow between the task table and Gantt to give either side more room.",
       "Drag or edit dates. Dependencies stay on the task.",
       "Signoffs live on phases. Request from the project, approve if you are a PM or Admin.",
       "Assign a consultant or contractor to a phase from Schedule or Team. Vendors can only hold work on the phases they are assigned.",

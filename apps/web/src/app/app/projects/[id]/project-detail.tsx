@@ -858,6 +858,7 @@ export function ProjectDetail({ id }: { id: string }) {
             <ActivityStream
               items={projectActivity}
               placeholder="Comment on this project"
+              mentionPeople={teamMembers.filter((member) => member.active)}
               onPost={(text) =>
                 addProjectNote(project.id, { author: user?.name ?? "Staff", body: text, visibility: "internal" })
               }

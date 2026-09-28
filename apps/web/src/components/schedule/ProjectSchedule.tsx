@@ -6,9 +6,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type UIEvent,
 } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { clampSplitPct } from "@/lib/mentions";
 import { GanttBoard } from "@/components/Gantt";
 import {
   addDays,
@@ -99,9 +102,17 @@ export function ProjectSchedule({
   const [overId, setOverId] = useState<string | null>(null);
   const [scale, setScale] = useState<"Days" | "Weeks">("Weeks");
   const [paneWidth, setPaneWidth] = useState(0);
+  const [splitPct, setSplitPct] = useState(() => {
+    if (typeof window === "undefined") return 46;
+    const raw = Number(window.localStorage.getItem("dmc-pmo-plan-split"));
+    return Number.isFinite(raw) && raw > 0 ? clampSplitPct(raw) : 46;
+  });
+  const [splitting, setSplitting] = useState(false);
   const zoom = 36;
   const tableRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const splitDrag = useRef<{ startX: number; startPct: number } | null>(null);
   const syncingScroll = useRef(false);
   const dragRef = useRef<{ id: string; mode: "move" | "start" | "end"; startX: number; start: string; due: string } | null>(
     null,
@@ -256,6 +267,32 @@ export function ProjectSchedule({
     dragRef.current = null;
   }
 
+  function persistSplit(next: number) {
+    const value = clampSplitPct(next);
+    setSplitPct(value);
+    if (typeof window !== "undefined") window.localStorage.setItem("dmc-pmo-plan-split", String(value));
+  }
+
+  function beginSplit(event: ReactPointerEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest("button")) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    splitDrag.current = { startX: event.clientX, startPct: splitPct };
+    setSplitting(true);
+  }
+
+  function moveSplit(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!splitDrag.current || !boardRef.current) return;
+    const width = boardRef.current.clientWidth;
+    if (!width) return;
+    persistSplit(splitDrag.current.startPct + ((event.clientX - splitDrag.current.startX) / width) * 100);
+  }
+
+  function endSplit() {
+    splitDrag.current = null;
+    setSplitting(false);
+  }
+
   const people = assignees.length ? assignees : ["M. Doyle", "J. Kim", "S. Ahmed", "S. Cho", "J. Alvarez"];
 
   return (
@@ -333,7 +370,11 @@ export function ProjectSchedule({
             ) : null}
           </div>
 
-          <div className={`plan-board ${view === "Split" ? "is-split" : ""}`}>
+          <div
+            className={`plan-board ${view === "Split" ? "is-split" : ""}`}
+            ref={boardRef}
+            style={view === "Split" ? ({ ["--plan-split"]: `${splitPct}%` } as CSSProperties) : undefined}
+          >
             <div className="plan-table-wrap panel" ref={tableRef} onScroll={syncScroll("table")}>
               <table className={`wbs-table plan-table ${compact ? "is-compact" : ""}`}>
                 <thead>
@@ -547,6 +588,37 @@ export function ProjectSchedule({
                 </tbody>
               </table>
             </div>
+
+            {view === "Split" ? (
+              <div
+                className={`plan-split-handle ${splitting ? "is-dragging" : ""}`}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize the schedule tables"
+                onPointerDown={beginSplit}
+                onPointerMove={moveSplit}
+                onPointerUp={endSplit}
+                onDoubleClick={() => persistSplit(46)}
+              >
+                <button
+                  type="button"
+                  className="plan-split-arrow"
+                  aria-label="Give more room to the Gantt"
+                  onClick={() => persistSplit(splitPct - 8)}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="plan-split-grip" aria-hidden />
+                <button
+                  type="button"
+                  className="plan-split-arrow"
+                  aria-label="Give more room to the task table"
+                  onClick={() => persistSplit(splitPct + 8)}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            ) : null}
 
             {view === "Split" ? (
               <div className="plan-gantt panel" ref={ganttRef} onScroll={syncScroll("gantt")}>

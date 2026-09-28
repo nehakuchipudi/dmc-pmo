@@ -2315,6 +2315,46 @@ button, input, select, textarea { font: inherit; }
 
 .activity-stream { display: grid; gap: 14px; }
 .activity-composer { display: flex; gap: 10px; align-items: flex-end; }
+.activity-composer-field { position: relative; flex: 1; min-width: 0; }
+.mention-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 8;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lift);
+  max-height: 220px;
+  overflow: auto;
+}
+.mention-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.mention-option.is-active,
+.mention-option:hover { background: var(--color-fog); }
+.activity-mention {
+  display: inline;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--color-info-bg);
+  color: var(--color-navy);
+  font-weight: 650;
+}
 .activity-filters {
   display: flex;
   flex-wrap: wrap;
@@ -2443,7 +2483,7 @@ button, input, select, textarea { font: inherit; }
 .plan-workspace { display: grid; gap: 12px; min-width: 0; }
 .plan-board { display: grid; gap: 12px; min-width: 0; }
 .plan-board.is-split {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(220px, var(--plan-split, 46%)) 28px minmax(220px, 1fr);
   gap: 0;
   align-items: stretch;
   border: 1px solid var(--color-border);
@@ -2451,6 +2491,40 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
   background: #fff;
   box-shadow: var(--shadow-soft);
+}
+.plan-split-handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: ew-resize;
+  background: var(--color-navy);
+  color: #fff;
+  user-select: none;
+  touch-action: none;
+}
+.plan-split-handle:hover,
+.plan-split-handle.is-dragging { background: #2f4660; }
+.plan-split-arrow {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  cursor: pointer;
+}
+.plan-split-arrow:hover { background: rgba(255, 255, 255, 0.24); }
+.plan-split-grip {
+  width: 4px;
+  height: 48px;
+  border-radius: 99px;
+  background: #fff;
+  opacity: 0.7;
 }
 .plan-table-wrap, .plan-gantt { overflow: auto; min-width: 0; max-height: min(70vh, 760px); }
 .plan-board.is-split .plan-table-wrap,
@@ -2616,6 +2690,7 @@ button, input, select, textarea { font: inherit; }
   .team-summary { grid-template-columns: 1fr 1fr; }
   .insights-health, .insights-kpis, .insights-split { grid-template-columns: 1fr 1fr; }
   .plan-board.is-split { grid-template-columns: 1fr; }
+  .plan-split-handle { display: none; }
 }
 @media (max-width: 720px) {
   .company-summary-grid, .company-stat-grid, .project-health-strip, .project-facts { grid-template-columns: 1fr; }
