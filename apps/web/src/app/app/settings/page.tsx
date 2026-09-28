@@ -10,6 +10,7 @@ import { roleLabel, useAuth } from "@/lib/auth";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
 import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
+import { inviteLandingHref } from "@/lib/user-invite";
 
 const SETTINGS_TABS = ["Users", "Lifecycle", "Email domain"];
 
@@ -20,6 +21,7 @@ export default function SettingsPage() {
   const inviteTeamMember = useAppStore((s) => s.inviteTeamMember);
   const updateTeamMember = useAppStore((s) => s.updateTeamMember);
   const setTeamMemberActive = useAppStore((s) => s.setTeamMemberActive);
+  const pushToast = useAppStore((s) => s.pushToast);
   const projectWorkflow = useAppStore((s) => s.projectWorkflow);
   const setProjectWorkflowTransition = useAppStore((s) => s.setProjectWorkflowTransition);
   const setProjectWorkflowRoles = useAppStore((s) => s.setProjectWorkflowRoles);
@@ -123,6 +125,22 @@ export default function SettingsPage() {
                       </button>
                       <button type="button" className="btn btn-ghost text-sm" onClick={() => inviteTeamMember(m.id)}>
                         {m.invitedAt ? "Resend invite" : "Send invite"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost text-sm"
+                        onClick={() => {
+                          const href = inviteLandingHref({
+                            email: m.email,
+                            firstName: m.firstName,
+                            lastName: m.lastName,
+                            role: m.role,
+                          });
+                          void navigator.clipboard.writeText(href);
+                          pushToast("Invite link copied");
+                        }}
+                      >
+                        Copy invite link
                       </button>
                       <button
                         type="button"

@@ -472,11 +472,11 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_automations",
     keywords: ["automation", "rules", "email", "outbox", "trigger"],
     summary:
-      "Automations are triggers, conditions, and email notifications. The Email outbox shows what the workspace queued, including welcome mail, user invitation links, and project owner assignment notices.",
+      "Automations are triggers, conditions, and email notifications. The Email outbox is the send log. Invites and assignment mail reach an inbox only when Microsoft Mail.Send or a host mail API key is connected.",
     steps: [
       "Open Automations.",
       "Enable or run a rule if you are an Admin.",
-      "Check Email outbox for sent notifications.",
+      "Check Email outbox. Sent means it left the workspace. Failed means it stayed in the log.",
     ],
     tips: ["Only Admin can toggle or run automations."],
   },
@@ -489,7 +489,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_users",
     keywords: ["email domain", "dns", "spf", "dkim", "dmarc", "sending domain", "spam"],
     summary:
-      "An email domain is the part after @. DNS records are public notes at your domain host that prove DMC PMO may send invoices, welcome mail, and reminders as your company.",
+      "An email domain is the part after @. DNS records prove DMC PMO may send as your company. They do not deliver mail. Sign in with Microsoft and grant Mail.Send, or add a host mail API key, to reach inboxes.",
     steps: [
       "Open Settings, then Email domain, or Automations then Email domain.",
       "Add the domain you send from, such as dillonmorgan.com.",
@@ -514,7 +514,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     steps: [
       "Open Users and roles from your profile or Settings.",
       "Admin: Add user, fill Profile, Organization, Rates, and Access.",
-      "Keep Send an invitation email checked so they get a link to create an account and sign in.",
+      "Keep Send an invitation email checked. Sign in with Microsoft so the invite leaves the outbox and reaches their inbox.",
       "Admin: Edit to change role. That role applies on the next page they open.",
       "Use Send invite or Resend invite on a row to mail the signup and sign-in links again.",
       "PM, Finance, and Leadership can view the roster but cannot edit it.",

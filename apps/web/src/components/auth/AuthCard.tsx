@@ -50,6 +50,13 @@ export function EntraSetupNote() {
         {" "}
         <code>NEXT_PUBLIC_ENTRA_AUTHORITY</code>.
       </p>
+      <p>
+        To deliver invitation email, add the Microsoft Graph delegated permission
+        {" "}
+        <code>Mail.Send</code>
+        {" "}
+        and grant admin consent. Then sign in with Microsoft before you add or invite a user.
+      </p>
     </div>
   );
 }

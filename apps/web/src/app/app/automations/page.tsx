@@ -96,7 +96,7 @@ export default function AutomationsPage() {
       {tab === "Email outbox" ? (
         <div className="panel overflow-hidden">
           <p className="px-4 pt-4 text-sm text-[var(--color-muted)]">
-            Outbox is what DMC PMO queued. Sending identity comes from Email domain / DNS records.
+            Outbox is the send log. Mail only reaches an inbox when you are signed in with Microsoft (Mail.Send) or the host has a mail API key. DNS records do not send the message.
           </p>
           <table className="table">
             <thead>
@@ -115,9 +115,12 @@ export default function AutomationsPage() {
                   <td>
                     <div className="font-medium">{e.subject}</div>
                     <div className="text-xs text-[var(--color-muted)]">{e.body}</div>
+                    {e.error ? <div className="mt-1 text-xs text-[var(--color-danger)]">{e.error}</div> : null}
                   </td>
                   <td>
-                    <StatusPill tone={e.status === "Sent" ? "success" : "warning"}>{e.status}</StatusPill>
+                    <StatusPill tone={e.status === "Sent" ? "success" : e.status === "Failed" ? "danger" : "warning"}>
+                      {e.status}
+                    </StatusPill>
                   </td>
                 </tr>
               ))}

@@ -477,6 +477,7 @@ export interface EmailOutboxItem {
   body: string;
   sentAt: string;
   status: "Queued" | "Sent" | "Failed";
+  error?: string;
 }
 
 export type DnsRecordKind = "spf" | "dkim" | "dmarc";

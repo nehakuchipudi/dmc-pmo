@@ -54,8 +54,9 @@ export function EmailDomainRecords() {
       <div className="panel p-5">
         <h2 className="section-title">What this means</h2>
         <p className="mb-4 text-sm text-[var(--color-muted)]">
-          Email Domain / DNS Records prove that DMC PMO may send mail as your company. You add three records at your
-          domain host. We then look them up on the public internet and mark the domain Verified, Partial, or Missing.
+          Email Domain / DNS Records prove that DMC PMO may send mail as your company. They do not deliver the
+          message. Invites reach an inbox only after you sign in with Microsoft and grant Mail.Send, or after the
+          host has a mail API key. You still add three DNS records so Gmail and Outlook do not treat that mail as spam.
         </p>
         <div className="email-domain-explain">
           {EXPLAIN.map((item) => (
