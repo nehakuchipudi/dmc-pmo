@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, EntraSetupNote } from "@/components/auth/AuthCard";
 import { Avatar, Field, TextInput } from "@/components/ui";
@@ -13,7 +13,8 @@ import { roleLabel, useAuth } from "@/lib/auth";
 export default function LoginPage() {
   const { setUserId, setSessionUser } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const params = useSearchParams();
+  const [email, setEmail] = useState(() => params.get("email") ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const configured = entraConfigured();
@@ -79,7 +80,10 @@ export default function LoginPage() {
       </form>
       <p className="mt-4 text-sm text-[var(--color-muted)]">
         New here?{" "}
-        <Link href="/signup" className="font-semibold text-[var(--color-navy)]">
+        <Link
+          href={email.trim() ? `/signup/?email=${encodeURIComponent(email.trim())}&invite=1` : "/signup"}
+          className="font-semibold text-[var(--color-navy)]"
+        >
           Create an account
         </Link>
         . Entra emails a verification or sign-in code to the address you use.

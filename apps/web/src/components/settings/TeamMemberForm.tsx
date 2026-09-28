@@ -35,6 +35,7 @@ export type TeamMemberFormValue = {
   role: Role;
   username: string;
   active: boolean;
+  sendInvite: boolean;
 };
 
 function splitName(name: string) {
@@ -64,6 +65,7 @@ export function valuesFromMember(member?: TeamMember): Partial<TeamMemberFormVal
     role: member.role,
     username: member.username ?? member.email.split("@")[0],
     active: member.active,
+    sendInvite: false,
   };
 }
 
@@ -94,6 +96,7 @@ export function readTeamMemberForm(form: HTMLFormElement): TeamMemberFormValue {
     role: String(data.get("role") || "staff") as Role,
     username,
     active: String(data.get("status") || "active") === "active",
+    sendInvite: data.has("sendInvite"),
   };
 }
 
@@ -222,6 +225,14 @@ export function TeamMemberForm({
         <p className="user-create-note">
           They sign in with Microsoft Entra ID using this email. New people can also create an account from Sign up.
         </p>
+        {!member ? (
+          <label className="user-invite-option">
+            <input type="checkbox" name="sendInvite" defaultChecked />
+            <span>
+              Send an invitation email with a link to DMC PMO so they can create an account and sign in.
+            </span>
+          </label>
+        ) : null}
       </section>
 
       <div className="user-create-actions">

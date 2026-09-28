@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, EntraSetupNote } from "@/components/auth/AuthCard";
 import { Field, TextInput, TextSelect } from "@/components/ui";
@@ -13,12 +13,14 @@ import type { Role } from "@/lib/types";
 
 export default function SignupPage() {
   const router = useRouter();
+  const params = useSearchParams();
+  const invited = params.get("invite") === "1";
   const { setSessionUser } = useAuth();
   const registerAccount = useAppStore((s) => s.registerAccount);
   const companies = useAppStore((s) => s.companies);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState(() => params.get("first") ?? "");
+  const [lastName, setLastName] = useState(() => params.get("last") ?? "");
+  const [email, setEmail] = useState(() => params.get("email") ?? "");
   const [role, setRole] = useState<Role>("staff");
   const [companyId, setCompanyId] = useState("");
   const [notifyEmail, setNotifyEmail] = useState(true);
@@ -71,8 +73,12 @@ export default function SignupPage() {
 
   return (
     <AuthCard
-      title="Create your account"
-      subtitle="Use the email address you already work from. Microsoft Entra ID verifies it and we send workspace notifications there."
+      title={invited ? "Accept your DMC PMO invite" : "Create your account"}
+      subtitle={
+        invited
+          ? "You were invited to this workspace. Confirm your name, use the same email from the invite, then create the account and sign in."
+          : "Use the email address you already work from. Microsoft Entra ID verifies it and we send workspace notifications there."
+      }
     >
       <form className="space-y-3" onSubmit={onSubmit}>
         <div className="auth-name-grid">
@@ -129,7 +135,10 @@ export default function SignupPage() {
       </form>
       <p className="mt-4 text-sm text-[var(--color-muted)]">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-[var(--color-navy)]">
+        <Link
+          href={email.trim() ? `/login/?email=${encodeURIComponent(email.trim())}` : "/login"}
+          className="font-semibold text-[var(--color-navy)]"
+        >
           Sign in
         </Link>
       </p>

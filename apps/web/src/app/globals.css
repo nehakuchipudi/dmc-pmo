@@ -1592,6 +1592,19 @@ button, input, select, textarea { font: inherit; }
   padding-top: 8px;
   background: var(--color-surface);
 }
+.user-invite-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-fog);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.user-invite-option input { margin-top: 3px; }
 @media (max-width: 980px) {
   .user-create-grid { grid-template-columns: 1fr; }
 }
@@ -2766,6 +2779,44 @@ button, input, select, textarea { font: inherit; }
   padding-top: 16px;
   border-top: 1px solid var(--color-border);
   font-size: 0.92rem;
+}
+.invite-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  counter-reset: invite;
+}
+.invite-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 4px 12px;
+  align-items: start;
+}
+.invite-steps li::before {
+  counter-increment: invite;
+  content: counter(invite);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-navy);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  grid-row: 1 / span 2;
+}
+.invite-steps strong { color: var(--color-navy); }
+.invite-steps span { color: var(--color-muted); font-size: 0.9rem; line-height: 1.45; }
+.invite-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .invite-actions { grid-template-columns: 1fr; }
 }
 .auth-demo summary {
   cursor: pointer;
