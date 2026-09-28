@@ -29,8 +29,8 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
-import { companyKindOf, phaseContractorLabel, vendorCompanies } from "@/lib/cip";
-import { formatDisplayDate, money } from "@/lib/seed";
+import { companyKindOf, phaseContractorMeta, vendorCompanies } from "@/lib/cip";
+import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 import type { CompanyAssetKind, CompanyAssetStatus, ProjectHealth } from "@/lib/types";
@@ -530,10 +530,10 @@ export function ProjectDetail({ id }: { id: string }) {
 
             <ProjectTeamPreview projectId={project.id} onManage={() => goTab("Team")} />
 
-            <div className="company-split">
-              <div className="panel p-4">
-                <SectionHead title="Schedule" action="Open schedule" onAction={() => goTab("Schedule")} />
-                <table className="table">
+            <div className="panel p-4">
+              <SectionHead title="Schedule" action="Open schedule" onAction={() => goTab("Schedule")} />
+              <div className="table-wrap">
+                <table className="table overview-schedule-table">
                   <thead>
                     <tr>
                       <th>Phase</th>
@@ -543,18 +543,28 @@ export function ProjectDetail({ id }: { id: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {phases.map((phase) => (
-                      <tr key={phase.id}>
-                        <td className="font-medium">{phase.name}</td>
-                        <td className="text-sm text-[var(--color-muted)]">
-                          {phaseContractorLabel(phase) || "Unassigned"}
-                        </td>
-                        <td>
-                          <TonePill value={phase.status} />
-                        </td>
-                        <td>{formatDisplayDate(phase.due)}</td>
-                      </tr>
-                    ))}
+                    {phases.map((phase) => {
+                      const meta = phaseContractorMeta(phase);
+                      return (
+                        <tr key={phase.id}>
+                          <td className="overview-schedule-phase">{phase.name}</td>
+                          <td>
+                            {phase.contractorName ? (
+                              <>
+                                <div className="overview-schedule-vendor">{phase.contractorName}</div>
+                                {meta ? <div className="overview-schedule-meta">{meta}</div> : null}
+                              </>
+                            ) : (
+                              <span className="text-[var(--color-muted)]">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="overview-schedule-status">
+                            <TonePill value={phase.status} />
+                          </td>
+                          <td className="overview-schedule-due">{formatShortDate(phase.due)}</td>
+                        </tr>
+                      );
+                    })}
                     {!phases.length ? (
                       <tr>
                         <td colSpan={4} className="text-[var(--color-muted)]">
@@ -565,8 +575,10 @@ export function ProjectDetail({ id }: { id: string }) {
                   </tbody>
                 </table>
               </div>
-              <div className="panel p-4">
-                <SectionHead title="Open tasks" action="See all tasks" onAction={() => goTab("Tasks")} />
+            </div>
+            <div className="panel p-4">
+              <SectionHead title="Open tasks" action="See all tasks" onAction={() => goTab("Tasks")} />
+              <div className="table-wrap">
                 <table className="table">
                   <thead>
                     <tr>
@@ -579,8 +591,8 @@ export function ProjectDetail({ id }: { id: string }) {
                     {openTasks.slice(0, 5).map((t) => (
                       <tr key={t.id}>
                         <td>{t.name}</td>
-                        <td>{t.assignee}</td>
-                        <td>
+                        <td className="overview-schedule-phase">{t.assignee}</td>
+                        <td className="overview-schedule-status">
                           <TonePill value={t.status} />
                         </td>
                       </tr>
