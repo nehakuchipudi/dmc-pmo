@@ -133,7 +133,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_projects",
     keywords: ["plan", "gantt", "schedule", "wbs", "milestone", "phase", "workstream", "task dates"],
     summary:
-      "The Schedule tab is the project plan: phases, workstream groups, tasks, dates, and a Gantt. It is inspired by a modern project plan, not a copy of Accelo.",
+      "The Schedule tab is the project plan: phases, workstream groups, tasks, dates, and a Gantt.",
     steps: [
       "Open a project and choose Schedule.",
       "Add a phase or group, then add tasks under it.",
