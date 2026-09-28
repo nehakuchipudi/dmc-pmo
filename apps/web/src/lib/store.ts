@@ -54,6 +54,7 @@ import {
   userInviteBody,
   userInviteSubject,
 } from "./user-invite";
+import { deliverMail } from "./deliver-mail";
 import {
   seedAllocations,
   seedBenefits,
@@ -469,13 +470,15 @@ function assignmentPeople(team: TeamMember[]) {
 
 function sendUserInviteMail(
   set: (fn: (s: AppState) => Partial<AppState>) => void,
+  get: () => AppState,
   member: TeamMember,
 ) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://dmc-pmo.vercel.app";
   const email = member.email.trim();
   const firstName = member.firstName ?? member.name.split(" ")[0];
   const lastName = member.lastName ?? member.name.split(" ").slice(1).join(" ");
-  recordAssignmentMail(set, {
+  const sender = get().emailDomains.find((row) => row.primary);
+  recordAssignmentMail(set, get, {
     to: email,
     subject: userInviteSubject(),
     body: userInviteBody({
@@ -488,14 +491,34 @@ function sendUserInviteMail(
       loginHref: inviteLoginHref(email, origin),
       toolHref: `${origin}/`,
     }),
-    title: `Invite sent to ${member.name}`,
+    title: `Invite queued for ${member.name}`,
     href: "/app/settings",
+    fromName: sender?.fromName,
+    fromEmail: sender?.fromEmail,
+  });
+}
+
+function persistOutbox(get: () => AppState, note?: NotificationItem) {
+  const extras = readAccountExtras();
+  writeAccountExtras({
+    ...extras,
+    mail: get().emailOutbox,
+    notes: note ? [note, ...extras.notes.filter((row) => row.id !== note.id)] : extras.notes,
   });
 }
 
 function recordAssignmentMail(
   set: (fn: (s: AppState) => Partial<AppState>) => void,
-  input: { to: string; subject: string; body: string; title: string; href: string },
+  get: () => AppState,
+  input: {
+    to: string;
+    subject: string;
+    body: string;
+    title: string;
+    href: string;
+    fromName?: string;
+    fromEmail?: string;
+  },
 ) {
   const mail: EmailOutboxItem = {
     id: uid("e"),
@@ -503,12 +526,12 @@ function recordAssignmentMail(
     subject: input.subject,
     body: input.body,
     sentAt: displayNow(),
-    status: "Sent",
+    status: "Queued",
   };
   const note: NotificationItem = {
     id: uid("n"),
     title: input.title,
-    body: `Sent to ${input.to}.`,
+    body: `Queued for ${input.to}.`,
     createdAt: displayNow(),
     read: false,
     href: input.href,
@@ -517,11 +540,25 @@ function recordAssignmentMail(
     emailOutbox: [mail, ...s.emailOutbox],
     notifications: [note, ...s.notifications],
   }));
-  const extras = readAccountExtras();
-  writeAccountExtras({
-    ...extras,
-    mail: [mail, ...extras.mail.filter((row) => row.id !== mail.id)],
-    notes: [note, ...extras.notes.filter((row) => row.id !== note.id)],
+  persistOutbox(get, note);
+  void deliverMail({
+    to: input.to,
+    subject: input.subject,
+    body: input.body,
+    fromName: input.fromName,
+    fromEmail: input.fromEmail,
+  }).then((result) => {
+    const status: EmailOutboxItem["status"] = result.delivered ? "Sent" : "Failed";
+    set((s) => ({
+      emailOutbox: s.emailOutbox.map((row) =>
+        row.id === mail.id ? { ...row, status, error: result.error, sentAt: displayNow() } : row,
+      ),
+    }));
+    persistOutbox(get);
+    get().pushToast(
+      result.delivered ? `Email delivered to ${input.to}` : result.error ?? `Could not email ${input.to}`,
+      result.delivered ? "success" : "danger",
+    );
   });
 }
 
@@ -1099,7 +1136,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (owner) {
       const href = projectHref(id);
-      recordAssignmentMail(set, {
+      recordAssignmentMail(set, get, {
         to: owner.email,
         subject: projectAssignmentSubject(project.name),
         body: projectAssignmentBody({
@@ -1232,7 +1269,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
         if (owner) {
           const href = projectHref(id);
-          recordAssignmentMail(set, {
+          recordAssignmentMail(set, get, {
             to: owner.email,
             subject: projectAssignmentSubject(next.name),
             body: projectAssignmentBody({
@@ -1680,8 +1717,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ team: [member, ...s.team] }));
     persistTeam(get().team);
     if (sendInvite) {
-      sendUserInviteMail(set, member);
-      get().pushToast(`Invite sent to ${member.email}`);
+      sendUserInviteMail(set, get, member);
+      get().pushToast(`Sending invite to ${member.email}`);
     } else {
       get().pushToast(`${member.name} added`);
     }
@@ -1700,8 +1737,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       team: s.team.map((row) => (row.id === id ? invited : row)),
     }));
     persistTeam(get().team);
-    sendUserInviteMail(set, invited);
-    get().pushToast(`Invite sent to ${invited.email}`);
+    sendUserInviteMail(set, get, invited);
+    get().pushToast(`Sending invite to ${invited.email}`);
   },
 
   registerAccount: (input) => {
@@ -1831,7 +1868,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (notified) {
       const href = projectHref(project.id);
       const owner = input.projectRole === OWNER_ROLE;
-      recordAssignmentMail(set, {
+      recordAssignmentMail(set, get, {
         to: notified.email,
         subject: owner ? projectAssignmentSubject(project.name) : memberAssignmentSubject(project.name, input.projectRole),
         body: owner
@@ -2812,15 +2849,42 @@ export const useAppStore = create<AppState>((set, get) => ({
     return next;
   },
 
-  queueEmail: (to, subject, body, status = "Sent") => {
+  queueEmail: (to, subject, body, status) => {
     const id = uid("e");
+    const sender = get().emailDomains.find((row) => row.primary);
+    const draft = status === "Queued";
     set((s) => ({
       emailOutbox: [
-        { id, to, subject, body, sentAt: displayNow(), status },
+        { id, to, subject, body, sentAt: displayNow(), status: "Queued" },
         ...s.emailOutbox,
       ],
     }));
-    get().pushToast(status === "Queued" ? "Email drafted in the outbox" : "Email sent to the outbox");
+    persistOutbox(get);
+    if (draft) {
+      get().pushToast("Email drafted in the outbox");
+      return id;
+    }
+    get().pushToast("Sending email");
+    void deliverMail({
+      to,
+      subject,
+      body,
+      fromName: sender?.fromName,
+      fromEmail: sender?.fromEmail,
+    }).then((result) => {
+      set((s) => ({
+        emailOutbox: s.emailOutbox.map((row) =>
+          row.id === id
+            ? { ...row, status: result.delivered ? "Sent" : "Failed", error: result.error, sentAt: displayNow() }
+            : row,
+        ),
+      }));
+      persistOutbox(get);
+      get().pushToast(
+        result.delivered ? `Email delivered to ${to}` : result.error ?? `Could not email ${to}`,
+        result.delivered ? "success" : "danger",
+      );
+    });
     return id;
   },
 

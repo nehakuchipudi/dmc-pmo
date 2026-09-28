@@ -1,6 +1,7 @@
 import type { AccountInfo, AuthenticationResult, RedirectRequest } from "@azure/msal-browser";
 
 export const ENTRA_SCOPES = ["openid", "profile", "email", "User.Read"];
+export const MAIL_SCOPES = ["Mail.Send"];
 
 export function entraClientId() {
   return (process.env.NEXT_PUBLIC_ENTRA_CLIENT_ID ?? "").trim();
@@ -24,6 +25,7 @@ export function entraRedirectUri() {
   return `${window.location.origin}/auth/callback/`;
 }
 
+type TokenRequest = { scopes: string[]; account?: AccountInfo; prompt?: string };
 type MsalInstance = {
   initialize: () => Promise<void>;
   handleRedirectPromise: () => Promise<AuthenticationResult | null>;
@@ -32,6 +34,8 @@ type MsalInstance = {
   getAllAccounts: () => AccountInfo[];
   getActiveAccount: () => AccountInfo | null;
   setActiveAccount: (account: AccountInfo | null) => void;
+  acquireTokenSilent: (request: TokenRequest) => Promise<AuthenticationResult>;
+  acquireTokenPopup: (request: TokenRequest) => Promise<AuthenticationResult>;
 };
 
 let instance: MsalInstance | null = null;
@@ -99,4 +103,19 @@ export async function startEntraSignOut() {
   const msal = await getMsal();
   if (!msal) return;
   await msal.logoutRedirect({ postLogoutRedirectUri: `${window.location.origin}/login/` });
+}
+
+export async function acquireMailToken() {
+  const msal = await getMsal();
+  if (!msal) return undefined;
+  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+  if (!account) return undefined;
+  msal.setActiveAccount(account);
+  try {
+    const silent = await msal.acquireTokenSilent({ account, scopes: MAIL_SCOPES });
+    return silent.accessToken;
+  } catch {
+    const popup = await msal.acquireTokenPopup({ account, scopes: MAIL_SCOPES });
+    return popup.accessToken;
+  }
 }

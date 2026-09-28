@@ -230,6 +230,7 @@ export function TeamMemberForm({
             <input type="checkbox" name="sendInvite" defaultChecked />
             <span>
               Send an invitation email with a link to DMC PMO so they can create an account and sign in.
+              Sign in with Microsoft first, or the invite stays in the Email outbox.
             </span>
           </label>
         ) : null}
