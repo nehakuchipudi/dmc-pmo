@@ -68,6 +68,32 @@ export function EmailDomainRecords() {
         </div>
       </div>
 
+      <div className="panel p-5">
+        <h2 className="section-title">Connect a mail sender</h2>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">
+          Pick one path. Microsoft is the default for DMC PMO. Resend is optional if you want the host to send on its
+          own.
+        </p>
+        <ol className="email-setup-steps">
+          <li>
+            <strong>Path A. Send from your Outlook mailbox</strong>
+            <span>
+              Sign out of a demo user, then Sign in with Microsoft. In entra.microsoft.com open the DMC PMO app
+              registration, API permissions, Add a permission, Microsoft Graph, Delegated permissions, Mail.Send.
+              Grant admin consent. The SPA redirect must be https://dmc-pmo.vercel.app/auth/callback/. Then add or
+              resend an invite and allow the consent popup.
+            </span>
+          </li>
+          <li>
+            <strong>Path B. Send with Resend</strong>
+            <span>
+              Create an API key at resend.com, add RESEND_API_KEY on the Vercel project for Production, verify
+              dillonmorgan.com in Resend, then redeploy. Invites then leave through /api/send-mail.
+            </span>
+          </li>
+        </ol>
+      </div>
+
       {canEdit ? (
         <form
           className="panel p-5"
