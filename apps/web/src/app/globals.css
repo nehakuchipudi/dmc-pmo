@@ -2483,7 +2483,7 @@ button, input, select, textarea { font: inherit; }
 .plan-workspace { display: grid; gap: 12px; min-width: 0; }
 .plan-board { display: grid; gap: 12px; min-width: 0; }
 .plan-board.is-split {
-  grid-template-columns: minmax(220px, var(--plan-split, 46%)) 18px minmax(220px, 1fr);
+  grid-template-columns: minmax(220px, var(--plan-split, 46%)) 28px minmax(220px, 1fr);
   gap: 0;
   align-items: stretch;
   border: 1px solid var(--color-border);
@@ -2497,34 +2497,34 @@ button, input, select, textarea { font: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   cursor: ew-resize;
-  background: #eef3f8;
-  border-left: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  color: var(--color-navy);
+  background: var(--color-navy);
+  color: #fff;
   user-select: none;
   touch-action: none;
 }
 .plan-split-handle:hover,
-.plan-split-handle.is-dragging { background: #e0e8f0; }
+.plan-split-handle.is-dragging { background: #2f4660; }
 .plan-split-arrow {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 0;
-  background: transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
   color: inherit;
   cursor: pointer;
 }
+.plan-split-arrow:hover { background: rgba(255, 255, 255, 0.24); }
 .plan-split-grip {
-  width: 3px;
-  height: 36px;
+  width: 4px;
+  height: 48px;
   border-radius: 99px;
-  background: var(--color-navy);
-  opacity: 0.38;
+  background: #fff;
+  opacity: 0.7;
 }
 .plan-table-wrap, .plan-gantt { overflow: auto; min-width: 0; max-height: min(70vh, 760px); }
 .plan-board.is-split .plan-table-wrap,

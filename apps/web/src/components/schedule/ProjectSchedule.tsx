@@ -606,7 +606,7 @@ export function ProjectSchedule({
                   aria-label="Give more room to the Gantt"
                   onClick={() => persistSplit(splitPct - 8)}
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={16} />
                 </button>
                 <span className="plan-split-grip" aria-hidden />
                 <button
@@ -615,7 +615,7 @@ export function ProjectSchedule({
                   aria-label="Give more room to the task table"
                   onClick={() => persistSplit(splitPct + 8)}
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={16} />
                 </button>
               </div>
             ) : null}
