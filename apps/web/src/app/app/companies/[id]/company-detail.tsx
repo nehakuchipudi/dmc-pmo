@@ -695,72 +695,64 @@ export function CompanyDetail({ id }: { id: string }) {
 
         {tab === "Contacts" && (
           <div className="panel contacts-record">
-            <div className="flex justify-end p-3">
+            <div className="contacts-record-toolbar">
+              <p className="contacts-record-count">
+                {companyContacts.length} {companyContacts.length === 1 ? "contact" : "contacts"}
+              </p>
               <button type="button" className="btn btn-primary" onClick={() => setCreateKind("contact")}>
                 + Contact
               </button>
             </div>
-            <div className="table-wrap">
-            <table className="table contacts-record-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Title</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Portal</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companyContacts.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <div className="contacts-name-cell">
-                        <Link href={`/app/contacts/view/?id=${c.id}`} className="font-medium text-[var(--color-navy)]">
-                          {c.name}
-                        </Link>
-                        {primary?.id === c.id ? <span className="contacts-primary-tag">Primary</span> : null}
+            {companyContacts.length ? (
+              <ul className="contacts-record-list">
+                {companyContacts.map((c) => {
+                  const isPrimary = primary?.id === c.id;
+                  return (
+                    <li key={c.id} className={isPrimary ? "contacts-record-row is-primary" : "contacts-record-row"}>
+                      <div className="contacts-record-person">
+                        <Avatar initials={c.initials} name={c.name} />
+                        <div className="contacts-record-identity">
+                          <div className="contacts-name-cell">
+                            <Link href={`/app/contacts/view/?id=${c.id}`} className="font-medium text-[var(--color-navy)]">
+                              {c.name}
+                            </Link>
+                            {isPrimary ? <span className="contacts-primary-tag">Primary</span> : null}
+                          </div>
+                          <div className="contacts-record-title">{c.title}</div>
+                        </div>
                       </div>
-                    </td>
-                    <td className="contacts-nowrap">{c.title}</td>
-                    <td className="contacts-nowrap">
-                      <a href={`mailto:${c.email}`} className="text-[var(--color-navy)]">
-                        {c.email}
-                      </a>
-                    </td>
-                    <td className="contacts-phone">
-                      {c.phone ? (
-                        <a href={`tel:${c.phone.replace(/\s+/g, "")}`} className="text-[var(--color-navy)]">
-                          {formatPhoneDisplay(c.phone)}
+                      <div className="contacts-record-reach">
+                        <a href={`mailto:${c.email}`} className="contacts-record-email" title={c.email}>
+                          {c.email}
                         </a>
-                      ) : (
-                        "None"
-                      )}
-                    </td>
-                    <td className="contacts-nowrap">
-                      <TonePill value={c.portal} />
-                    </td>
-                    <td className="contacts-record-actions">
-                      <ContactActions contact={c} compact />
-                      {primary?.id === c.id ? null : (
-                        <button type="button" className="btn btn-ghost text-sm" onClick={() => updateCompany(company.id, { primaryContactId: c.id })}>
-                          Set primary
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {!companyContacts.length ? (
-                  <tr>
-                    <td colSpan={6} className="text-[var(--color-muted)]">
-                      No contacts yet.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-            </div>
+                        {c.phone ? (
+                          <a href={`tel:${c.phone.replace(/\s+/g, "")}`} className="contacts-phone">
+                            {formatPhoneDisplay(c.phone)}
+                          </a>
+                        ) : (
+                          <span className="contacts-phone text-[var(--color-muted)]">No phone</span>
+                        )}
+                        <TonePill value={c.portal} />
+                      </div>
+                      <div className="contacts-record-actions">
+                        <ContactActions contact={c} compact />
+                        {isPrimary ? null : (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => updateCompany(company.id, { primaryContactId: c.id })}
+                          >
+                            Set primary
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="contacts-record-empty">No contacts yet.</p>
+            )}
           </div>
         )}
 

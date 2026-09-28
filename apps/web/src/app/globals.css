@@ -2334,11 +2334,74 @@ button, input, select, textarea { font: inherit; }
 .contact-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .contacts-phone, .contacts-nowrap { white-space: nowrap; }
 .contacts-record { overflow: hidden; }
-.contacts-record-table { min-width: 920px; }
+.contacts-record-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.contacts-record-count {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+.contacts-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contacts-record-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8eef4;
+}
+.contacts-record-row:last-child { border-bottom: 0; }
+.contacts-record-row.is-primary { background: #f8fafc; }
+.contacts-record-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.contacts-record-identity { min-width: 0; }
+.contacts-record-title {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contacts-record-reach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.contacts-record-email {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-navy);
+}
 .contacts-name-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+.contacts-name-cell a {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .contacts-primary-tag {
@@ -2358,9 +2421,15 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 .contacts-record-actions .btn { white-space: nowrap; }
+.contacts-record-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--color-muted);
+}
 .contact-overview { display: grid; gap: 14px; }
 
 .activity-stream { display: grid; gap: 14px; }
