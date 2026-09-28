@@ -26,7 +26,7 @@ import {
   uid,
   users,
 } from "./seed";
-import { findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
+import { allAccounts, findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
 import { applyTeamRole, can, isAssignedName, type Capability } from "./rbac";
 import { makeActivity } from "./activity";
 import {
@@ -37,6 +37,15 @@ import {
   toggleWorkflowTransition,
 } from "./project-lifecycle";
 import { weeklyHoursFromAllocation } from "./project-team";
+import {
+  OWNER_ROLE,
+  memberAssignmentBody,
+  memberAssignmentSubject,
+  projectAssignmentBody,
+  projectAssignmentSubject,
+  projectHref,
+  resolveNotifyEmail,
+} from "./project-notify";
 import {
   seedAllocations,
   seedBenefits,
@@ -135,6 +144,7 @@ type CreateProjectInput = {
   name: string;
   companyId: string;
   manager: string;
+  ownerEmail?: string;
   due: string;
   budgetHours: number;
 };
@@ -432,6 +442,50 @@ function mergeTeam() {
 function persistTeam(team: TeamMember[]) {
   const extras = readAccountExtras();
   writeAccountExtras({ ...extras, team });
+}
+
+function assignmentPeople(team: TeamMember[]) {
+  const seen = new Set<string>();
+  const people: { name: string; email: string; notifyEmail?: boolean }[] = [];
+  for (const row of [...team, ...allAccounts()]) {
+    const email = row.email?.trim().toLowerCase();
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    people.push({ name: row.name, email: row.email, notifyEmail: row.notifyEmail });
+  }
+  return people;
+}
+
+function recordAssignmentMail(
+  set: (fn: (s: AppState) => Partial<AppState>) => void,
+  input: { to: string; subject: string; body: string; title: string; href: string },
+) {
+  const mail: EmailOutboxItem = {
+    id: uid("e"),
+    to: input.to,
+    subject: input.subject,
+    body: input.body,
+    sentAt: displayNow(),
+    status: "Sent",
+  };
+  const note: NotificationItem = {
+    id: uid("n"),
+    title: input.title,
+    body: `Sent to ${input.to}.`,
+    createdAt: displayNow(),
+    read: false,
+    href: input.href,
+  };
+  set((s) => ({
+    emailOutbox: [mail, ...s.emailOutbox],
+    notifications: [note, ...s.notifications],
+  }));
+  const extras = readAccountExtras();
+  writeAccountExtras({
+    ...extras,
+    mail: [mail, ...extras.mail.filter((row) => row.id !== mail.id)],
+    notes: [note, ...extras.notes.filter((row) => row.id !== note.id)],
+  });
 }
 
 function currentUser() {
@@ -980,7 +1034,51 @@ export const useAppStore = create<AppState>((set, get) => ({
       entityLabel: project.name,
       href: `/app/projects/view/?id=${id}`,
     });
-    get().pushToast(`Project ${project.name} created`);
+    const owner = resolveNotifyEmail({
+      name: input.manager,
+      email: input.ownerEmail,
+      people: assignmentPeople(get().team),
+    });
+    const ownerMember = get().team.find(
+      (member) =>
+        member.name === input.manager ||
+        (input.ownerEmail && member.email.toLowerCase() === input.ownerEmail.trim().toLowerCase()),
+    );
+    if (ownerMember && !get().allocations.some((row) => row.projectId === id && row.memberId === ownerMember.id)) {
+      const allocation: ResourceAllocation = {
+        id: uid("al"),
+        memberId: ownerMember.id,
+        memberName: ownerMember.name,
+        projectId: id,
+        projectName: project.name,
+        allocationPct: 20,
+        hoursPerWeek: weeklyHoursFromAllocation(20),
+        start: project.start,
+        end: project.due,
+        projectRole: OWNER_ROLE,
+        responsibility: "Project owner",
+      };
+      set((s) => ({ allocations: [allocation, ...s.allocations] }));
+    }
+    if (owner) {
+      const href = projectHref(id);
+      recordAssignmentMail(set, {
+        to: owner.email,
+        subject: projectAssignmentSubject(project.name),
+        body: projectAssignmentBody({
+          ownerName: owner.name,
+          projectName: project.name,
+          companyName: company.name,
+          href,
+          created: true,
+        }),
+        title: projectAssignmentSubject(project.name),
+        href: `/app/projects/view/?id=${id}`,
+      });
+      get().pushToast(`Project ${project.name} created. Owner notified at ${owner.email}`);
+    } else {
+      get().pushToast(`Project ${project.name} created`);
+    }
     return id;
   },
 
@@ -1088,6 +1186,32 @@ export const useAppStore = create<AppState>((set, get) => ({
           entityLabel: patch.name ?? prev.name,
           href: `/app/projects/view/?id=${id}`,
         });
+      }
+      if (patch.manager && patch.manager !== prev.manager) {
+        const next = get().projects.find((row) => row.id === id) ?? { ...prev, manager: patch.manager };
+        const owner = resolveNotifyEmail({
+          name: patch.manager,
+          people: assignmentPeople(get().team),
+        });
+        if (owner) {
+          const href = projectHref(id);
+          recordAssignmentMail(set, {
+            to: owner.email,
+            subject: projectAssignmentSubject(next.name),
+            body: projectAssignmentBody({
+              ownerName: owner.name,
+              projectName: next.name,
+              companyName: next.companyName,
+              requestId: next.requestId,
+              href,
+              created: false,
+            }),
+            title: projectAssignmentSubject(next.name),
+            href: `/app/projects/view/?id=${id}`,
+          });
+          get().pushToast(`Project updated. Owner notified at ${owner.email}`);
+          return;
+        }
       }
     }
     get().pushToast("Project updated");
@@ -1633,7 +1757,45 @@ export const useAppStore = create<AppState>((set, get) => ({
       entityLabel: project.name,
       href: `/app/projects/view/?id=${project.id}`,
     });
-    get().pushToast(`${member.name} added to the team`);
+    if (input.projectRole === OWNER_ROLE && project.manager !== member.name) {
+      set((s) => ({
+        projects: s.projects.map((row) => (row.id === project.id ? { ...row, manager: member.name } : row)),
+      }));
+    }
+    const notified = resolveNotifyEmail({
+      name: member.name,
+      email: member.email,
+      people: assignmentPeople(get().team),
+    });
+    if (notified) {
+      const href = projectHref(project.id);
+      const owner = input.projectRole === OWNER_ROLE;
+      recordAssignmentMail(set, {
+        to: notified.email,
+        subject: owner ? projectAssignmentSubject(project.name) : memberAssignmentSubject(project.name, input.projectRole),
+        body: owner
+          ? projectAssignmentBody({
+              ownerName: notified.name,
+              projectName: project.name,
+              companyName: project.companyName,
+              requestId: project.requestId,
+              href,
+              created: false,
+            })
+          : memberAssignmentBody({
+              memberName: notified.name,
+              projectName: project.name,
+              companyName: project.companyName,
+              role: input.projectRole,
+              href,
+            }),
+        title: owner ? projectAssignmentSubject(project.name) : memberAssignmentSubject(project.name, input.projectRole),
+        href: `/app/projects/view/?id=${project.id}`,
+      });
+      get().pushToast(`${member.name} added to the team. Notified at ${notified.email}`);
+    } else {
+      get().pushToast(`${member.name} added to the team`);
+    }
     return id;
   },
   updateProjectMember: (id, patch) => {

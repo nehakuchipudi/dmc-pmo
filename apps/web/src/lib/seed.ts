@@ -22,6 +22,7 @@ import type {
   TimeEntry,
   User,
 } from "./types";
+import { projectAssignmentBody, projectAssignmentSubject } from "./project-notify";
 
 const emptyScope = (): ProjectScope => ({
   objectives: "",
@@ -78,6 +79,15 @@ export const users: User[] = [
     role: "leadership",
     email: "privera@dillonmorgan.com",
     avatarUrl: "https://i.pravatar.cc/128?u=p-rivera",
+  },
+  {
+    id: "u-ap",
+    name: "Aishwarya Phalak",
+    initials: "AP",
+    role: "pm",
+    email: "aishwarya.phalak@dillonmorgan.com",
+    notifyEmail: true,
+    avatarUrl: "https://i.pravatar.cc/128?u=aishwarya-phalak",
   },
   {
     id: "u-client",
@@ -463,7 +473,7 @@ export const seedProjects: Project[] = [
     name: "Downtown Sidewalk Connector",
     companyId: "c-rowlett",
     companyName: "City of Rowlett Public Works",
-    manager: "A. Chen",
+    manager: "Aishwarya Phalak",
     progress: 28,
     status: "Active",
     due: "2027-02-28",
@@ -1018,6 +1028,7 @@ export const seedTeam: TeamMember[] = [
   { id: "tm-ja", name: "J. Alvarez", firstName: "Jules", lastName: "Alvarez", title: "Finance Partner", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, costRate: 58, department: "Finance", managerId: "tm-dm", username: "jalvarez", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
   { id: "tm-pr", name: "P. Rivera", firstName: "Pat", lastName: "Rivera", title: "PMO Director", email: "privera@dillonmorgan.com", initials: "PR", role: "leadership", active: true, billRate: 210, costRate: 75, department: "Leadership", managerId: "tm-dm", username: "privera", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=p-rivera" },
   { id: "tm-ac", name: "A. Chen", firstName: "Avery", lastName: "Chen", title: "Engineering Manager", email: "achen@rowletttx.gov", initials: "AC", role: "pm", active: true, billRate: 0, costRate: 62, department: "Capital Delivery", managerId: "tm-pr", username: "achen", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=a-chen" },
+  { id: "tm-ap", name: "Aishwarya Phalak", firstName: "Aishwarya", lastName: "Phalak", title: "Project Owner", email: "aishwarya.phalak@dillonmorgan.com", initials: "AP", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-pr", username: "aphalak", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=aishwarya-phalak", notifyEmail: true },
 ];
 
 export const seedInvoiceTemplates: InvoiceTemplate[] = [
@@ -1218,6 +1229,7 @@ export const seedTimeEntries: TimeEntry[] = [
 ];
 
 export const seedNotifications: NotificationItem[] = [
+  { id: "n-sw-owner", title: "You are the Owner of Downtown Sidewalk Connector", body: "The project was assigned to you. A notice was sent to aishwarya.phalak@dillonmorgan.com.", createdAt: "Today 7:20 AM", read: false, href: "/app/projects/view/?id=p-sidewalk" },
   { id: "n1", title: "Invoice overdue", body: "INV-2291 for Cascade Ventures is overdue.", createdAt: "Today 8:15 AM", read: false, href: "/app/billing/view/?id=inv-2291" },
   { id: "n2", title: "Signoff requested", body: "Homepage Design Review awaits client approval.", createdAt: "Yesterday 4:40 PM", read: false, href: "/app/projects/view/?id=p-website" },
   { id: "n3", title: "SLA risk", body: "Ticket #1042 is inside the final 3 hours.", createdAt: "Yesterday 2:10 PM", read: true, href: "/app/tickets/view/?id=t-1042" },
@@ -1236,6 +1248,7 @@ export const seedActivities: ActivityItem[] = [
   { id: "a-sw-1", type: "status", actor: "P. Rivera", action: "approved TG2 execution kickoff", entityType: "project", entityId: "p-sidewalk", entityLabel: "Downtown Sidewalk Connector", href: "/app/projects/view/?id=p-sidewalk", companyId: "c-rowlett", projectId: "p-sidewalk", when: "Oct 6, 2026", at: "2026-10-06T10:00:00", text: "PRC approved TG2. Munis setup and design NTP are live." },
   { id: "a-sw-2", type: "milestone", actor: "A. Chen", action: "assigned Trinity Ridge Engineering to Design", entityType: "milestone", entityId: "m-sw-design", entityLabel: "Design", href: "/app/projects/view/?id=p-sidewalk", companyId: "c-rowlett", projectId: "p-sidewalk", when: "Jan 20, 2026", at: "2026-01-20T14:00:00", text: "M5 complete. Trinity Ridge Engineering holds PS-4412 on Design." },
   { id: "a-sw-3", type: "task", actor: "L. Ortiz", action: "moved 30% design review to In Progress", entityType: "task", entityId: "tk-sw-30", entityLabel: "M7 30% design review", href: "/app/projects/view/?id=p-sidewalk", companyId: "c-rowlett", projectId: "p-sidewalk", when: "Sep 12, 2026", at: "2026-09-12T11:20:00", text: "Trinity Ridge submitted the 30% package for page-turn." },
+  { id: "a-sw-4", type: "project", actor: "Dillon Morgan", action: "assigned Aishwarya Phalak as Owner", entityType: "project", entityId: "p-sidewalk", entityLabel: "Downtown Sidewalk Connector", href: "/app/projects/view/?id=p-sidewalk", companyId: "c-rowlett", projectId: "p-sidewalk", when: "Sep 28, 2026", at: "2026-09-28T07:20:00", text: "Aishwarya Phalak is the Owner. A notice was sent to aishwarya.phalak@dillonmorgan.com." },
 ];
 
 export const seedRetainers: Retainer[] = [
@@ -1313,6 +1326,21 @@ export const seedAutomations: AutomationRule[] = [
 ];
 
 export const seedEmailOutbox: EmailOutboxItem[] = [
+  {
+    id: "e-sw-owner",
+    to: "aishwarya.phalak@dillonmorgan.com",
+    subject: projectAssignmentSubject("Downtown Sidewalk Connector"),
+    body: projectAssignmentBody({
+      ownerName: "Aishwarya Phalak",
+      projectName: "Downtown Sidewalk Connector",
+      companyName: "City of Rowlett Public Works",
+      requestId: "RQ-2025-0127",
+      href: "https://dmc-pmo.vercel.app/app/projects/view/?id=p-sidewalk",
+      created: true,
+    }),
+    sentAt: "Sep 28, 2026, 7:20 AM",
+    status: "Sent",
+  },
   { id: "e1", to: "dana@cascadeventures.com", subject: "Invoice INV-2291 is overdue", body: "Please review and pay INV-2291 in the client portal.", sentAt: "2026-08-04 09:00", status: "Sent" },
   { id: "e2", to: "jkim@dillonmorgan.com", subject: "Reminder: submit timesheet", body: "You have draft time entries for this week.", sentAt: "2026-08-01 16:00", status: "Sent" },
 ];

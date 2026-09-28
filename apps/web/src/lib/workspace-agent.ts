@@ -90,6 +90,7 @@ export interface AgentIntent {
   emailSubject?: string;
   emailBody?: string;
   memberQuery?: string;
+  projectRole?: string;
   count?: number;
   parentOrdinal?: number;
   milestoneId?: string;
@@ -215,7 +216,7 @@ export interface WorkspaceRunner {
     email: string;
     portal: "Enabled" | "Not Invited";
   }) => string;
-  createProject: (input: { name: string; companyId: string; manager: string; due: string; budgetHours: number }) => string;
+  createProject: (input: { name: string; companyId: string; manager: string; ownerEmail?: string; due: string; budgetHours: number }) => string;
   deleteProject: (id: string) => void;
   addProjectMember: (input: {
     projectId: string;
@@ -674,7 +675,7 @@ function extractPerson(raw: string, people: AgentPerson[]): AgentPerson | undefi
     .map((person) => ({ person, score: Math.max(scoreName(person.name, raw), scoreName(person.email, raw)) }))
     .sort((a, b) => b.score - a.score);
   if (ranked[0] && ranked[0].score >= 16) return ranked[0].person;
-  const to = raw.match(/\b(?:to|assign(?:ed)?)\s+([a-z][a-z.\s-]{1,40}?)(?:\s+to\b|\s+on\b|$)/i);
+  const to = raw.match(/\b(?:to|assign(?:ed)?)\s+([a-z][a-z.\s-]{1,40}?)(?:\s+to\b|\s+on\b|\s+as\b|$)/i);
   if (to) return resolveNamed(to[1], people);
   return undefined;
 }
@@ -882,6 +883,7 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
       name: extractRecordName(text, "projects?"),
       companyQuery,
       due: parseRelativeDate(lower),
+      assignee: person?.name,
     });
   }
   if (/\bprojects?\b/.test(lower) && isDelete && !/\b(team|member|task|ticket|milestone|contact|user)\b/.test(lower)) {
@@ -896,7 +898,13 @@ export function parseWorkspaceIntents(raw: string, ctx: AgentContext): AgentInte
     });
   }
   if (isAssign && /\b(team|member|project)\b/.test(lower) && !/\btask\b/.test(lower) && !/\bticket\b/.test(lower)) {
-    intents.push({ type: "assign_member", projectQuery, memberQuery: person?.name, assignee: person?.name });
+    intents.push({
+      type: "assign_member",
+      projectQuery,
+      memberQuery: person?.name,
+      assignee: person?.name,
+      projectRole: /\bowner\b/i.test(text) ? "Owner" : "Specialist",
+    });
   }
   if (/\b(remove|unassign)\b/.test(lower) && /\b(team|member)\b/.test(lower) && !/\btask\b/.test(lower)) {
     intents.push({ type: "remove_member", projectQuery, memberQuery: person?.name, assignee: person?.name });
@@ -1489,14 +1497,17 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       }
       const name = intent.name?.trim();
       if (!name) continue;
+      const owner = intent.assignee ?? ctx.actorName;
+      const ownerPerson = (ctx.people ?? []).find((person) => person.kind === "team" && person.name === owner);
       const id = runner.createProject({
         name,
         companyId: host.id,
-        manager: ctx.actorName,
+        manager: owner,
+        ownerEmail: ownerPerson?.email,
         due: intent.due ?? addDays(todayIso(), 30),
         budgetHours: 80,
       });
-      done(Boolean(id), id ? `Created ${name}` : "Could not create the project", id ? `I created project ${name} for ${host.name}.` : "I could not create that project.");
+      done(Boolean(id), id ? `Created ${name}` : "Could not create the project", id ? `I created project ${name} for ${host.name} and assigned ${owner} as Owner.` : "I could not create that project.");
       if (id) {
         lastProject = { id, name, status: "Draft", companyId: host.id, companyName: host.name };
         workingProjects.unshift(lastProject);
@@ -1519,7 +1530,7 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
       const id = runner.addProjectMember({
         projectId: project.id,
         memberId: member.id,
-        projectRole: "Consultant",
+        projectRole: intent.projectRole || (/\bowner\b/i.test(raw) ? "Owner" : "Specialist"),
         responsibility: "Assigned by workspace AI",
         allocationPct: 25,
       });

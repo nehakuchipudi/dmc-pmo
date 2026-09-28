@@ -400,7 +400,7 @@ export function ProjectTeamPanel({
                 <option value="">Select a person</option>
                 {available.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name}
+                    {member.name} ({member.email})
                   </option>
                 ))}
               </TextSelect>
@@ -439,6 +439,7 @@ export function ProjectTeamPanel({
           </Field>
           <p className="mb-3 text-sm text-[var(--color-muted)]">
             {weeklyHoursFromAllocation(draft.allocationPct)} hours per week on this project.
+            {!editId ? " We email them at that address as soon as they are assigned." : ""}
           </p>
           <div className="flex gap-2">
             <button type="submit" className="btn btn-primary" disabled={!editId && !draft.memberId}>

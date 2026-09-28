@@ -152,10 +152,11 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_projects",
     keywords: ["rowlett", "cip", "sidewalk", "capital", "contractor", "phase", "prc", "tollgate"],
     summary:
-      "Downtown Sidewalk Connector (RQ-2025-0127) is the live City of Rowlett capital example. Public Works owns the job. Trinity Ridge Engineering holds Design on PS-4412. Construction stays unassigned until Council award.",
+      "Downtown Sidewalk Connector (RQ-2025-0127) is the live City of Rowlett capital example. Aishwarya Phalak is the Owner. Public Works is the agency. Trinity Ridge Engineering holds Design on PS-4412. Construction stays unassigned until Council award.",
     steps: [
       "Open Companies and find City of Rowlett Public Works (Agency).",
       "Open Downtown Sidewalk Connector. CIP fields, funding, and the six playbook phases are on Overview.",
+      "Confirm Aishwarya Phalak on Team as Owner. Creating or assigning a project emails the owner immediately.",
       "Use Team to assign Roadway Solutions, Inc. to Construction after M16.",
       "Review TG0 through TG5 on Governance.",
     ],
@@ -170,14 +171,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_projects",
     keywords: ["project team", "allocation", "add member", "responsibility", "capacity"],
     summary:
-      "The Team tab assigns people from Users & roles onto a project with a project role, responsibility, and allocation percent.",
+      "The Team tab assigns people from Users & roles onto a project with a project role, responsibility, and allocation percent. Owner is the first role. The owner is emailed as soon as the project is created or they are assigned.",
     steps: [
       "Open a project and choose Team.",
       "Add a member from the firm roster.",
-      "Set project role, responsibility, and weekly allocation.",
+      "Set project role (Owner for the accountable person), responsibility, and weekly allocation.",
       "Those allocations also appear on Resources.",
     ],
-    tips: ["Only Admin and PM can change the project team."],
+    tips: ["Only Admin and PM can change the project team. Assignment mail goes to the member email when notify is on."],
   },
   {
     id: "work",
@@ -470,7 +471,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_automations",
     keywords: ["automation", "rules", "email", "outbox", "trigger"],
     summary:
-      "Automations are triggers, conditions, and email notifications. The Email outbox shows what the workspace queued, including welcome mail.",
+      "Automations are triggers, conditions, and email notifications. The Email outbox shows what the workspace queued, including welcome mail and project owner assignment notices.",
     steps: [
       "Open Automations.",
       "Enable or run a rule if you are an Admin.",
