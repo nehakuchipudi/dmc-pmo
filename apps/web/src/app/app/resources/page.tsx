@@ -42,7 +42,7 @@ export default function ResourcesPage() {
               const member = team.find((t) => t.id === row.id);
               return [
                 <div key={row.id} className="flex items-center gap-2">
-                  <Avatar initials={member?.initials ?? row.name.slice(0, 2)} src={member?.avatarUrl} name={row.name} size={28} />
+                  <Avatar initials={member?.initials ?? row.name.slice(0, 2)} name={row.name} size={28} />
                   <span className="font-medium">{row.name}</span>
                 </div>,
                 member?.role ?? "",

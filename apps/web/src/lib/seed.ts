@@ -46,7 +46,6 @@ export const users: User[] = [
     initials: "DM",
     role: "admin",
     email: "dillon@dillonmorgan.com",
-    avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan",
   },
   {
     id: "u-pm",
@@ -54,7 +53,6 @@ export const users: User[] = [
     initials: "MD",
     role: "pm",
     email: "mdoyle@dillonmorgan.com",
-    avatarUrl: "https://i.pravatar.cc/128?u=m-doyle",
   },
   {
     id: "u-staff",
@@ -62,7 +60,6 @@ export const users: User[] = [
     initials: "JK",
     role: "staff",
     email: "jkim@dillonmorgan.com",
-    avatarUrl: "https://i.pravatar.cc/128?u=j-kim",
   },
   {
     id: "u-finance",
@@ -70,7 +67,6 @@ export const users: User[] = [
     initials: "JA",
     role: "finance",
     email: "jalvarez@dillonmorgan.com",
-    avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez",
   },
   {
     id: "u-lead",
@@ -78,7 +74,6 @@ export const users: User[] = [
     initials: "PR",
     role: "leadership",
     email: "privera@dillonmorgan.com",
-    avatarUrl: "https://i.pravatar.cc/128?u=p-rivera",
   },
   {
     id: "u-ap",
@@ -87,7 +82,6 @@ export const users: User[] = [
     role: "pm",
     email: "aishwarya.phalak@dillonmorgan.com",
     notifyEmail: true,
-    avatarUrl: "https://i.pravatar.cc/128?u=aishwarya-phalak",
   },
   {
     id: "u-client",
@@ -96,7 +90,6 @@ export const users: User[] = [
     role: "client",
     email: "dana@cascadeventures.com",
     companyId: "c-cascade",
-    avatarUrl: "https://i.pravatar.cc/128?u=dana-kessler",
   },
 ];
 
@@ -1020,15 +1013,15 @@ export const seedTasks: Task[] = [
 ];
 
 export const seedTeam: TeamMember[] = [
-  { id: "tm-dm", name: "Dillon Morgan", firstName: "Dillon", lastName: "Morgan", title: "Managing Director", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, billRate: 225, costRate: 80, department: "Leadership", username: "dillon", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=dillon-morgan" },
-  { id: "tm-md", name: "M. Doyle", firstName: "Morgan", lastName: "Doyle", title: "Delivery Lead", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, billRate: 185, costRate: 65, department: "Delivery", managerId: "tm-dm", username: "mdoyle", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=m-doyle" },
-  { id: "tm-jk", name: "J. Kim", firstName: "Jordan", lastName: "Kim", title: "Consultant", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-md", username: "jkim", financialVisibility: "hours", timezone: "America/New_York", avatarUrl: "https://i.pravatar.cc/128?u=j-kim" },
-  { id: "tm-sc", name: "S. Cho", firstName: "Sam", lastName: "Cho", title: "Project Manager", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-dm", username: "scho", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-cho" },
-  { id: "tm-sa", name: "S. Ahmed", firstName: "Sara", lastName: "Ahmed", title: "Analyst", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-sc", username: "sahmed", financialVisibility: "hours", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=s-ahmed" },
-  { id: "tm-ja", name: "J. Alvarez", firstName: "Jules", lastName: "Alvarez", title: "Finance Partner", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, costRate: 58, department: "Finance", managerId: "tm-dm", username: "jalvarez", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=j-alvarez" },
-  { id: "tm-pr", name: "P. Rivera", firstName: "Pat", lastName: "Rivera", title: "PMO Director", email: "privera@dillonmorgan.com", initials: "PR", role: "leadership", active: true, billRate: 210, costRate: 75, department: "Leadership", managerId: "tm-dm", username: "privera", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=p-rivera" },
-  { id: "tm-ac", name: "A. Chen", firstName: "Avery", lastName: "Chen", title: "Engineering Manager", email: "achen@rowletttx.gov", initials: "AC", role: "pm", active: true, billRate: 0, costRate: 62, department: "Capital Delivery", managerId: "tm-pr", username: "achen", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=a-chen" },
-  { id: "tm-ap", name: "Aishwarya Phalak", firstName: "Aishwarya", lastName: "Phalak", title: "Project Owner", email: "aishwarya.phalak@dillonmorgan.com", initials: "AP", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-pr", username: "aphalak", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", avatarUrl: "https://i.pravatar.cc/128?u=aishwarya-phalak", notifyEmail: true },
+  { id: "tm-dm", name: "Dillon Morgan", firstName: "Dillon", lastName: "Morgan", title: "Managing Director", email: "dillon@dillonmorgan.com", initials: "DM", role: "admin", active: true, billRate: 225, costRate: 80, department: "Leadership", username: "dillon", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-md", name: "M. Doyle", firstName: "Morgan", lastName: "Doyle", title: "Delivery Lead", email: "mdoyle@dillonmorgan.com", initials: "MD", role: "pm", active: true, billRate: 185, costRate: 65, department: "Delivery", managerId: "tm-dm", username: "mdoyle", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-jk", name: "J. Kim", firstName: "Jordan", lastName: "Kim", title: "Consultant", email: "jkim@dillonmorgan.com", initials: "JK", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-md", username: "jkim", financialVisibility: "hours", timezone: "America/New_York" },
+  { id: "tm-sc", name: "S. Cho", firstName: "Sam", lastName: "Cho", title: "Project Manager", email: "scho@dillonmorgan.com", initials: "SC", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-dm", username: "scho", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-sa", name: "S. Ahmed", firstName: "Sara", lastName: "Ahmed", title: "Analyst", email: "sahmed@dillonmorgan.com", initials: "SA", role: "staff", active: true, billRate: 145, costRate: 52, department: "Delivery", managerId: "tm-sc", username: "sahmed", financialVisibility: "hours", timezone: "America/Chicago" },
+  { id: "tm-ja", name: "J. Alvarez", firstName: "Jules", lastName: "Alvarez", title: "Finance Partner", email: "jalvarez@dillonmorgan.com", initials: "JA", role: "finance", active: true, billRate: 165, costRate: 58, department: "Finance", managerId: "tm-dm", username: "jalvarez", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-pr", name: "P. Rivera", firstName: "Pat", lastName: "Rivera", title: "PMO Director", email: "privera@dillonmorgan.com", initials: "PR", role: "leadership", active: true, billRate: 210, costRate: 75, department: "Leadership", managerId: "tm-dm", username: "privera", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-ac", name: "A. Chen", firstName: "Avery", lastName: "Chen", title: "Engineering Manager", email: "achen@rowletttx.gov", initials: "AC", role: "pm", active: true, billRate: 0, costRate: 62, department: "Capital Delivery", managerId: "tm-pr", username: "achen", financialVisibility: "rates_and_budgets", timezone: "America/Chicago" },
+  { id: "tm-ap", name: "Aishwarya Phalak", firstName: "Aishwarya", lastName: "Phalak", title: "Project Owner", email: "aishwarya.phalak@dillonmorgan.com", initials: "AP", role: "pm", active: true, billRate: 185, costRate: 65, department: "PMO", managerId: "tm-pr", username: "aphalak", financialVisibility: "rates_and_budgets", timezone: "America/Chicago", notifyEmail: true },
 ];
 
 export const seedInvoiceTemplates: InvoiceTemplate[] = [

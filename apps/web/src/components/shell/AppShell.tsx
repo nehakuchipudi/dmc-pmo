@@ -594,7 +594,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-expanded={menu === "profile"}
                 onClick={() => setMenu((v) => (v === "profile" ? null : "profile"))}
               >
-                <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} />
+                <Avatar initials={user.initials} name={user.name} />
                 <span className="hidden sm:grid text-left leading-tight">
                   <span className="text-sm font-medium text-[var(--color-ink)]">{user.name.split(" ")[0]}</span>
                   <span className="text-[11px] text-[var(--color-muted)]">{roleLabel(user.role)}</span>
@@ -604,7 +604,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {menu === "profile" ? (
                 <div className="menu-popover profile-popover fade-in">
                   <div className="profile-card">
-                    <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} size={40} />
+                    <Avatar initials={user.initials} name={user.name} size={40} />
                     <div>
                       <div className="font-semibold">{user.name}</div>
                       <div className="text-xs text-[var(--color-muted)]">{roleLabel(user.role)}</div>

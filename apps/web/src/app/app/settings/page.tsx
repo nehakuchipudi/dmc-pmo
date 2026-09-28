@@ -98,7 +98,7 @@ export default function SettingsPage() {
               <tr key={m.id}>
                 <td>
                   <div className="flex items-center gap-2">
-                    <Avatar initials={m.initials} src={m.avatarUrl} name={m.name} size={32} />
+                    <Avatar initials={m.initials} name={m.name} size={32} />
                     <div>
                       <div className="font-medium">{m.name}</div>
                       {m.department ? <div className="text-xs text-[var(--color-muted)]">{m.department}</div> : null}

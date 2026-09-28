@@ -109,7 +109,7 @@ export default function LoginPage() {
                   {roleLabel(user.role)} · {user.email}
                 </div>
               </div>
-              <Avatar initials={user.initials} src={user.avatarUrl} name={user.name} size={40} />
+              <Avatar initials={user.initials} name={user.name} size={40} />
             </button>
           ))}
         </div>
