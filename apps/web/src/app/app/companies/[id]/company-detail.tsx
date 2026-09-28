@@ -220,6 +220,7 @@ export function CompanyDetail({ id }: { id: string }) {
   return (
     <>
       <RecordShell
+        wide={tab === "Contacts"}
         breadcrumb={
           <>
             <Link href="/app/companies">Companies</Link> / {company.name}
@@ -704,24 +705,31 @@ export function CompanyDetail({ id }: { id: string }) {
               </button>
             </div>
             {companyContacts.length ? (
-              <ul className="contacts-record-list">
-                {companyContacts.map((c) => {
-                  const isPrimary = primary?.id === c.id;
-                  return (
-                    <li key={c.id} className={isPrimary ? "contacts-record-row is-primary" : "contacts-record-row"}>
-                      <div className="contacts-record-person">
-                        <Avatar initials={c.initials} name={c.name} />
-                        <div className="contacts-record-identity">
-                          <div className="contacts-name-cell">
-                            <Link href={`/app/contacts/view/?id=${c.id}`} className="font-medium text-[var(--color-navy)]">
-                              {c.name}
-                            </Link>
-                            {isPrimary ? <span className="contacts-primary-tag">Primary</span> : null}
+              <div className="contacts-record-table">
+                <div className="contacts-record-head">
+                  <span>Name</span>
+                  <span>Email</span>
+                  <span>Phone</span>
+                  <span>Portal</span>
+                  <span>Actions</span>
+                </div>
+                <ul className="contacts-record-list">
+                  {companyContacts.map((c) => {
+                    const isPrimary = primary?.id === c.id;
+                    return (
+                      <li key={c.id} className={isPrimary ? "contacts-record-row is-primary" : "contacts-record-row"}>
+                        <div className="contacts-record-person">
+                          <Avatar initials={c.initials} name={c.name} />
+                          <div className="contacts-record-identity">
+                            <div className="contacts-name-cell">
+                              <Link href={`/app/contacts/view/?id=${c.id}`} className="font-medium text-[var(--color-navy)]">
+                                {c.name}
+                              </Link>
+                              {isPrimary ? <span className="contacts-primary-tag">Primary</span> : null}
+                            </div>
+                            <div className="contacts-record-title">{c.title}</div>
                           </div>
-                          <div className="contacts-record-title">{c.title}</div>
                         </div>
-                      </div>
-                      <div className="contacts-record-reach">
                         <a href={`mailto:${c.email}`} className="contacts-record-email" title={c.email}>
                           {c.email}
                         </a>
@@ -732,24 +740,26 @@ export function CompanyDetail({ id }: { id: string }) {
                         ) : (
                           <span className="contacts-phone text-[var(--color-muted)]">No phone</span>
                         )}
-                        <TonePill value={c.portal} />
-                      </div>
-                      <div className="contacts-record-actions">
-                        <ContactActions contact={c} compact />
-                        {isPrimary ? null : (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => updateCompany(company.id, { primaryContactId: c.id })}
-                          >
-                            Set primary
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <div className="contacts-record-portal">
+                          <TonePill value={c.portal} />
+                        </div>
+                        <div className="contacts-record-actions">
+                          <ContactActions contact={c} compact />
+                          {isPrimary ? null : (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => updateCompany(company.id, { primaryContactId: c.id })}
+                            >
+                              Set primary
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : (
               <p className="contacts-record-empty">No contacts yet.</p>
             )}

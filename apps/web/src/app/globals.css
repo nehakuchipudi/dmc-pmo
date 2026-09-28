@@ -2347,26 +2347,41 @@ button, input, select, textarea { font: inherit; }
   font-size: 0.85rem;
   color: var(--color-muted);
 }
+.contacts-record-table {
+  min-width: 0;
+  overflow-x: auto;
+}
+.contacts-record-head,
+.contacts-record-row { min-width: 760px; }
 .contacts-record-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
+.contacts-record-head,
 .contacts-record-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) 132px 86px auto;
+  gap: 10px 14px;
   align-items: center;
-  gap: 10px 16px;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e8eef4;
+  padding: 12px 16px;
 }
+.contacts-record-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+}
+.contacts-record-head span:last-child { text-align: right; }
+.contacts-record-row { border-bottom: 1px solid #e8eef4; }
 .contacts-record-row:last-child { border-bottom: 0; }
 .contacts-record-row.is-primary { background: #f8fafc; }
 .contacts-record-person {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1 1 200px;
   min-width: 0;
 }
 .contacts-record-identity { min-width: 0; }
@@ -2377,22 +2392,14 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.contacts-record-reach {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  flex: 1 1 240px;
-  min-width: 0;
-}
 .contacts-record-email {
   min-width: 0;
-  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-navy);
 }
+.contacts-record-portal { min-width: 0; }
 .contacts-name-cell {
   display: flex;
   align-items: center;
