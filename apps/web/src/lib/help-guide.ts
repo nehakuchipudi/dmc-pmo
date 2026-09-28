@@ -502,6 +502,32 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    id: "send-invite-mail",
+    title: "Deliver invitation email",
+    group: "Admin",
+    href: "/app/settings",
+    audience: "internal",
+    viewCap: "manage_users",
+    keywords: ["invite", "mail.send", "resend", "inbox", "entra", "outlook", "smtp"],
+    summary:
+      "Invites reach an inbox only when a mail sender is connected. Use Microsoft Mail.Send from your Outlook mailbox, or add a Resend API key on Vercel.",
+    steps: [
+      "Sign out of a demo user. On Sign in, use Sign in with Microsoft and your Dillon Morgan work email.",
+      "Open entra.microsoft.com as an Application Administrator. Go to Identity, Applications, App registrations, then the DMC PMO app.",
+      "Open API permissions, Add a permission, Microsoft Graph, Delegated permissions, then check Mail.Send. Add permissions.",
+      "Select Grant admin consent for Dillon Morgan. Status should show Granted for Mail.Send.",
+      "Confirm Authentication has the SPA redirect https://dmc-pmo.vercel.app/auth/callback/.",
+      "Back in DMC PMO, add or resend an invite. Allow the Mail.Send consent popup. The outbox should move to Sent, and a copy appears in your Outlook Sent Items.",
+      "Optional instead of Graph: create a Resend API key, add RESEND_API_KEY on the Vercel project for Production, verify dillonmorgan.com in Resend, then redeploy.",
+    ],
+    tips: [
+      "Pick Delegated Mail.Send, not Application Mail.Send. The app sends as the signed-in admin.",
+      "The Microsoft account must have an Exchange or Microsoft 365 mailbox.",
+      "Demo users such as Dillon Morgan cannot deliver mail.",
+      "If the outbox says Failed, use Copy invite link until the sender is connected.",
+    ],
+  },
+  {
     id: "users",
     title: "Users and roles",
     group: "Admin",
