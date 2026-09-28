@@ -19,10 +19,10 @@ import {
 } from "@/lib/mentions";
 import type { ActivityItem, ActivityType } from "@/lib/types";
 
-function MentionText({ text, people }: { text: string; people: MentionPerson[] }) {
+function MentionText({ text, people }: { text?: string; people: MentionPerson[] }) {
   return (
     <>
-      {splitMentions(text, people).map((part, index) =>
+      {splitMentions(text ?? "", people).map((part, index) =>
         part.mention ? (
           <span key={`${part.text}-${index}`} className="activity-mention">
             {part.text}
