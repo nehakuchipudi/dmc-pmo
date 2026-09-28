@@ -2332,7 +2332,111 @@ button, input, select, textarea { font: inherit; }
 .contacts-search { max-width: 280px; flex: 1 1 220px; }
 .contacts-company { max-width: 220px; }
 .contact-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.contacts-phone { white-space: nowrap; }
+.contacts-phone, .contacts-nowrap { white-space: nowrap; }
+.contacts-record { overflow: hidden; }
+.contacts-record-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.contacts-record-count {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+.contacts-record-table {
+  min-width: 0;
+  overflow-x: auto;
+}
+.contacts-record-head,
+.contacts-record-row { min-width: 760px; }
+.contacts-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contacts-record-head,
+.contacts-record-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) 132px 86px auto;
+  gap: 10px 14px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.contacts-record-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+}
+.contacts-record-head span:last-child { text-align: right; }
+.contacts-record-row { border-bottom: 1px solid #e8eef4; }
+.contacts-record-row:last-child { border-bottom: 0; }
+.contacts-record-row.is-primary { background: #f8fafc; }
+.contacts-record-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.contacts-record-identity { min-width: 0; }
+.contacts-record-title {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contacts-record-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-navy);
+}
+.contacts-record-portal { min-width: 0; }
+.contacts-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.contacts-name-cell a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contacts-primary-tag {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-fog);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.contacts-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.contacts-record-actions .btn { white-space: nowrap; }
+.contacts-record-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--color-muted);
+}
 .contact-overview { display: grid; gap: 14px; }
 
 .activity-stream { display: grid; gap: 14px; }
