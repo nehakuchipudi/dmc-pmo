@@ -11,7 +11,9 @@ import {
   utilizationLabel,
   weeklyHoursFromAllocation,
 } from "@/lib/project-team";
+import { PHASE_ROLES, phaseContractorLabel, vendorCompanies } from "@/lib/cip";
 import { useAppStore } from "@/lib/store";
+import type { PhaseRole } from "@/lib/types";
 
 type Draft = {
   memberId: string;
@@ -43,6 +45,9 @@ export function ProjectTeamPanel({
   managerName?: string;
 }) {
   const team = useAppStore((s) => s.team);
+  const companies = useAppStore((s) => s.companies);
+  const milestones = useAppStore((s) => s.milestones);
+  const updateMilestone = useAppStore((s) => s.updateMilestone);
   const allocations = useAppStore((s) => s.allocations);
   const tasks = useAppStore((s) => s.tasks);
   const timeEntries = useAppStore((s) => s.timeEntries);
@@ -92,6 +97,11 @@ export function ProjectTeamPanel({
   const totalHours = cards.reduce((sum, card) => sum + card.loggedHours, 0);
   const totalOpen = cards.reduce((sum, card) => sum + card.openTasks, 0);
   const overloaded = cards.filter((card) => card.utilizationLevel === "over").length;
+  const phases = useMemo(
+    () => milestones.filter((row) => row.projectId === projectId && row.kind === "phase"),
+    [milestones, projectId],
+  );
+  const vendors = useMemo(() => vendorCompanies(companies), [companies]);
 
   function openAdd(memberId = "") {
     setEditId(null);
@@ -166,6 +176,81 @@ export function ProjectTeamPanel({
           Add team member
         </button>
       </div>
+
+      {phases.length ? (
+        <div className="panel p-4">
+          <h3 className="section-title">Phase contractors</h3>
+          <p className="mb-3 text-sm text-[var(--color-muted)]">
+            Consultants and contractors are assigned to a phase. They cannot invoice work they do not hold.
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Phase</th>
+                  <th>Contractor</th>
+                  <th>Role</th>
+                  <th>Contract</th>
+                </tr>
+              </thead>
+              <tbody>
+                {phases.map((phase) => (
+                  <tr key={phase.id}>
+                    <td className="font-medium">{phase.name}</td>
+                    <td>
+                      <TextSelect
+                        value={phase.contractorCompanyId ?? ""}
+                        onChange={(e) => {
+                          const company = vendors.find((row) => row.id === e.target.value);
+                          updateMilestone(phase.id, {
+                            contractorCompanyId: company?.id,
+                            contractorName: company?.name,
+                            phaseRole: company ? phase.phaseRole ?? "Design" : undefined,
+                          });
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {vendors.map((company) => (
+                          <option key={company.id} value={company.id}>
+                            {company.name}
+                          </option>
+                        ))}
+                      </TextSelect>
+                    </td>
+                    <td>
+                      <TextSelect
+                        value={phase.phaseRole ?? ""}
+                        onChange={(e) =>
+                          updateMilestone(phase.id, { phaseRole: (e.target.value || undefined) as PhaseRole | undefined })
+                        }
+                      >
+                        <option value="">Role</option>
+                        {PHASE_ROLES.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </TextSelect>
+                    </td>
+                    <td>
+                      <TextInput
+                        value={phase.contractNumber ?? ""}
+                        placeholder="PO / contract"
+                        onChange={(e) => updateMilestone(phase.id, { contractNumber: e.target.value || undefined })}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {phases.some((phase) => phase.contractorName) ? (
+            <p className="mt-2 text-xs text-[var(--color-muted)]">
+              Assigned: {phases.filter((phase) => phase.contractorName).map((phase) => phaseContractorLabel(phase)).join("; ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="team-grid">
         {cards.map((card) => {

@@ -20,7 +20,7 @@ import {
   type PlanRow,
 } from "@/lib/project-plan";
 import { formatShortDate, money } from "@/lib/seed";
-import type { Milestone, Task, TaskLink, TaskStatus } from "@/lib/types";
+import type { Company, Milestone, Task, TaskLink, TaskStatus } from "@/lib/types";
 
 const STATUSES: TaskStatus[] = ["Not Started", "In Progress", "Review", "Done"];
 const PHASE_COLORS = ["#8FA8BF", "#C4A574", "#7BA891", "#9AA0C4", "#9AA6B5"];
@@ -50,6 +50,7 @@ export function ProjectSchedule({
   projectDue,
   hoursByTaskId = {},
   assignees,
+  contractorCompanies = [],
   rateFor,
   onUpdateDates,
   onAddPhase,
@@ -72,6 +73,7 @@ export function ProjectSchedule({
   projectDue?: string;
   hoursByTaskId?: Record<string, number>;
   assignees: string[];
+  contractorCompanies?: Company[];
   rateFor: (assignee: string) => number;
   onUpdateDates?: (start: string, due: string) => void;
   onAddPhase: () => void;
@@ -404,6 +406,29 @@ export function ProjectSchedule({
                               {people.map((name) => (
                                 <option key={name} value={name}>
                                   {name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : row.kind === "milestone" ? (
+                            <select
+                              className="wbs-select"
+                              value={milestones.find((item) => item.id === row.id)?.contractorCompanyId ?? ""}
+                              aria-label={`Contractor for ${row.name}`}
+                              onChange={(e) => {
+                                const company = contractorCompanies.find((item) => item.id === e.target.value);
+                                onUpdateMilestone(row.id, {
+                                  contractorCompanyId: company?.id,
+                                  contractorName: company?.name,
+                                  phaseRole: company
+                                    ? milestones.find((item) => item.id === row.id)?.phaseRole
+                                    : undefined,
+                                });
+                              }}
+                            >
+                              <option value="">Unassigned</option>
+                              {contractorCompanies.map((company) => (
+                                <option key={company.id} value={company.id}>
+                                  {company.name}
                                 </option>
                               ))}
                             </select>

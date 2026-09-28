@@ -29,6 +29,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
+import { companyKindOf, phaseContractorLabel, vendorCompanies } from "@/lib/cip";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -48,7 +49,7 @@ const TABS = [
   "Assets",
   "Details",
 ];
-const PROJECT_TYPES = ["Client Work", "Internal", "Retainer", "Fixed Fee"];
+const PROJECT_TYPES = ["Client Work", "Internal", "Retainer", "Fixed Fee", "Capital / PMO"];
 
 function activityDate(when: string) {
   if (/today|yesterday/i.test(when)) return "2026-08-05";
@@ -397,6 +398,9 @@ export function ProjectDetail({ id }: { id: string }) {
                 ) : null}
                 <RecordFact label="Manager">{project.manager}</RecordFact>
                 <RecordFact label="Type">{project.projectType}</RecordFact>
+                {project.requestId ? <RecordFact label="Request">{project.requestId}</RecordFact> : null}
+                {project.location ? <RecordFact label="Location">{project.location}</RecordFact> : null}
+                {project.sponsor ? <RecordFact label="Sponsor">{project.sponsor}</RecordFact> : null}
                 <RecordFact label="Start">{formatDisplayDate(project.start)}</RecordFact>
                 <RecordFact label="Deadline">{formatDisplayDate(project.due)}</RecordFact>
               </dl>
@@ -435,7 +439,9 @@ export function ProjectDetail({ id }: { id: string }) {
               <p className="text-sm text-[var(--color-muted)]">{project.description || "No description yet."}</p>
               <div className="project-facts mt-3">
                 <div>
-                  <div className="metric-label">Client</div>
+                  <div className="metric-label">
+                    {companyKindOf(companies.find((c) => c.id === project.companyId)) === "Agency" ? "Agency" : "Client"}
+                  </div>
                   <div className="text-sm font-medium">{project.companyName}</div>
                 </div>
                 <div>
@@ -452,6 +458,42 @@ export function ProjectDetail({ id }: { id: string }) {
                     {formatDisplayDate(project.start)} to {formatDisplayDate(project.due)}
                   </div>
                 </div>
+                {project.requestId ? (
+                  <div>
+                    <div className="metric-label">Request</div>
+                    <div className="text-sm font-medium">{project.requestId}</div>
+                  </div>
+                ) : null}
+                {project.cipNumber ? (
+                  <div>
+                    <div className="metric-label">CIP</div>
+                    <div className="text-sm font-medium">{project.cipNumber}</div>
+                  </div>
+                ) : null}
+                {project.location ? (
+                  <div>
+                    <div className="metric-label">Location</div>
+                    <div className="text-sm font-medium">{project.location}</div>
+                  </div>
+                ) : null}
+                {project.deliveryMethod ? (
+                  <div>
+                    <div className="metric-label">Delivery</div>
+                    <div className="text-sm font-medium">{project.deliveryMethod}</div>
+                  </div>
+                ) : null}
+                {project.fundingSource ? (
+                  <div>
+                    <div className="metric-label">Funding</div>
+                    <div className="text-sm font-medium">{project.fundingSource}</div>
+                  </div>
+                ) : null}
+                {project.sponsor ? (
+                  <div>
+                    <div className="metric-label">Sponsor</div>
+                    <div className="text-sm font-medium">{project.sponsor}</div>
+                  </div>
+                ) : null}
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div>
@@ -495,14 +537,18 @@ export function ProjectDetail({ id }: { id: string }) {
                   <thead>
                     <tr>
                       <th>Phase</th>
+                      <th>Contractor</th>
                       <th>Status</th>
                       <th>Due</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {phases.slice(0, 4).map((phase) => (
+                    {phases.map((phase) => (
                       <tr key={phase.id}>
                         <td className="font-medium">{phase.name}</td>
+                        <td className="text-sm text-[var(--color-muted)]">
+                          {phaseContractorLabel(phase) || "Unassigned"}
+                        </td>
                         <td>
                           <TonePill value={phase.status} />
                         </td>
@@ -511,7 +557,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     ))}
                     {!phases.length ? (
                       <tr>
-                        <td colSpan={3} className="text-[var(--color-muted)]">
+                        <td colSpan={4} className="text-[var(--color-muted)]">
                           No phases yet. Add them on Schedule.
                         </td>
                       </tr>
@@ -605,6 +651,7 @@ export function ProjectDetail({ id }: { id: string }) {
             projectDue={project.due}
             hoursByTaskId={hoursByTask}
             assignees={team}
+            contractorCompanies={vendorCompanies(companies)}
             rateFor={(name) => memberRate(name, project, teamMembers)}
             onUpdateDates={(start, due) => updateProject(project.id, { start, due })}
             onAddPhase={() => createMilestone(project.id, "New milestone", project.due, { kind: "phase" })}
@@ -1225,6 +1272,12 @@ export function ProjectDetail({ id }: { id: string }) {
               budgetAmount: Number(fd.get("budgetAmount") || project.budgetAmount),
               companyId,
               companyName: companies.find((c) => c.id === companyId)?.name ?? project.companyName,
+              requestId: String(fd.get("requestId") || ""),
+              cipNumber: String(fd.get("cipNumber") || ""),
+              location: String(fd.get("location") || ""),
+              deliveryMethod: String(fd.get("deliveryMethod") || ""),
+              fundingSource: String(fd.get("fundingSource") || ""),
+              sponsor: String(fd.get("sponsor") || ""),
             });
             setEditOpen(false);
           }}
@@ -1276,6 +1329,26 @@ export function ProjectDetail({ id }: { id: string }) {
           </div>
           <Field label="Description">
             <TextInput name="description" defaultValue={project.description} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Request ID">
+              <TextInput name="requestId" defaultValue={project.requestId ?? ""} />
+            </Field>
+            <Field label="CIP number">
+              <TextInput name="cipNumber" defaultValue={project.cipNumber ?? ""} />
+            </Field>
+          </div>
+          <Field label="Location">
+            <TextInput name="location" defaultValue={project.location ?? ""} />
+          </Field>
+          <Field label="Delivery method">
+            <TextInput name="deliveryMethod" defaultValue={project.deliveryMethod ?? ""} />
+          </Field>
+          <Field label="Funding source">
+            <TextInput name="fundingSource" defaultValue={project.fundingSource ?? ""} />
+          </Field>
+          <Field label="Sponsor">
+            <TextInput name="sponsor" defaultValue={project.sponsor ?? ""} />
           </Field>
           <div className="flex gap-2">
             <button type="submit" className="btn btn-primary">
