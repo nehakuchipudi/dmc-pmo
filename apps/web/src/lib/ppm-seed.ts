@@ -55,6 +55,17 @@ export const seedObjectives: StrategicObjective[] = [
     progress: 72,
     description: "Standard intake, scoring, and signoff so leadership can see risk early.",
   },
+  {
+    id: "so-mobility",
+    code: "SO-5",
+    name: "Mobility and Connectivity",
+    owner: "Public Works Director",
+    horizon: "FY 2026",
+    status: "On Track",
+    target: "Close the downtown sidewalk gap on Main Street",
+    progress: 28,
+    description: "Rowlett CIP focus area for safe pedestrian connections and quality infrastructure.",
+  },
 ];
 
 export const seedIdeas: Idea[] = [
@@ -101,6 +112,22 @@ export const seedIdeas: Idea[] = [
     requestedBudget: 26000,
     summary: "Matter templates and search for a prospect account. Hold until the sale advances.",
   },
+  {
+    id: "idea-sidewalk",
+    name: "Downtown sidewalk gap, Main to Liberty Grove",
+    companyId: "c-rowlett",
+    companyName: "City of Rowlett Public Works",
+    submitter: "Public Works Director",
+    stage: "Converted",
+    score: 86,
+    strategicFit: 9,
+    valueScore: 8,
+    riskScore: 5,
+    objectiveId: "so-mobility",
+    requestedBudget: 1250000,
+    convertedProjectId: "p-sidewalk",
+    summary: "RQ-2025-0127. Horizontal capital request. TG0 and TG1 approved. Converted to Downtown Sidewalk Connector.",
+  },
 ];
 
 export const seedPortfolios: Portfolio[] = [
@@ -123,6 +150,16 @@ export const seedPortfolios: Portfolio[] = [
     projectIds: [],
     objectiveIds: ["so-gov"],
     description: "Internal PMO, automation, and portal quality work. Ideas land here before they become projects.",
+  },
+  {
+    id: "pf-cip26",
+    name: "CIP 2026 Mobility",
+    owner: "A. Chen",
+    theme: "Capital program",
+    budget: 1250000,
+    projectIds: ["p-sidewalk"],
+    objectiveIds: ["so-mobility", "so-gov"],
+    description: "City of Rowlett adopted CIP book for pedestrian and street connections. Downtown Sidewalk Connector is the first funded job.",
   },
 ];
 
@@ -170,6 +207,28 @@ export const seedRisks: RiskItem[] = [
     status: "Mitigating",
     due: "2026-08-08",
     mitigation: "Ticket 1042 is in progress. Confirm both Cascade contacts can sign in.",
+  },
+  {
+    id: "rk-sw-1",
+    title: "Utility conflicts on Main Street",
+    projectId: "p-sidewalk",
+    owner: "A. Chen",
+    probability: "High",
+    impact: "High",
+    status: "Mitigating",
+    due: "2026-05-15",
+    mitigation: "Complete utility coordination before 60% and hold bid if relocations are open.",
+  },
+  {
+    id: "rk-sw-2",
+    title: "Partial ROW acquisition may slip bid",
+    projectId: "p-sidewalk",
+    owner: "A. Chen",
+    probability: "Medium",
+    impact: "Critical",
+    status: "Open",
+    due: "2026-05-30",
+    mitigation: "Start M11 ROW with Real Estate as soon as 30% confirms takes.",
   },
 ];
 
@@ -269,6 +328,18 @@ export const seedBenefits: Benefit[] = [
     progress: 75,
     owner: "J. Alvarez",
   },
+  {
+    id: "bn-sw-1",
+    name: "Downtown pedestrian connection",
+    objectiveId: "so-mobility",
+    projectId: "p-sidewalk",
+    metric: "Continuous sidewalk Main to Liberty Grove",
+    baseline: "Gap",
+    target: "Open to public",
+    current: "30% design",
+    progress: 28,
+    owner: "A. Chen",
+  },
 ];
 
 export const seedGates: GovernanceGate[] = [
@@ -312,6 +383,66 @@ export const seedGates: GovernanceGate[] = [
     status: "Upcoming",
     criteria: "Final signoff, leftover hours allocated or written off.",
   },
+  {
+    id: "gt-sw-0",
+    name: "TG0 Intake",
+    projectId: "p-sidewalk",
+    stage: "TG0",
+    owner: "P. Rivera",
+    due: "2025-11-15",
+    status: "Approved",
+    criteria: "Complete intake, ROM, classification Capital / PMO, sponsor and PM named.",
+  },
+  {
+    id: "gt-sw-1",
+    name: "TG1 Scope and CIP",
+    projectId: "p-sidewalk",
+    stage: "TG1",
+    owner: "P. Rivera",
+    due: "2026-03-30",
+    status: "Approved",
+    criteria: "Charter accepted. Advance Downtown Sidewalk Connector into CIP 2026 Mobility.",
+  },
+  {
+    id: "gt-sw-2",
+    name: "TG2 Execution kickoff",
+    projectId: "p-sidewalk",
+    stage: "TG2",
+    owner: "P. Rivera",
+    due: "2026-10-06",
+    status: "Approved",
+    criteria: "Munis project string, WBS phases, PM, sponsor, and design procurement path confirmed.",
+  },
+  {
+    id: "gt-sw-3",
+    name: "TG3 Change control",
+    projectId: "p-sidewalk",
+    stage: "TG3",
+    owner: "A. Chen",
+    due: "2026-12-15",
+    status: "Upcoming",
+    criteria: "Use when cost, scope, or schedule changes need PRC. Track cumulative change order exposure.",
+  },
+  {
+    id: "gt-sw-4",
+    name: "TG4 Handover",
+    projectId: "p-sidewalk",
+    stage: "TG4",
+    owner: "A. Chen",
+    due: "2027-02-10",
+    status: "Upcoming",
+    criteria: "Acceptance letter, maintenance owner, warranty documents, and work orders ready.",
+  },
+  {
+    id: "gt-sw-5",
+    name: "TG5 Final closeout",
+    projectId: "p-sidewalk",
+    stage: "TG5",
+    owner: "J. Alvarez",
+    due: "2027-02-28",
+    status: "Upcoming",
+    criteria: "Final actuals, retainage, PO closures, lessons learned, and dashboard match Munis.",
+  },
 ];
 
 export const seedAllocations: ResourceAllocation[] = [
@@ -324,4 +455,6 @@ export const seedAllocations: ResourceAllocation[] = [
   { id: "al-7", memberId: "tm-sc", memberName: "S. Cho", projectId: "p-pos", projectName: "POS Integration", allocationPct: 25, hoursPerWeek: 10, start: "2026-07-10", end: "2026-08-28", projectRole: "Analyst", responsibility: "Store rollout support" },
   { id: "al-8", memberId: "tm-sa", memberName: "S. Ahmed", projectId: "p-warehouse", projectName: "Q3 Warehouse Rollout", allocationPct: 60, hoursPerWeek: 24, start: "2026-08-01", end: "2026-08-22", projectRole: "Developer", responsibility: "Racking and go-live" },
   { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28", projectRole: "Project Manager", responsibility: "ERP sync" },
+  { id: "al-sw-1", memberId: "tm-ac", memberName: "A. Chen", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 45, hoursPerWeek: 18, start: "2025-10-15", end: "2027-02-28", projectRole: "Project Manager", responsibility: "City PM, design reviews, vendor invoices" },
+  { id: "al-sw-2", memberId: "tm-pr", memberName: "P. Rivera", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 10, hoursPerWeek: 4, start: "2025-10-15", end: "2027-02-28", projectRole: "Sponsor support", responsibility: "PRC and CIP cadence" },
 ];

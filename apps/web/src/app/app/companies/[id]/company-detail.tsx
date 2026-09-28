@@ -21,10 +21,11 @@ import {
   TextInput,
   TextSelect,
 } from "@/components/ui";
+import { COMPANY_KINDS, companyKindOf } from "@/lib/cip";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
-import type { CompanyAssetKind, CompanyAssetStatus, CompanyStatus } from "@/lib/types";
+import type { CompanyAssetKind, CompanyAssetStatus, CompanyKind, CompanyStatus } from "@/lib/types";
 
 const TABS = [
   "Overview",
@@ -227,6 +228,7 @@ export function CompanyDetail({ id }: { id: string }) {
         subtitle={
           <>
             <TonePill value={company.status} />
+            <TonePill value={companyKindOf(company)} />
             <span>{managers.join(", ")}</span>
             <span>{company.openProjects} open projects</span>
           </>
@@ -455,6 +457,10 @@ export function CompanyDetail({ id }: { id: string }) {
               <SectionHead title="Company summary" action="Edit" onAction={() => setEditOpen(true)} />
               <p className="text-sm text-[var(--color-muted)]">{company.notes || "Add a company summary from Edit."}</p>
               <div className="company-summary-grid mt-3">
+                <div>
+                  <div className="metric-label">Kind</div>
+                  <div className="text-sm font-medium">{companyKindOf(company)}</div>
+                </div>
                 <div>
                   <div className="metric-label">Industry</div>
                   <div className="text-sm font-medium">{company.industry}</div>
@@ -1137,6 +1143,7 @@ export function CompanyDetail({ id }: { id: string }) {
               privacy: (String(fd.get("privacy") || company.privacy || "Standard") as "Standard" | "Confidential"),
               notes: String(fd.get("notes") ?? company.notes ?? ""),
               status: String(fd.get("status") || company.status) as CompanyStatus,
+              companyKind: String(fd.get("companyKind") || companyKindOf(company)) as CompanyKind,
             });
             setEditOpen(false);
           }}
@@ -1150,6 +1157,15 @@ export function CompanyDetail({ id }: { id: string }) {
           <Field label="Status">
             <TextSelect name="status" defaultValue={company.status}>
               {["Active", "Prospect", "Overdue Inv."].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field label="Kind">
+            <TextSelect name="companyKind" defaultValue={companyKindOf(company)}>
+              {COMPANY_KINDS.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>

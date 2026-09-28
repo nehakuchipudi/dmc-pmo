@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { exportCsv } from "@/lib/pdf";
+import { companyKindOf } from "@/lib/cip";
 import { useAppStore } from "@/lib/store";
 
 const FILTERS = [
@@ -40,7 +41,7 @@ export default function CompaniesPage() {
     <div className="fade-in">
       <PageHeader
         title="Companies"
-        subtitle="Manage every client account in one place."
+        subtitle="Agencies, clients, consultants, and contractors on one roster."
         actions={
           <>
             <button
@@ -91,6 +92,7 @@ export default function CompaniesPage() {
             <thead>
               <tr>
                 <th>Company</th>
+                <th>Kind</th>
                 <th>Status</th>
                 <th>Account Manager</th>
                 <th>Open Projects</th>
@@ -110,6 +112,7 @@ export default function CompaniesPage() {
                       {c.name}
                     </Link>
                   </td>
+                  <td>{companyKindOf(c)}</td>
                   <td>
                     <StatusPill tone={statusTone(c.status)}>{c.status}</StatusPill>
                   </td>

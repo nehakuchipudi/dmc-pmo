@@ -114,6 +114,7 @@ import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextI
 type CreateCompanyInput = {
   name: string;
   status: Company["status"];
+  companyKind?: Company["companyKind"];
   accountManager: string;
   accountManagers?: string[];
   industry: string;
@@ -522,9 +523,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   allocations: seedAllocations,
   toasts: [],
   recentlyViewed: [
+    { type: "company", id: "c-rowlett", label: "City of Rowlett Public Works" },
     { type: "company", id: "c-cascade", label: "Cascade Ventures" },
-    { type: "company", id: "c-oakton", label: "Oakton Technologies" },
-    { type: "company", id: "c-northridge", label: "Northridge Retail Group" },
+    { type: "company", id: "c-trinity", label: "Trinity Ridge Engineering" },
   ],
   focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
   projectWorkflow: loadProjectWorkflow(),
@@ -591,6 +592,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       name: input.name,
       initials: initialsFromName(input.name),
       status: input.status,
+      companyKind: input.companyKind ?? "Client",
       accountManager: managers[0] ?? input.accountManager,
       openProjects: 0,
       openTickets: 0,
@@ -945,7 +947,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       marginPct: 35,
       portalShared: true,
       portalContacts: company.portalContacts,
-      projectType: "Client Work",
+      projectType: company.companyKind === "Agency" ? "Capital / PMO" : "Client Work",
       description: "",
       budgetAmount: input.budgetHours * 180,
       materials: [],

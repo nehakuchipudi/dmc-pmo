@@ -7,6 +7,8 @@ export type Role =
   | "client";
 
 export type CompanyStatus = "Active" | "Prospect" | "Overdue Inv.";
+export type CompanyKind = "Client" | "Agency" | "Consultant" | "Contractor";
+export type PhaseRole = "Design" | "Bid support" | "Construction" | "Inspection" | "CM" | "Utility";
 export type ProjectStatus =
   | "Draft"
   | "Planning"
@@ -95,6 +97,7 @@ export interface Company {
   name: string;
   initials: string;
   status: CompanyStatus;
+  companyKind?: CompanyKind;
   accountManager: string;
   openProjects: number;
   openTickets: number;
@@ -214,6 +217,12 @@ export interface Project {
   scope: ProjectScope;
   rates?: ProjectRate[];
   statusHistory?: ProjectStatusChange[];
+  requestId?: string;
+  cipNumber?: string;
+  location?: string;
+  deliveryMethod?: string;
+  fundingSource?: string;
+  sponsor?: string;
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */
@@ -226,6 +235,11 @@ export interface Milestone {
   status: MilestoneStatus;
   kind: "phase" | "group";
   parentId?: string;
+  contractorCompanyId?: string;
+  contractorName?: string;
+  contractNumber?: string;
+  phaseRole?: PhaseRole;
+  awardAmount?: number;
 }
 
 export interface Ticket {

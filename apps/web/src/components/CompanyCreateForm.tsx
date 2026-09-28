@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { Building2, Link2, MapPin, Plus, Shield, UserPlus, Users, X } from "lucide-react";
 import { Field, TextInput, TextSelect } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
-import type { CompanyAddress, CompanyCustomField, CompanyPrivacy, CompanyStatus } from "@/lib/types";
+import { COMPANY_KINDS } from "@/lib/cip";
+import type { CompanyAddress, CompanyCustomField, CompanyKind, CompanyPrivacy, CompanyStatus } from "@/lib/types";
 
 const STATUSES: CompanyStatus[] = ["Active", "Prospect", "Overdue Inv."];
 const INDUSTRIES = [
@@ -17,6 +18,7 @@ const INDUSTRIES = [
   "Healthcare",
   "Finance",
   "Public Sector",
+  "Construction",
 ];
 const SALUTATIONS = ["", "Mr", "Ms", "Mx", "Dr", "Prof"];
 const PRONOUNS = ["", "she/her", "he/him", "they/them", "prefer not to say"];
@@ -29,6 +31,7 @@ export type NewCompanyPayload = {
     status: CompanyStatus;
     accountManager: string;
     accountManagers: string[];
+    companyKind?: CompanyKind;
     industry: string;
     billingTerms: string;
     website?: string;
@@ -99,6 +102,7 @@ export function CompanyCreateForm({
   const contacts = useAppStore((s) => s.contacts);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<CompanyStatus>("Prospect");
+  const [companyKind, setCompanyKind] = useState<CompanyKind>("Client");
   const [website, setWebsite] = useState("");
   const [phone, setPhone] = useState("");
   const [fax, setFax] = useState("");
@@ -219,6 +223,7 @@ export function CompanyCreateForm({
           company: {
             name: typedName,
             status,
+            companyKind,
             accountManager: managers[0] ?? "M. Doyle",
             accountManagers: managers.length ? managers : ["M. Doyle"],
             industry: industry.trim() || "Professional Services",
@@ -267,6 +272,17 @@ export function CompanyCreateForm({
                 ))}
               </TextSelect>
             </Field>
+            <Field label="Kind">
+              <TextSelect value={companyKind} onChange={(e) => setCompanyKind(e.target.value as CompanyKind)}>
+                {COMPANY_KINDS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+          </div>
+          <div className="company-create-row">
             <Field label="Website">
               <TextInput value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
             </Field>
