@@ -15,12 +15,14 @@ export function vendorCompanies(companies: Company[]) {
   return companies.filter((row) => isVendorKind(companyKindOf(row)));
 }
 
+export function phaseContractorMeta(phase: Milestone) {
+  return [phase.phaseRole, phase.contractNumber].filter(Boolean).join(" · ");
+}
+
 export function phaseContractorLabel(phase: Milestone) {
   if (!phase.contractorName) return "";
-  const bits = [phase.contractorName];
-  if (phase.phaseRole) bits.push(phase.phaseRole);
-  if (phase.contractNumber) bits.push(phase.contractNumber);
-  return bits.join(" · ");
+  const meta = phaseContractorMeta(phase);
+  return meta ? `${phase.contractorName} · ${meta}` : phase.contractorName;
 }
 
 export function assignPhaseContractor(

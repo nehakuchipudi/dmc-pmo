@@ -2032,6 +2032,27 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-muted);
 }
 .project-overview { display: grid; gap: 12px; }
+.overview-schedule-table { table-layout: fixed; }
+.overview-schedule-table th,
+.overview-schedule-table td { padding: 10px 12px; }
+.overview-schedule-table th:first-child,
+.overview-schedule-table td:first-child { width: 22%; }
+.overview-schedule-table th:nth-child(3),
+.overview-schedule-table td:nth-child(3) { width: 132px; }
+.overview-schedule-table th:nth-child(4),
+.overview-schedule-table td:nth-child(4) { width: 108px; }
+.overview-schedule-phase,
+.overview-schedule-due,
+.overview-schedule-status { white-space: nowrap; }
+.overview-schedule-vendor {
+  font-weight: 650;
+  color: var(--color-ink);
+}
+.overview-schedule-meta {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
 .project-facts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
