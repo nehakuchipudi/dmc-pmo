@@ -472,7 +472,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_automations",
     keywords: ["automation", "rules", "email", "outbox", "trigger"],
     summary:
-      "Automations are triggers, conditions, and email notifications. The Email outbox shows what the workspace queued, including welcome mail and project owner assignment notices.",
+      "Automations are triggers, conditions, and email notifications. The Email outbox shows what the workspace queued, including welcome mail, user invitation links, and project owner assignment notices.",
     steps: [
       "Open Automations.",
       "Enable or run a rule if you are an Admin.",
@@ -508,13 +508,15 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/app/settings",
     audience: "internal",
     viewCap: "view_users",
-    keywords: ["users", "roles", "permissions", "add user", "rbac", "access", "rates"],
+    keywords: ["users", "roles", "permissions", "add user", "rbac", "access", "rates", "invite", "invitation"],
     summary:
-      "Users & roles is the firm roster. Admin adds people, assigns a role, sets bill and cost rates, and chooses hours-only versus rates and budgets.",
+      "Users & roles is the firm roster. Admin adds people, sends an invitation email, assigns a role, sets bill and cost rates, and chooses hours-only versus rates and budgets.",
     steps: [
       "Open Users and roles from your profile or Settings.",
-      "Admin: Add user, fill Profile, Organization, Rates, and Access, then save.",
+      "Admin: Add user, fill Profile, Organization, Rates, and Access.",
+      "Keep Send an invitation email checked so they get a link to create an account and sign in.",
       "Admin: Edit to change role. That role applies on the next page they open.",
+      "Use Send invite or Resend invite on a row to mail the signup and sign-in links again.",
       "PM, Finance, and Leadership can view the roster but cannot edit it.",
     ],
     tips: [

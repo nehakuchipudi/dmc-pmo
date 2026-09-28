@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const { can } = useAuth();
   const team = useAppStore((s) => s.team);
   const addTeamMember = useAppStore((s) => s.addTeamMember);
+  const inviteTeamMember = useAppStore((s) => s.inviteTeamMember);
   const updateTeamMember = useAppStore((s) => s.updateTeamMember);
   const setTeamMemberActive = useAppStore((s) => s.setTeamMemberActive);
   const projectWorkflow = useAppStore((s) => s.projectWorkflow);
@@ -44,7 +45,7 @@ export default function SettingsPage() {
         subtitle={
           tab === "Users"
             ? canManageUsers
-              ? "Add people, assign roles, set rates, and decide who can see hours versus budgets."
+              ? "Add people, send an invite, assign roles, set rates, and decide who can see hours versus budgets."
               : "Review who is on the workspace and what each role can do. Only an admin can change access."
             : tab === "Email domain"
               ? "Prove DMC PMO may send invoices and reminders as your company, so inboxes do not treat them as spam."
@@ -110,12 +111,18 @@ export default function SettingsPage() {
                 </td>
                 <td>
                   <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
+                  {m.invitedAt ? (
+                    <div className="mt-1 text-xs text-[var(--color-muted)]">Invited {m.invitedAt}</div>
+                  ) : null}
                 </td>
                 <td className="text-right space-x-2">
                   {canManageUsers ? (
                     <>
                       <button type="button" className="btn btn-ghost text-sm" onClick={() => setEditId(m.id)}>
                         Edit
+                      </button>
+                      <button type="button" className="btn btn-ghost text-sm" onClick={() => inviteTeamMember(m.id)}>
+                        {m.invitedAt ? "Resend invite" : "Send invite"}
                       </button>
                       <button
                         type="button"
@@ -216,8 +223,8 @@ export default function SettingsPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const value = readTeamMemberForm(e.currentTarget);
-            addTeamMember(value);
+            const { sendInvite, ...value } = readTeamMemberForm(e.currentTarget);
+            addTeamMember({ ...value, sendInvite });
             setOpen(false);
           }}
         >
@@ -230,7 +237,8 @@ export default function SettingsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              updateTeamMember(editing.id, readTeamMemberForm(e.currentTarget));
+              const { sendInvite: _invite, ...value } = readTeamMemberForm(e.currentTarget);
+              updateTeamMember(editing.id, value);
               setEditId(null);
             }}
           >

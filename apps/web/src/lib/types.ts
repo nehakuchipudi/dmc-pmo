@@ -314,6 +314,7 @@ export interface TeamMember {
   username?: string;
   financialVisibility?: FinancialVisibility;
   notifyEmail?: boolean;
+  invitedAt?: string;
 }
 
 export interface ProjectRate {

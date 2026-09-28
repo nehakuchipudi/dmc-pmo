@@ -48,6 +48,13 @@ import {
   resolveNotifyEmail,
 } from "./project-notify";
 import {
+  inviteLandingHref,
+  inviteLoginHref,
+  inviteSignupHref,
+  userInviteBody,
+  userInviteSubject,
+} from "./user-invite";
+import {
   seedAllocations,
   seedBenefits,
   seedDependencies,
@@ -305,7 +312,10 @@ type AppState = {
   linkFileToTask: (projectId: string, fileId: string, taskId: string) => void;
   updateProjectScope: (projectId: string, scope: ProjectScope) => void;
   team: TeamMember[];
-  addTeamMember: (input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean }) => string;
+  addTeamMember: (
+    input: Omit<TeamMember, "id" | "initials" | "active"> & { active?: boolean; sendInvite?: boolean },
+  ) => string;
+  inviteTeamMember: (id: string) => void;
   registerAccount: (input: {
     name: string;
     email: string;
@@ -455,6 +465,32 @@ function assignmentPeople(team: TeamMember[]) {
     people.push({ name: row.name, email: row.email, notifyEmail: row.notifyEmail });
   }
   return people;
+}
+
+function sendUserInviteMail(
+  set: (fn: (s: AppState) => Partial<AppState>) => void,
+  member: TeamMember,
+) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://dmc-pmo.vercel.app";
+  const email = member.email.trim();
+  const firstName = member.firstName ?? member.name.split(" ")[0];
+  const lastName = member.lastName ?? member.name.split(" ").slice(1).join(" ");
+  recordAssignmentMail(set, {
+    to: email,
+    subject: userInviteSubject(),
+    body: userInviteBody({
+      name: member.name,
+      email,
+      role: member.role,
+      inviterName: currentUser()?.name ?? "Your DMC PMO admin",
+      inviteHref: inviteLandingHref({ email, firstName, lastName, role: member.role, origin }),
+      signupHref: inviteSignupHref({ email, firstName, lastName, origin }),
+      loginHref: inviteLoginHref(email, origin),
+      toolHref: `${origin}/`,
+    }),
+    title: `Invite sent to ${member.name}`,
+    href: "/app/settings",
+  });
 }
 
 function recordAssignmentMail(
@@ -1615,6 +1651,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTeamMember: (input) => {
     if (currentUser() && !requireCap(get, "manage_users")) return "";
     const id = uid("tm");
+    const sendInvite = input.sendInvite === true;
     const member: TeamMember = {
       id,
       name: input.name,
@@ -1637,11 +1674,34 @@ export const useAppStore = create<AppState>((set, get) => ({
       username: input.username,
       financialVisibility: input.financialVisibility,
       avatarUrl: input.avatarUrl ?? `https://i.pravatar.cc/128?u=${encodeURIComponent(input.email)}`,
+      notifyEmail: input.notifyEmail,
+      invitedAt: sendInvite ? displayNow() : input.invitedAt,
     };
     set((s) => ({ team: [member, ...s.team] }));
     persistTeam(get().team);
-    get().pushToast(`${member.name} added`);
+    if (sendInvite) {
+      sendUserInviteMail(set, member);
+      get().pushToast(`Invite sent to ${member.email}`);
+    } else {
+      get().pushToast(`${member.name} added`);
+    }
     return id;
+  },
+
+  inviteTeamMember: (id) => {
+    if (!requireCap(get, "manage_users")) return;
+    const member = get().team.find((row) => row.id === id);
+    if (!member?.email) {
+      get().pushToast("This person needs an email before you can invite them.", "danger");
+      return;
+    }
+    const invited = { ...member, invitedAt: displayNow() };
+    set((s) => ({
+      team: s.team.map((row) => (row.id === id ? invited : row)),
+    }));
+    persistTeam(get().team);
+    sendUserInviteMail(set, invited);
+    get().pushToast(`Invite sent to ${invited.email}`);
   },
 
   registerAccount: (input) => {
