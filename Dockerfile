@@ -8,7 +8,14 @@ COPY . .
 ENV GITHUB_PAGES=false
 RUN pnpm --filter web build
 
-FROM nginx:alpine AS runner
-COPY --from=builder /app/apps/web/out /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV STATIC_DIR=/app/public
+COPY apps/api/package.json ./package.json
+COPY apps/api/server.mjs ./server.mjs
+RUN npm install --omit=dev
+COPY --from=builder /app/apps/web/out ./public
+EXPOSE 8080
+CMD ["node", "server.mjs"]

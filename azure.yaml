@@ -1,0 +1,22 @@
+name: dmc-pmo
+metadata:
+  template: dmc-pmo@0.0.1
+services:
+  app:
+    project: .
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: ./scripts/azure-preprovision.sh
+      continueOnError: false
+  postprovision:
+    posix:
+      shell: sh
+      run: ./scripts/azure-postprovision.sh
+      continueOnError: true

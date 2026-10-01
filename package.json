@@ -6,7 +6,8 @@
     "build": "pnpm --filter web build",
     "start": "pnpm --filter web start",
     "lint": "pnpm --filter web lint",
-    "check:copy": "node scripts/check-no-emdash.mjs"
+    "check:copy": "node scripts/check-no-emdash.mjs",
+    "verify:azure": "node scripts/verify-azure-workspace.mjs"
   },
   "packageManager": "pnpm@9.15.0"
 }
