@@ -10,6 +10,7 @@ import {
 } from "react";
 import { findAccount } from "./directory";
 import { entraConfigured, startEntraSignOut } from "./entra";
+import { applyWorkspaceSnapshot, pullAzureWorkspace } from "./workspace-sync";
 import { users } from "./data";
 import { applyTeamRole, can as roleCan, canSeeFinancials as roleSeesMoney, type Capability } from "./rbac";
 import { useAppStore } from "./store";
@@ -35,6 +36,14 @@ function lookupUser(id: string | null) {
   return findAccount(id) ?? users.find((u) => u.id === id) ?? null;
 }
 
+function hydrateAzureWorkspace() {
+  void pullAzureWorkspace()
+    .then((remote) => {
+      if (remote?.data) applyWorkspaceSnapshot(remote);
+    })
+    .catch(() => {});
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
@@ -53,12 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserId: (id: string) => {
         const next = lookupUser(id);
         setUser(next);
-        if (next) window.localStorage.setItem(STORAGE_KEY, next.id);
-        else window.localStorage.removeItem(STORAGE_KEY);
+        if (next) {
+          window.localStorage.setItem(STORAGE_KEY, next.id);
+          hydrateAzureWorkspace();
+        } else window.localStorage.removeItem(STORAGE_KEY);
       },
       setSessionUser: (next: User) => {
         setUser(next);
         window.localStorage.setItem(STORAGE_KEY, next.id);
+        hydrateAzureWorkspace();
       },
       logout: () => {
         const usedEntra = Boolean(resolved?.entraOid);

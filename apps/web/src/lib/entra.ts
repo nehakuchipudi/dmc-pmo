@@ -1,10 +1,14 @@
 import type { AccountInfo, AuthenticationResult, RedirectRequest } from "@azure/msal-browser";
+import { azureRuntimeConfig } from "./azure-config";
 
 export const ENTRA_SCOPES = ["openid", "profile", "email", "User.Read"];
 export const MAIL_SCOPES = ["Mail.Send"];
 
 export function entraClientId() {
-  return (process.env.NEXT_PUBLIC_ENTRA_CLIENT_ID ?? "").trim();
+  return (
+    azureRuntimeConfig().entraClientId ||
+    (process.env.NEXT_PUBLIC_ENTRA_CLIENT_ID ?? "")
+  ).trim();
 }
 
 export function entraConfigured() {
@@ -12,9 +16,11 @@ export function entraConfigured() {
 }
 
 export function entraAuthority() {
-  const explicit = (process.env.NEXT_PUBLIC_ENTRA_AUTHORITY ?? "").trim();
+  const runtime = azureRuntimeConfig();
+  const explicit = (runtime.entraAuthority || process.env.NEXT_PUBLIC_ENTRA_AUTHORITY || "").trim();
   if (explicit) return explicit;
-  const tenant = (process.env.NEXT_PUBLIC_ENTRA_TENANT_ID ?? "common").trim() || "common";
+  const tenant =
+    (runtime.entraTenantId || process.env.NEXT_PUBLIC_ENTRA_TENANT_ID || "common").trim() || "common";
   return `https://login.microsoftonline.com/${tenant}`;
 }
 
@@ -103,6 +109,25 @@ export async function startEntraSignOut() {
   const msal = await getMsal();
   if (!msal) return;
   await msal.logoutRedirect({ postLogoutRedirectUri: `${window.location.origin}/login/` });
+}
+
+export async function acquireWorkspaceToken() {
+  const msal = await getMsal();
+  if (!msal) return undefined;
+  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+  if (!account) return undefined;
+  msal.setActiveAccount(account);
+  try {
+    const silent = await msal.acquireTokenSilent({ account, scopes: ENTRA_SCOPES });
+    return silent.accessToken;
+  } catch {
+    try {
+      const popup = await msal.acquireTokenPopup({ account, scopes: ENTRA_SCOPES });
+      return popup.accessToken;
+    } catch {
+      return undefined;
+    }
+  }
 }
 
 export async function acquireMailToken() {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Poppins } from "next/font/google";
+import { AzureRuntime } from "@/components/azure/AzureRuntime";
 import { AuthProvider } from "@/lib/auth";
 import { ToastHost } from "@/components/ui";
 import "./globals.css";
@@ -30,10 +31,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${body.variable} ${display.variable} antialiased`}>
-        <AuthProvider>
-          {children}
-          <ToastHost />
-        </AuthProvider>
+        <AzureRuntime>
+          <AuthProvider>
+            {children}
+            <ToastHost />
+          </AuthProvider>
+        </AzureRuntime>
       </body>
     </html>
   );

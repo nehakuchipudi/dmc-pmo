@@ -44,7 +44,10 @@ export function EntraSetupNote() {
         an account with their original address. Entra then emails the verification or sign-in code.
       </p>
       <p>
-        Set <code>NEXT_PUBLIC_ENTRA_CLIENT_ID</code> and optionally
+        Azure Container Apps supplies <code>ENTRA_CLIENT_ID</code> at runtime through
+        {" "}
+        <code>/config.json</code>
+        . For local development set <code>NEXT_PUBLIC_ENTRA_CLIENT_ID</code> and optionally
         {" "}
         <code>NEXT_PUBLIC_ENTRA_TENANT_ID</code> or a CIAM
         {" "}

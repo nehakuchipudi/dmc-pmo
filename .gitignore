@@ -11,3 +11,4 @@ dist
 coverage
 .vercel
 apps/web/out
+infra/main.json

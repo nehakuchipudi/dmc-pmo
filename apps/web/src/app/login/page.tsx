@@ -48,7 +48,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Sign in to PMO"
-      subtitle="Use your original work or personal email with Microsoft Entra ID. Demo users stay available for the sample workspace."
+      subtitle="Sign in with Microsoft Entra ID. Azure Database keeps the workspace shared across devices."
     >
       <form
         className="space-y-3"
