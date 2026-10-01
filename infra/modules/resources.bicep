@@ -178,16 +178,6 @@ resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2
   }
 }
 
-resource postgresEntraAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
-  parent: postgres
-  name: identity.name
-  properties: {
-    principalType: 'ServicePrincipal'
-    principalName: identity.name
-    tenantId: tenant().tenantId
-  }
-}
-
 resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(acr.id, identity.id, acrPullRole)
   scope: acr
