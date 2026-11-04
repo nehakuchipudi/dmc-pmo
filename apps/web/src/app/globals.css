@@ -1857,8 +1857,61 @@ button, input, select, textarea { font: inherit; }
   justify-content: space-between;
   margin-bottom: 14px;
 }
-.ts-toolbar-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.ts-toolbar-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ts-toolbar-group .field-input { min-width: 140px; width: auto; }
+.ts-picker { position: relative; }
+.ts-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.ts-person-btn { min-width: 200px; }
+.ts-filter-label { color: var(--color-muted); }
+.ts-picker-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 240px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lift);
+  display: grid;
+  gap: 4px;
+}
+.ts-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.ts-picker-row:hover { background: var(--color-fog); }
+.ts-picker-row.is-active { background: #2563eb; color: #fff; }
+.ts-toolbar-link {
+  border: 0;
+  background: none;
+  color: var(--color-navy);
+  font-weight: 650;
+  cursor: pointer;
+}
 .ts-inline { display: grid; gap: 4px; font-size: 0.72rem; color: var(--color-muted); }
 .ts-inline .field-input { min-width: 150px; }
 .ts-toolbar-toggles { align-items: center; }
@@ -2102,11 +2155,12 @@ button, input, select, textarea { font: inherit; }
 }
 .ts-week-cell:hover .ts-week-add,
 .ts-week-add:focus-visible { opacity: 1; background: #2563eb; color: #fff; }
-.ts-add-btn:hover,
-.ts-add-btn:focus-visible {
+.icon-btn.ts-add-btn:hover,
+.icon-btn.ts-add-btn:focus-visible {
   background: #2563eb;
   border-color: #2563eb;
   color: #fff;
+  transform: none;
 }
 @media (max-width: 900px) {
   .ts-timeline, .ts-entry, .ts-activity-row, .ts-activity-grid { grid-template-columns: 1fr; }
