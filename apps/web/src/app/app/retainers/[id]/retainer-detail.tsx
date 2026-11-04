@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
+import { MoreHorizontal, MoreVertical } from "lucide-react";
+import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
+import { AddActivityModal, AddPeriodModal } from "@/components/retainers/RetainerModals";
 import {
   Field,
   Modal,
@@ -16,7 +19,9 @@ import {
   TextSelect,
   statusTone,
 } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
+import { companyProjectId, daysUntil, earnedValue, nextPeriodRange, pickCurrentPeriod, retainerRate } from "@/lib/retainers";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import type { RetainerStatus, RetainerType } from "@/lib/types";
@@ -25,14 +30,18 @@ const TABS = ["Overview", "Periods", "Billing", "Tickets", "Files & Notes"];
 
 export function RetainerDetail({ id }: { id: string }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, can } = useAuth();
   const retainers = useAppStore((s) => s.retainers);
   const retainerPeriods = useAppStore((s) => s.retainerPeriods);
   const allTickets = useAppStore((s) => s.tickets);
   const allContacts = useAppStore((s) => s.contacts);
+  const projects = useAppStore((s) => s.projects);
+  const tasks = useAppStore((s) => s.tasks);
   const updateRetainer = useAppStore((s) => s.updateRetainer);
   const allocate = useAppStore((s) => s.allocateRetainerHours);
   const addPeriod = useAppStore((s) => s.addRetainerPeriod);
+  const updatePeriod = useAppStore((s) => s.updateRetainerPeriod);
   const generatePeriodInvoice = useAppStore((s) => s.generatePeriodInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const addRetainerFile = useAppStore((s) => s.addRetainerFile);
@@ -43,6 +52,12 @@ export function RetainerDetail({ id }: { id: string }) {
   const trackView = useAppStore((s) => s.trackView);
   const [tab, setTab] = useState("Overview");
   const [editOpen, setEditOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [periodMenu, setPeriodMenu] = useState<string | null>(null);
+  const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [hours, setHours] = useState("1");
 
   const retainer = useMemo(() => retainers.find((r) => r.id === id), [retainers, id]);
@@ -62,11 +77,34 @@ export function RetainerDetail({ id }: { id: string }) {
     () => contacts.find((c) => c.id === retainer?.contactId) ?? contacts[0],
     [contacts, retainer?.contactId],
   );
+  const linkedProjects = useMemo(
+    () => projects.filter((p) => p.companyId === retainer?.companyId),
+    [projects, retainer?.companyId],
+  );
+  const upcoming = useMemo(() => {
+    const ids = new Set(linkedProjects.map((p) => p.id));
+    return tasks
+      .filter((task) => ids.has(task.projectId) && task.status !== "Done")
+      .slice()
+      .sort((a, b) => a.due.localeCompare(b.due))
+      .slice(0, 5);
+  }, [linkedProjects, tasks]);
+  const currentPeriod = useMemo(() => pickCurrentPeriod(periods), [periods]);
+  const periodDraft = nextPeriodRange(periods);
 
   useEffect(() => {
     if (!retainer) return;
     trackView("retainer", retainer.id, retainer.name);
   }, [retainer, trackView]);
+
+  useEffect(() => {
+    const edit = searchParams.get("edit") === "1";
+    const period = searchParams.get("period") === "1";
+    if (!edit && !period) return;
+    if (edit) setEditOpen(true);
+    if (period) setPeriodOpen(true);
+    router.replace(`/app/retainers/view/?id=${id}`);
+  }, [id, router, searchParams]);
 
   if (!retainer) {
     return (
@@ -79,8 +117,41 @@ export function RetainerDetail({ id }: { id: string }) {
     );
   }
 
-  const pct = Math.round((retainer.usedHours / Math.max(retainer.budgetHours, 1)) * 100);
-  const remaining = Math.max(0, retainer.budgetHours - retainer.usedHours);
+  const rate = retainerRate(retainer.rate);
+  const budgetHours = currentPeriod?.budgetHours ?? retainer.budgetHours;
+  const usedHours = currentPeriod?.usedHours ?? retainer.usedHours;
+  const pct = Math.round((usedHours / Math.max(budgetHours, 1)) * 100);
+  const remaining = Math.max(0, budgetHours - usedHours);
+  const renewIn = daysUntil(retainer.nextRenew ?? retainer.expires);
+  const projectId = companyProjectId(projects, retainer.companyId);
+
+  function emailContact() {
+    const to = linkedContact?.email ?? "billing@client.com";
+    queueEmail(
+      to,
+      `Retainer: ${retainer!.name}`,
+      `Usage ${retainer!.usedHours}/${retainer!.budgetHours}h. Period expires ${retainer!.expires}.`,
+    );
+    pushToast(`Email queued to ${to}`);
+  }
+
+  function invoicePeriod(periodId?: string) {
+    const target = periodId ?? periods.find((p) => p.status === "Opened")?.id;
+    if (!target) {
+      pushToast("No open period to invoice", "danger");
+      return;
+    }
+    const inv = generatePeriodInvoice(target);
+    if (inv) router.push(`/app/billing/view/?id=${inv}`);
+  }
+
+  function startLogTime() {
+    if (!projectId) {
+      pushToast("Add a project on this company first.", "danger");
+      return;
+    }
+    setCreateKind("time");
+  }
 
   return (
     <div className="fade-in">
@@ -93,40 +164,69 @@ export function RetainerDetail({ id }: { id: string }) {
         subtitle={`${retainer.companyName} · ${retainer.type} · Manager ${retainer.manager}`}
         actions={
           <>
-            <StatusPill tone={statusTone(retainer.status)}>{retainer.status}</StatusPill>
+            <IfCan cap="log_time">
+              <button type="button" className="btn btn-primary" onClick={startLogTime}>
+                Log time
+              </button>
+            </IfCan>
             <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
               Edit
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                const to = linkedContact?.email ?? "billing@client.com";
-                queueEmail(
-                  to,
-                  `Retainer: ${retainer.name}`,
-                  `Usage ${retainer.usedHours}/${retainer.budgetHours}h. Period expires ${retainer.expires}.`,
-                );
-                pushToast(`Email queued to ${to}`);
-              }}
-            >
-              Send email
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                const open = periods.find((p) => p.status === "Opened");
-                if (!open) {
-                  pushToast("No open period to invoice", "danger");
-                  return;
-                }
-                const inv = generatePeriodInvoice(open.id);
-                if (inv) router.push(`/app/billing/view/?id=${inv}`);
-              }}
-            >
-              Generate invoice
-            </button>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="More retainer actions"
+                aria-expanded={moreOpen}
+                onClick={() => setMoreOpen((open) => !open)}
+              >
+                <MoreHorizontal size={18} />
+              </button>
+              {moreOpen ? (
+                <div className="row-menu">
+                  {can("manage_retainer") ? (
+                    <button type="button" onClick={() => { setPeriodOpen(true); setMoreOpen(false); }}>
+                      Add period
+                    </button>
+                  ) : null}
+                  {can("manage_retainer") ? (
+                    <button type="button" onClick={() => { setActivityOpen(true); setMoreOpen(false); }}>
+                      Add activity
+                    </button>
+                  ) : null}
+                  {can("create_invoice") ? (
+                    <button type="button" onClick={() => { invoicePeriod(); setMoreOpen(false); }}>
+                      Create invoice
+                    </button>
+                  ) : null}
+                  {can("create_ticket") ? (
+                    <button type="button" onClick={() => { setCreateKind("ticket"); setMoreOpen(false); }}>
+                      New ticket
+                    </button>
+                  ) : null}
+                  {can("create_project") ? (
+                    <button type="button" onClick={() => { setCreateKind("project"); setMoreOpen(false); }}>
+                      New project
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => { emailContact(); setMoreOpen(false); }}>
+                    Email contact
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push("/app/timesheets");
+                      setMoreOpen(false);
+                    }}
+                  >
+                    Timesheets
+                  </button>
+                  <button type="button" onClick={() => { setPortalOpen(true); setMoreOpen(false); }}>
+                    Client portal
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </>
         }
       />
@@ -182,19 +282,48 @@ export function RetainerDetail({ id }: { id: string }) {
                 <dd>{retainer.autoRenew ? "On" : "Off"}</dd>
               </div>
               <div>
+                <dt className="text-[var(--color-muted)]">Rate</dt>
+                <dd>{money(rate)}/hr</dd>
+              </div>
+            </dl>
+            <h3 className="mt-6 text-sm font-semibold text-[var(--color-navy)]">Key dates</h3>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="text-[var(--color-muted)]">Started</dt>
+                <dd>{retainer.started ? formatDisplayDate(retainer.started) : "Not set"}</dd>
+              </div>
+              <div>
                 <dt className="text-[var(--color-muted)]">Expires</dt>
                 <dd>{formatDisplayDate(retainer.expires)}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--color-muted)]">Period began</dt>
+                <dd>{currentPeriod ? formatDisplayDate(currentPeriod.start) : "Not set"}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--color-muted)]">Next renew</dt>
+                <dd>{retainer.nextRenew ? formatDisplayDate(retainer.nextRenew) : formatDisplayDate(retainer.expires)}</dd>
               </div>
             </dl>
           </SideRail>
           <div className="space-y-4">
             <div className="panel p-4">
-              <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Current period allowance</h2>
-              <div className="mb-2 text-sm text-[var(--color-muted)]">{retainer.periodLabel}</div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold text-[var(--color-navy)]">Current period</h2>
+                {currentPeriod ? (
+                  <span className="text-sm text-[var(--color-muted)]">
+                    {formatDisplayDate(currentPeriod.start)} to {formatDisplayDate(currentPeriod.end)}
+                  </span>
+                ) : null}
+              </div>
               <div className="grid gap-3 sm:grid-cols-4">
-                <Metric label="Budget" value={`${retainer.budgetHours}h`} />
-                <Metric label="Used" value={`${retainer.usedHours}h`} />
+                <Metric label="Budget" value={`${budgetHours}h`} />
+                <Metric label="Used" value={`${usedHours}h`} />
                 <Metric label="Remaining" value={`${remaining}h`} accent />
+                <Metric label="Renewal" value={renewIn === null ? "Not set" : renewIn >= 0 ? `${renewIn} days` : `${Math.abs(renewIn)} days ago`} />
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Metric label="Earned" value={money(earnedValue(usedHours, retainer.rate))} />
                 <Metric label="Burn" value={`${pct}%`} />
               </div>
               <div className="mt-4">
@@ -218,6 +347,43 @@ export function RetainerDetail({ id }: { id: string }) {
                 </button>
               </div>
             </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="panel p-4">
+                <h2 className="mb-3 font-semibold text-[var(--color-navy)]">Linked work</h2>
+                <ul className="space-y-2 text-sm">
+                  {linkedProjects.map((project) => (
+                    <li key={project.id}>
+                      <Link href={`/app/projects/view/?id=${project.id}`} className="font-semibold text-[var(--color-navy)] hover:underline">
+                        {project.name}
+                      </Link>
+                      <div className="text-xs text-[var(--color-muted)]">{project.status}</div>
+                    </li>
+                  ))}
+                  {!linkedProjects.length ? <li className="text-[var(--color-muted)]">No projects on this company.</li> : null}
+                </ul>
+              </div>
+              <div className="panel p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="font-semibold text-[var(--color-navy)]">Upcoming work</h2>
+                  <IfCan cap="log_time">
+                    <button type="button" className="btn btn-ghost text-sm" onClick={startLogTime}>
+                      Schedule time
+                    </button>
+                  </IfCan>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  {upcoming.map((task) => (
+                    <li key={task.id}>
+                      <span className="font-semibold">{task.name}</span>
+                      <div className="text-xs text-[var(--color-muted)]">
+                        {task.projectName} · due {formatDisplayDate(task.due)}
+                      </div>
+                    </li>
+                  ))}
+                  {!upcoming.length ? <li className="text-[var(--color-muted)]">No upcoming work.</li> : null}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -225,13 +391,11 @@ export function RetainerDetail({ id }: { id: string }) {
       {tab === "Periods" ? (
         <div className="panel overflow-hidden">
           <div className="flex justify-end p-3">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => addPeriod(retainer.id, "2026-09-01", "2026-09-30", retainer.budgetHours)}
-            >
-              + Add new period
-            </button>
+            <IfCan cap="manage_retainer">
+              <button type="button" className="btn btn-primary" onClick={() => setPeriodOpen(true)}>
+                Add new period
+              </button>
+            </IfCan>
           </div>
           <table className="table">
             <thead>
@@ -240,6 +404,7 @@ export function RetainerDetail({ id }: { id: string }) {
                 <th>Status</th>
                 <th>Usage</th>
                 <th>Invoice</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -254,7 +419,7 @@ export function RetainerDetail({ id }: { id: string }) {
                 return (
                   <tr key={p.id}>
                     <td>
-                      {formatDisplayDate(p.start)} - {formatDisplayDate(p.end)}
+                      {formatDisplayDate(p.start)} to {formatDisplayDate(p.end)}
                     </td>
                     <td>
                       <StatusPill tone={statusTone(p.status)}>{p.status}</StatusPill>
@@ -273,17 +438,38 @@ export function RetainerDetail({ id }: { id: string }) {
                           View
                         </Link>
                       ) : (
-                        <button
-                          type="button"
-                          className="btn btn-ghost text-sm"
-                          onClick={() => {
-                            const inv = generatePeriodInvoice(p.id);
-                            if (inv) router.push(`/app/billing/view/?id=${inv}`);
-                          }}
-                        >
+                        <button type="button" className="btn btn-ghost text-sm" onClick={() => invoicePeriod(p.id)}>
                           Create
                         </button>
                       )}
+                    </td>
+                    <td className="row-actions text-right">
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        aria-label={`Period actions ${p.start}`}
+                        onClick={() => setPeriodMenu(periodMenu === p.id ? null : p.id)}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                      {periodMenu === p.id ? (
+                        <div className="row-menu">
+                          {!p.invoiceId ? (
+                            <button type="button" onClick={() => { invoicePeriod(p.id); setPeriodMenu(null); }}>
+                              Create invoice
+                            </button>
+                          ) : (
+                            <button type="button" onClick={() => { router.push(`/app/billing/view/?id=${p.invoiceId}`); setPeriodMenu(null); }}>
+                              Open invoice
+                            </button>
+                          )}
+                          {p.status === "Opened" && can("manage_retainer") ? (
+                            <button type="button" onClick={() => { updatePeriod(p.id, { status: "Closed" }); setPeriodMenu(null); }}>
+                              Close period
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -296,19 +482,10 @@ export function RetainerDetail({ id }: { id: string }) {
       {tab === "Billing" ? (
         <div className="panel p-6">
           <p className="mb-4 text-sm text-[var(--color-muted)]">
-            Create invoices from open periods. Estimated value at $175/hr on current usage:{" "}
-            <strong className="text-[var(--color-navy)]">{money(retainer.usedHours * 175)}</strong>
+            Create invoices from open periods. Estimated value at {money(rate)}/hr on current usage:{" "}
+            <strong className="text-[var(--color-navy)]">{money(earnedValue(retainer.usedHours, retainer.rate))}</strong>
           </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              const open = periods.find((p) => p.status === "Opened");
-              if (!open) return;
-              const inv = generatePeriodInvoice(open.id);
-              if (inv) router.push(`/app/billing/view/?id=${inv}`);
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={() => invoicePeriod()}>
             Invoice current period
           </button>
         </div>
@@ -316,6 +493,13 @@ export function RetainerDetail({ id }: { id: string }) {
 
       {tab === "Tickets" ? (
         <div className="panel overflow-hidden">
+          <div className="flex justify-end p-3">
+            <IfCan cap="create_ticket">
+              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("ticket")}>
+                New ticket
+              </button>
+            </IfCan>
+          </div>
           <table className="table">
             <thead>
               <tr>
@@ -374,6 +558,9 @@ export function RetainerDetail({ id }: { id: string }) {
               contactId: String(fd.get("contactId") || "") || undefined,
               budgetHours: Number(fd.get("budgetHours") || retainer.budgetHours),
               autoRenew: fd.get("autoRenew") === "on",
+              started: String(fd.get("started") || retainer.started || ""),
+              nextRenew: String(fd.get("nextRenew") || retainer.nextRenew || ""),
+              rate: Number(fd.get("rate") || rate),
               expires: String(fd.get("expires") || retainer.expires),
             });
             setEditOpen(false);
@@ -402,11 +589,20 @@ export function RetainerDetail({ id }: { id: string }) {
               ))}
             </TextSelect>
           </Field>
-          <Field label="Budget hours">
-            <TextInput name="budgetHours" type="number" defaultValue={retainer.budgetHours} />
+          <Field label="Started">
+            <TextInput name="started" type="date" defaultValue={retainer.started ?? ""} />
           </Field>
           <Field label="Expires">
             <TextInput name="expires" type="date" defaultValue={retainer.expires} />
+          </Field>
+          <Field label="Next renew">
+            <TextInput name="nextRenew" type="date" defaultValue={retainer.nextRenew ?? retainer.expires} />
+          </Field>
+          <Field label="Budget hours">
+            <TextInput name="budgetHours" type="number" defaultValue={retainer.budgetHours} />
+          </Field>
+          <Field label="Rate">
+            <TextInput name="rate" type="number" defaultValue={rate} />
           </Field>
           <label className="mb-4 flex items-center gap-2 text-sm">
             <input type="checkbox" name="autoRenew" defaultChecked={retainer.autoRenew} />
@@ -417,6 +613,40 @@ export function RetainerDetail({ id }: { id: string }) {
           </button>
         </form>
       </Modal>
+
+      <AddPeriodModal
+        open={periodOpen}
+        defaultHours={retainer.budgetHours}
+        defaultStart={periodDraft.start}
+        defaultEnd={periodDraft.end}
+        onClose={() => setPeriodOpen(false)}
+        onSubmit={(start, end, hoursValue) => {
+          addPeriod(retainer.id, start, end, hoursValue);
+          setPeriodOpen(false);
+          setTab("Periods");
+        }}
+      />
+      <AddActivityModal
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        onSubmit={(body) => {
+          addRetainerNote(retainer.id, { author: user?.name ?? "Staff", body, visibility: "internal" });
+          setActivityOpen(false);
+        }}
+      />
+      <Modal open={portalOpen} title="Client portal" onClose={() => setPortalOpen(false)}>
+        <p className="mb-4 text-sm text-[var(--color-ink)]">
+          Company contacts can see hours and open periods for this retainer on the client portal.
+        </p>
+        <Link href="/portal/retainers" className="btn btn-primary" onClick={() => setPortalOpen(false)}>
+          Open portal view
+        </Link>
+      </Modal>
+      <CreateForms
+        kind={createKind}
+        onClose={() => setCreateKind(null)}
+        defaults={{ companyId: retainer.companyId, projectId }}
+      />
     </div>
   );
 }

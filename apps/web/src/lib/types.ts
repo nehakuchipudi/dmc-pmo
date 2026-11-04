@@ -472,6 +472,9 @@ export interface Retainer {
   budgetHours: number;
   status: RetainerStatus;
   autoRenew: boolean;
+  started?: string;
+  nextRenew?: string;
+  rate?: number;
   expires: string;
   openPeriods: number;
   files: ProjectFile[];

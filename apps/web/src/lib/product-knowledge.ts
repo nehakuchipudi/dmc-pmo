@@ -179,8 +179,17 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     viewCap: "view_retainers",
     keywords: ["retainer", "pre-paid", "monthly t&m"],
     summary: "Retainers are recurring commercial agreements on a company: Monthly T&M, Pre-paid, or Fixed.",
-    howTo: ["Open Retainers or a company Retainers tab.", "Create with type, manager, hours, and expiry."],
-    canDo: ["Create, rename, or delete a retainer"],
+    howTo: [
+      "Open Retainers. Use the row menu to log time, add a note, edit, or add a period.",
+      "On a retainer, log time or edit from the header. Extra actions sit in the three-dot menu.",
+      "Add a period with start, end, and hours, then invoice or close it from the period row.",
+    ],
+    canDo: [
+      "Create, edit, or delete a retainer",
+      "Log time, add a note, or add a period",
+      "Invoice or close an open period",
+      "Export the retainer list",
+    ],
   },
   {
     id: "sales",

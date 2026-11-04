@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { MoreVertical, Plus } from "lucide-react";
+import { MoreHorizontal, MoreVertical, Plus } from "lucide-react";
+import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { AddActivityModal, AddPeriodModal } from "@/components/retainers/RetainerModals";
 import {
   Field,
   FilterChips,
@@ -16,25 +18,39 @@ import {
   statusTone,
 } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
-import { formatDisplayDate } from "@/lib/seed";
+import { useAuth } from "@/lib/auth";
+import { exportCsv } from "@/lib/pdf";
+import { companyProjectId, earnedValue, nextPeriodRange } from "@/lib/retainers";
+import { hiddenMoney } from "@/lib/rbac";
+import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
-import type { RetainerType } from "@/lib/types";
+import type { Retainer, RetainerType } from "@/lib/types";
 
 const FILTERS = ["All open retainers", "My retainers", "Over budget"];
 
 export default function RetainersPage() {
   const router = useRouter();
+  const { user, can, canSeeFinancials } = useAuth();
   const retainers = useAppStore((s) => s.retainers);
   const companies = useAppStore((s) => s.companies);
   const contacts = useAppStore((s) => s.contacts);
+  const projects = useAppStore((s) => s.projects);
+  const periods = useAppStore((s) => s.retainerPeriods);
   const createRetainer = useAppStore((s) => s.createRetainer);
   const deleteRetainer = useAppStore((s) => s.deleteRetainer);
+  const addPeriod = useAppStore((s) => s.addRetainerPeriod);
+  const addRetainerNote = useAppStore((s) => s.addRetainerNote);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const pushToast = useAppStore((s) => s.pushToast);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [open, setOpen] = useState(false);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [headerMore, setHeaderMore] = useState(false);
   const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
+  const [createKind, setCreateKind] = useState<CreateKind>(null);
+  const [logRetainer, setLogRetainer] = useState<Retainer | null>(null);
+  const [periodRetainer, setPeriodRetainer] = useState<Retainer | null>(null);
+  const [noteRetainer, setNoteRetainer] = useState<Retainer | null>(null);
 
   const rows = useMemo(() => {
     if (filter === "My retainers") return retainers.filter((r) => r.manager === "M. Doyle");
@@ -43,18 +59,68 @@ export default function RetainersPage() {
   }, [filter, retainers]);
 
   const companyContacts = contacts.filter((c) => c.companyId === companyId);
+  const periodDraft = periodRetainer
+    ? nextPeriodRange(periods.filter((item) => item.retainerId === periodRetainer.id))
+    : { start: "", end: "" };
+
+  function startLogTime(retainer: Retainer) {
+    const projectId = companyProjectId(projects, retainer.companyId);
+    if (!projectId) {
+      pushToast("Add a project on this company first.", "danger");
+      return;
+    }
+    setLogRetainer(retainer);
+    setCreateKind("time");
+  }
 
   return (
     <div className="fade-in">
       <PageHeader
         title="Retainers"
-        subtitle="Recurring contracts with periods, usage, invoices, and linked contacts."
+        subtitle="Open contracts, hours used, and the next period date."
         actions={
-          <IfCan cap="create_retainer">
-            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-              <Plus size={16} /> New retainer
-            </button>
-          </IfCan>
+          <>
+            <IfCan cap="create_retainer">
+              <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+                <Plus size={16} /> New retainer
+              </button>
+            </IfCan>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="More retainer actions"
+                aria-expanded={headerMore}
+                onClick={() => setHeaderMore((value) => !value)}
+              >
+                <MoreHorizontal size={18} />
+              </button>
+              {headerMore ? (
+                <div className="row-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCsv(
+                        "retainers.csv",
+                        rows.map((r) => ({
+                          title: r.name,
+                          company: r.companyName,
+                          type: r.type,
+                          manager: r.manager,
+                          status: r.status,
+                          earned: earnedValue(r.usedHours, r.rate),
+                          expiry: r.expires,
+                        })),
+                      );
+                      setHeaderMore(false);
+                    }}
+                  >
+                    Export
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </>
         }
       />
       <FilterChips items={FILTERS} active={filter} onChange={setFilter} />
@@ -62,13 +128,13 @@ export default function RetainersPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Retainer</th>
+              <th>Title</th>
               <th>Company</th>
               <th>Type</th>
               <th>Manager</th>
               <th>Status</th>
-              <th>Expiry</th>
-              <th>Open periods</th>
+              <th>Earned</th>
+              <th>Period expiry</th>
               <th>Usage</th>
               <th />
             </tr>
@@ -97,8 +163,8 @@ export default function RetainersPage() {
                   <td>
                     <StatusPill tone={statusTone(r.status)}>{r.status}</StatusPill>
                   </td>
+                  <td className="tabular-nums">{hiddenMoney(canSeeFinancials, money(earnedValue(r.usedHours, r.rate)))}</td>
                   <td>{formatDisplayDate(r.expires)}</td>
-                  <td className="tabular-nums">{r.openPeriods}</td>
                   <td className="min-w-[150px]">
                     <div className="mb-1 text-xs tabular-nums">
                       {r.usedHours}/{r.budgetHours}h
@@ -109,12 +175,58 @@ export default function RetainersPage() {
                     <button
                       type="button"
                       className="btn btn-ghost"
-                      onClick={() => setMenuId(menuId === r.id ? null : r.id)}
+                      aria-label={`Actions for ${r.name}`}
+                      onClick={() => {
+                        setHeaderMore(false);
+                        setMenuId(menuId === r.id ? null : r.id);
+                      }}
                     >
                       <MoreVertical size={16} />
                     </button>
                     {menuId === r.id ? (
                       <div className="row-menu">
+                        {can("log_time") ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              startLogTime(r);
+                              setMenuId(null);
+                            }}
+                          >
+                            Log time
+                          </button>
+                        ) : null}
+                        {can("manage_retainer") ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNoteRetainer(r);
+                              setMenuId(null);
+                            }}
+                          >
+                            Add activity
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            router.push(`/app/retainers/view/?id=${r.id}&edit=1`);
+                            setMenuId(null);
+                          }}
+                        >
+                          Edit retainer
+                        </button>
+                        {can("manage_retainer") ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPeriodRetainer(r);
+                              setMenuId(null);
+                            }}
+                          >
+                            Add period
+                          </button>
+                        ) : null}
                         <button type="button" onClick={() => { router.push(`/app/retainers/view/?id=${r.id}`); setMenuId(null); }}>
                           Open details
                         </button>
@@ -134,15 +246,17 @@ export default function RetainersPage() {
                         >
                           Email contact
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            deleteRetainer(r.id);
-                            setMenuId(null);
-                          }}
-                        >
-                          Delete
-                        </button>
+                        {can("manage_retainer") ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              deleteRetainer(r.id);
+                              setMenuId(null);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </td>
@@ -218,6 +332,39 @@ export default function RetainersPage() {
           </button>
         </form>
       </Modal>
+
+      <AddPeriodModal
+        open={Boolean(periodRetainer)}
+        defaultHours={periodRetainer?.budgetHours ?? 20}
+        defaultStart={periodDraft.start}
+        defaultEnd={periodDraft.end}
+        onClose={() => setPeriodRetainer(null)}
+        onSubmit={(start, end, hours) => {
+          if (!periodRetainer) return;
+          addPeriod(periodRetainer.id, start, end, hours);
+          setPeriodRetainer(null);
+        }}
+      />
+      <AddActivityModal
+        open={Boolean(noteRetainer)}
+        onClose={() => setNoteRetainer(null)}
+        onSubmit={(body) => {
+          if (!noteRetainer) return;
+          addRetainerNote(noteRetainer.id, { author: user?.name ?? "Staff", body, visibility: "internal" });
+          setNoteRetainer(null);
+        }}
+      />
+      <CreateForms
+        kind={createKind}
+        onClose={() => {
+          setCreateKind(null);
+          setLogRetainer(null);
+        }}
+        defaults={{
+          companyId: logRetainer?.companyId,
+          projectId: logRetainer ? companyProjectId(projects, logRetainer.companyId) : undefined,
+        }}
+      />
     </div>
   );
 }
