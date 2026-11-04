@@ -6,7 +6,7 @@ import { ProjectDetail } from "../[id]/project-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "p-warehouse";
+  const id = params.get("id") ?? "";
   return <ProjectDetail id={id} />;
 }
 

@@ -132,7 +132,7 @@ export default function InsightsPage() {
       </MetricGrid>
       <input
         className="field-input mb-4"
-        placeholder="Ask the book: margin, Cascade, capacity, gates..."
+        placeholder="Filter insights: margin, capacity, gates..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />

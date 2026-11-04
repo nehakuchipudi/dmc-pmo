@@ -1,8 +1,8 @@
-import { seedInvoices } from "@/lib/seed";
+import { seedInvoices, staticRecordIds } from "@/lib/seed";
 import { InvoiceDetail } from "./invoice-detail";
 
 export function generateStaticParams() {
-  return seedInvoices.map((i) => ({ id: i.id }));
+  return staticRecordIds(seedInvoices);
 }
 
 export default async function InvoicePage({

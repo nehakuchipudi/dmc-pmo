@@ -247,6 +247,12 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  position: relative;
+  z-index: 40;
+  overflow: visible;
+}
+.topbar .menu-popover {
+  z-index: 60;
 }
 
 .crumb-bar {
@@ -1424,6 +1430,8 @@ button, input, select, textarea { font: inherit; }
 .file-kind-other { background: #8a96a5; }
 
 .row-actions { position: relative; }
+.row-actions:hover .row-menu,
+.row-actions:focus-within .row-menu { display: block; }
 .row-menu {
   position: absolute;
   right: 0;
@@ -2048,7 +2056,13 @@ button, input, select, textarea { font: inherit; }
   opacity: 0.55;
 }
 .ts-week-cell:hover .ts-week-add,
-.ts-week-add:focus-visible { opacity: 1; background: var(--color-fog); color: var(--color-navy); }
+.ts-week-add:focus-visible { opacity: 1; background: #2563eb; color: #fff; }
+.ts-add-btn:hover,
+.ts-add-btn:focus-visible {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
 @media (max-width: 900px) {
   .ts-timeline, .ts-entry, .ts-activity-row, .ts-activity-grid { grid-template-columns: 1fr; }
 }

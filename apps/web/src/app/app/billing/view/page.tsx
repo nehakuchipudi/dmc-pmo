@@ -6,7 +6,7 @@ import { InvoiceDetail } from "../[id]/invoice-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "inv-2291";
+  const id = params.get("id") ?? "";
   return <InvoiceDetail id={id} />;
 }
 

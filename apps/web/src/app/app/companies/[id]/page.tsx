@@ -1,8 +1,9 @@
 import { companies } from "@/lib/data";
+import { staticRecordIds } from "@/lib/seed";
 import { CompanyDetail } from "./company-detail";
 
 export function generateStaticParams() {
-  return companies.map((c) => ({ id: c.id }));
+  return staticRecordIds(companies);
 }
 
 export default async function CompanyDetailPage({

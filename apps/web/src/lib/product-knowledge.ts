@@ -296,9 +296,9 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     summary:
       "Ask AI knows every module and can change live records your role allows. Ask how something works, what a record looks like, or tell it to create, update, assign, email, or delete.",
     howTo: [
-      "Open the sparkle button, or Help & Support then Ask AI.",
-      "Ask a question: How do Ideas become Projects? What is the status of Downtown Sidewalk Connector?",
-      "Give a task: Create a company called Northwind, Set warehouse to On Hold, Draft an email to Dana Kessler.",
+      "Open Help & Support, then Ask AI.",
+      "Ask a question: How do Ideas become Projects? How do I create a company?",
+      "Give a task: Create a company called Northwind, add a project Atlas, or draft an email to a teammate.",
     ],
     canDo: [
       "Answer how any module works",
@@ -429,7 +429,7 @@ export function fallbackProductAnswer(role?: Role | null) {
     starters: [
       "How do Strategy, Ideas, Portfolios, and Projects connect?",
       "What can you do?",
-      "What is the status of Downtown Sidewalk Connector?",
+      "How do I create a company?",
     ],
   };
 }

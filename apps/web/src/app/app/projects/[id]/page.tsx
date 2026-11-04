@@ -1,8 +1,9 @@
 import { projects } from "@/lib/data";
+import { staticRecordIds } from "@/lib/seed";
 import { ProjectDetail } from "./project-detail";
 
 export function generateStaticParams() {
-  return projects.map((p) => ({ id: p.id }));
+  return staticRecordIds(projects);
 }
 
 export default async function ProjectDetailPage({

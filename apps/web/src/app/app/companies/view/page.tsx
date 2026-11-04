@@ -6,7 +6,7 @@ import { CompanyDetail } from "../[id]/company-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "c-cascade";
+  const id = params.get("id") ?? "";
   return <CompanyDetail id={id} />;
 }
 

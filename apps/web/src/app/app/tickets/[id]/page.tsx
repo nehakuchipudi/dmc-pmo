@@ -1,8 +1,8 @@
-import { seedTickets } from "@/lib/seed";
+import { seedTickets, staticRecordIds } from "@/lib/seed";
 import { TicketDetail } from "./ticket-detail";
 
 export function generateStaticParams() {
-  return seedTickets.map((t) => ({ id: t.id }));
+  return staticRecordIds(seedTickets);
 }
 
 export default async function TicketDetailPage({

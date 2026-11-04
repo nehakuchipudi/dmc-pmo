@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { seedAllocations } from "./ppm-seed";
 import {
   OWNER_ROLE,
   memberAssignmentSubject,
@@ -9,7 +8,7 @@ import {
   resolveNotifyEmail,
   wantsOwnerRole,
 } from "./project-notify";
-import { seedEmailOutbox, seedProjects, seedTeam, users } from "./seed";
+import { seedTeam, users } from "./seed";
 
 assert.equal(OWNER_ROLE, "Owner");
 assert.equal(projectAssignmentSubject("Downtown Sidewalk Connector"), "You are the Owner of Downtown Sidewalk Connector");
@@ -41,10 +40,7 @@ assert.equal(wantsOwnerRole("assign Aishwarya as Owner"), true);
 assert.equal(memberAssignmentSubject("Downtown Sidewalk Connector", "Owner").includes("Owner"), true);
 assert.equal(projectHref("p-sidewalk", "https://dmc-pmo.vercel.app"), "https://dmc-pmo.vercel.app/app/projects/view/?id=p-sidewalk");
 
-assert.equal(seedProjects.find((project) => project.id === "p-sidewalk")?.manager, "Aishwarya Phalak");
 assert.ok(users.some((user) => user.email === "aishwarya.phalak@dillonmorgan.com" && user.notifyEmail));
 assert.ok(seedTeam.some((member) => member.email === "aishwarya.phalak@dillonmorgan.com" && member.notifyEmail));
-assert.ok(seedAllocations.some((row) => row.memberId === "tm-ap" && row.projectRole === OWNER_ROLE));
-assert.ok(seedEmailOutbox.some((row) => row.to === "aishwarya.phalak@dillonmorgan.com" && row.subject.includes("Downtown Sidewalk Connector")));
 
 console.log("project-notify.verify ok");

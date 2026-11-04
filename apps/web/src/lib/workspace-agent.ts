@@ -2205,14 +2205,14 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
 }
 
 export function workspaceStarters(role?: Role | null): string[] {
-  if (role === "staff") return ["Log 1 hour on warehouse", "Add a note on warehouse: blockers for Friday", "Draft an email to M. Doyle about my task"];
-  if (role === "finance") return ["Draft an invoice for Cascade", "Approve the pending expense", "Email billing@client.com about INV-2291"];
+  if (role === "staff") return ["How do I log time?", "How do I add a note on a project?", "Draft an email to my project manager"];
+  if (role === "finance") return ["How do I draft an invoice?", "How do I approve an expense?", "Where is the billing outbox?"];
   if (role === "client") return ["How do I raise a ticket?", "Where are my invoices?"];
   return [
     "How do Strategy, Ideas, Portfolios, and Projects connect?",
-    "What is the status of Downtown Sidewalk Connector?",
-    "Set warehouse to On Hold and add a Go-live milestone",
+    "How do I create a company?",
     "Create a company called Northwind and add a contact Dana",
+    "What can you do?",
   ];
 }
 

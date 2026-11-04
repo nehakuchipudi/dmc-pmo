@@ -433,7 +433,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Ask AI knows every module and the live workspace. It answers how the tool works, looks up records, and can create, update, delete, assign, and email across companies, contacts, projects, plan, tasks, tickets, time, billing, retainers, sales, ideas, portfolios, strategy, risks, governance, and the email outbox.",
     steps: [
-      "Open Workspace AI from the sparkle button, or Help & Support then Ask AI.",
+      "Open Help & Support, then Ask AI.",
       "Ask how a module works, how Strategy, Ideas, Portfolios, and Projects connect, or what a live record looks like.",
       "Create: a company, contact, project, task, milestone, ticket, invoice, idea, portfolio, objective, risk, retainer, opportunity, or user.",
       "Update: project status, task or ticket status, assignments, approvals, payments, signoffs, risks, issues, invoices, and record names.",

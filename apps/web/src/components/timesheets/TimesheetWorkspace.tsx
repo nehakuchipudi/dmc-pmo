@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, MoreHorizontal, Plus, Timer } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Timer } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { TimesheetActivityModal } from "@/components/timesheets/TimesheetActivityModal";
 import { ConfirmModal, PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
@@ -241,6 +241,19 @@ export function TimesheetWorkspace() {
     setMoreOpen(false);
   }
 
+  function refreshSheet() {
+    const today = todayIso();
+    setDay(today);
+    setWeekStart(startOfWeek(today));
+    setRangeStart(startOfWeek(today));
+    setRangeEnd(addDays(startOfWeek(today), 6));
+    setWorkFilter("All");
+    setObjectType("All");
+    setReportPerson("All");
+    setSheetPerson(user?.name ?? "All");
+    setSearch("");
+  }
+
   function finishTimer(id: string) {
     const timer = stopTimer(id);
     if (!timer) return;
@@ -263,7 +276,7 @@ export function TimesheetWorkspace() {
         subtitle="Search work, click a day to log or edit, and keep extra tools in the menu."
         actions={
           <div className="ts-header-actions">
-            <div className="ts-more">
+            <div className="ts-more" onMouseEnter={() => setMoreOpen(true)} onMouseLeave={() => setMoreOpen(false)}>
               <button
                 type="button"
                 className="icon-btn"
@@ -291,29 +304,6 @@ export function TimesheetWorkspace() {
                       {tab}
                     </button>
                   ))}
-                  {view === "Weekly" ? (
-                    <>
-                      <div className="menu-heading">Filters</div>
-                      <label className="menu-row ts-more-field">
-                        Work type
-                        <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
-                          <option>All</option>
-                          <option>Billable</option>
-                          <option>Non-billable</option>
-                        </TextSelect>
-                      </label>
-                      <label className="menu-row ts-more-field">
-                        Object type
-                        <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])}>
-                          <option value="All">All</option>
-                          <option value="project">Project</option>
-                          <option value="phase">Phase</option>
-                          <option value="task">Task</option>
-                          <option value="subtask">Subtask</option>
-                        </TextSelect>
-                      </label>
-                    </>
-                  ) : null}
                   {view === "Overview" ? (
                     <>
                       <div className="menu-heading">Report</div>
@@ -379,8 +369,8 @@ export function TimesheetWorkspace() {
           <div className="ts-toolbar">
             <div className="ts-toolbar-group">
               <label className="ts-inline">
-                <span>People</span>
-                <TextSelect value={reportPerson} onChange={(e) => setReportPerson(e.target.value)}>
+                <span>Person</span>
+                <TextSelect value={reportPerson} onChange={(e) => setReportPerson(e.target.value)} aria-label="Person">
                   {people.map((name) => (
                     <option key={name} value={name}>
                       {name === "All" ? "Users and groups" : name}
@@ -389,8 +379,8 @@ export function TimesheetWorkspace() {
                 </TextSelect>
               </label>
               <label className="ts-inline">
-                <span>Rate type</span>
-                <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
+                <span>Work type</span>
+                <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
                   <option>All</option>
                   <option>Billable</option>
                   <option>Non-billable</option>
@@ -404,6 +394,22 @@ export function TimesheetWorkspace() {
                 <span>To</span>
                 <TextInput type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
               </label>
+              <label className="ts-inline">
+                <span>Object type</span>
+                <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
+                  <option value="All">All</option>
+                  <option value="project">Project</option>
+                  <option value="phase">Phase</option>
+                  <option value="task">Task</option>
+                  <option value="subtask">Subtask</option>
+                </TextSelect>
+              </label>
+              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
+                <RefreshCw size={16} />
+              </button>
+              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: rangeStart })}>
+                <Plus size={16} />
+              </button>
             </div>
             <div className="ts-toolbar-group">
               <span className="ts-date-label">{formatDuration(reportTotals.total)} logged</span>
@@ -512,6 +518,24 @@ export function TimesheetWorkspace() {
                   </option>
                 ))}
               </TextSelect>
+              <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
+                <option>All</option>
+                <option>Billable</option>
+                <option>Non-billable</option>
+              </TextSelect>
+              <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
+                <option value="All">All</option>
+                <option value="project">Project</option>
+                <option value="phase">Phase</option>
+                <option value="task">Task</option>
+                <option value="subtask">Subtask</option>
+              </TextSelect>
+              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
+                <RefreshCw size={16} />
+              </button>
+              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: day })}>
+                <Plus size={16} />
+              </button>
             </div>
           </div>
           <div className="panel ts-timeline-panel">
@@ -675,6 +699,24 @@ export function TimesheetWorkspace() {
                   </option>
                 ))}
               </TextSelect>
+              <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
+                <option>All</option>
+                <option>Billable</option>
+                <option>Non-billable</option>
+              </TextSelect>
+              <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
+                <option value="All">All</option>
+                <option value="project">Project</option>
+                <option value="phase">Phase</option>
+                <option value="task">Task</option>
+                <option value="subtask">Subtask</option>
+              </TextSelect>
+              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
+                <RefreshCw size={16} />
+              </button>
+              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: weekStart })}>
+                <Plus size={16} />
+              </button>
             </div>
             <div className="ts-toolbar-group">
               <button type="button" className="icon-btn" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>
@@ -852,7 +894,7 @@ function DailyCard({
       <StatusPill tone={statusTone(entry.status)}>{entry.status}</StatusPill>
       <div className="ts-entry-actions">
         <span className="tabular-nums font-semibold">{formatDuration(entry.hours)}</span>
-        <div className="ts-more">
+        <div className="ts-more" onMouseEnter={() => setMenu(true)} onMouseLeave={() => setMenu(false)}>
           <button type="button" className="icon-btn" aria-label="More activity actions" aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
             <MoreHorizontal size={16} />
           </button>

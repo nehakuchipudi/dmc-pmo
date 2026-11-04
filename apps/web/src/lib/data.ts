@@ -27,24 +27,20 @@ export const companyActivities: Record<string, ActivityItem[]> = seedActivities.
 );
 
 export const billingTotals = {
-  outstanding: 84220,
-  overdue: 12400,
-  inTerms: 71820,
-  paidMtd: 56900,
+  outstanding: 0,
+  overdue: 0,
+  inTerms: 0,
+  paidMtd: 0,
 };
 
 export const profitability = {
-  revenueRecognized: 412900,
-  actualCost: 268400,
-  grossMargin: 35,
-  avgUtilization: 78,
-  revenueDelta: "+8.2% vs Q2",
-  costDelta: "+3.1% vs Q2",
-  marginDelta: "+2 pts",
-  utilDelta: "-1 pt",
-  topAccounts: [
-    { name: "Cascade Ventures", amount: 96200 },
-    { name: "Bellweather Logistics", amount: 71050 },
-    { name: "Northridge Retail Group", amount: 58900 },
-  ],
+  revenueRecognized: 0,
+  actualCost: 0,
+  grossMargin: 0,
+  avgUtilization: 0,
+  revenueDelta: "0 vs last period",
+  costDelta: "0 vs last period",
+  marginDelta: "0 pts",
+  utilDelta: "0 pt",
+  topAccounts: [] as { name: string; amount: number }[],
 };

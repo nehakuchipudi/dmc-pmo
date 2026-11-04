@@ -6,7 +6,7 @@ import { TicketDetail } from "../[id]/ticket-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "t-1042";
+  const id = params.get("id") ?? "";
   return <TicketDetail id={id} />;
 }
 
