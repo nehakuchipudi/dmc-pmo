@@ -59,14 +59,6 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
     items: [{ href: "/app/home", label: "Home", icon: LayoutDashboard, exact: true }],
   },
   {
-    label: "Align",
-    items: [
-      { href: "/app/strategy", label: "Strategy", icon: Target },
-      { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
-      { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
-    ],
-  },
-  {
     label: "Deliver",
     items: [
       { href: "/app/projects", label: "Projects", icon: Briefcase },
@@ -105,6 +97,14 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/reports", label: "Reports", icon: FileText },
       { href: "/app/ai", label: "Insights", icon: Sparkles },
       { href: "/app/automations", label: "Automations", icon: Zap },
+    ],
+  },
+  {
+    label: "Align",
+    items: [
+      { href: "/app/strategy", label: "Strategy", icon: Target },
+      { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
+      { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
     ],
   },
 ];

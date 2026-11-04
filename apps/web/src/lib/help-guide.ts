@@ -657,7 +657,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
 ];
 
-export const HELP_GROUPS = ["Overview", "Align", "Deliver", "Clients", "Govern", "Value", "Insights", "Admin", "Portal"];
+export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Govern", "Value", "Insights", "Align", "Admin", "Portal"];
 
 export function articlesForAudience(audience: HelpAudience) {
   return HELP_ARTICLES.filter((article) => article.audience === audience || article.audience === "both");
