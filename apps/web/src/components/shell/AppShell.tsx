@@ -16,7 +16,6 @@ import {
   Eye,
   EyeOff,
   FileText,
-  GitBranch,
   Landmark,
   Layers3,
   LayoutDashboard,
@@ -26,10 +25,8 @@ import {
   MessageSquare,
   Plus,
   Receipt,
-  Scale,
   Search,
   Settings,
-  ShieldAlert,
   Sparkles,
   Target,
   Ticket,
@@ -65,6 +62,7 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/work", label: "Work", icon: Workflow },
       { href: "/app/tickets", label: "Tickets", icon: Ticket },
       { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
+      { href: "/app/resources", label: "Resources", icon: Users },
     ],
   },
   {
@@ -73,15 +71,6 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/companies", label: "Companies", icon: Building2 },
       { href: "/app/sales", label: "Sales", icon: ChartColumn },
       { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
-    ],
-  },
-  {
-    label: "Govern",
-    items: [
-      { href: "/app/resources", label: "Resources", icon: Users },
-      { href: "/app/risks", label: "Risks", icon: ShieldAlert },
-      { href: "/app/dependencies", label: "Dependencies", icon: GitBranch },
-      { href: "/app/governance", label: "Governance", icon: Scale },
     ],
   },
   {
@@ -106,6 +95,10 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: t
       { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
       { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
     ],
+  },
+  {
+    label: "Settings",
+    items: [{ href: "/app/settings", label: "Users & roles", icon: Users }],
   },
 ];
 

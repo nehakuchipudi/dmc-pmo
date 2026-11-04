@@ -269,7 +269,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     keywords: ["user", "role", "invite", "permission", "rbac", "admin", "staff"],
     summary: "Users & roles is the firm roster. Admin adds people, sends an invite, and sets role and rates.",
     howTo: [
-      "Open Users and roles from Settings or your profile.",
+      "Open Settings, then Users & roles. You can also open it from your profile.",
       "Add user with Send an invitation email checked.",
       "The invite includes signup and sign-in links. Mail leaves the outbox when Microsoft Mail.Send or a host mail key is connected.",
     ],
