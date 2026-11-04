@@ -13,6 +13,8 @@ import {
   CircleHelp,
   ClipboardList,
   Clock3,
+  Eye,
+  EyeOff,
   FileText,
   GitBranch,
   Landmark,
@@ -31,6 +33,7 @@ import {
   Sparkles,
   Target,
   Ticket,
+  Timer,
   Users,
   Workflow,
   Zap,
@@ -48,6 +51,7 @@ import { formatDisplayDate } from "@/lib/seed";
 import { buildAppBreadcrumbs } from "@/components/shell/breadcrumbs";
 import { CommandSearch } from "@/components/shell/CommandSearch";
 import { HelpSupport, HelpTrigger } from "@/components/help/HelpSupport";
+import { timerClock } from "@/lib/timesheet-work";
 
 const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] }[] = [
   {
@@ -112,7 +116,7 @@ function deniedModuleName(pathname: string) {
   return match?.label;
 }
 
-type MenuId = "create" | "profile" | "company" | null;
+type MenuId = "create" | "profile" | "company" | "time" | null;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isInternal, logout, can } = useAuth();
@@ -123,7 +127,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
   const [menu, setMenu] = useState<MenuId>(null);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
-  const [createDefaults, setCreateDefaults] = useState<{ companyId?: string; projectId?: string; hours?: number }>({});
+  const [createDefaults, setCreateDefaults] = useState<{
+    companyId?: string;
+    projectId?: string;
+    milestoneId?: string;
+    taskId?: string;
+    workKind?: "project" | "phase" | "task" | "subtask";
+    hours?: number;
+  }>({});
   const [tasksOpen, setTasksOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -138,8 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [companyQuery, setCompanyQuery] = useState("");
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [seconds, setSeconds] = useState(0);
+  const [now, setNow] = useState(Date.now());
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteCompanyId, setNoteCompanyId] = useState("");
@@ -161,6 +171,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const setFocusCompanyId = useAppStore((s) => s.setFocusCompanyId);
   const markRead = useAppStore((s) => s.markNotificationRead);
   const markAll = useAppStore((s) => s.markAllNotificationsRead);
+  const timeTimers = useAppStore((s) => s.timeTimers);
+  const showTimeTimers = useAppStore((s) => s.showTimeTimers);
+  const startTimeTimer = useAppStore((s) => s.startTimeTimer);
+  const stopTimeTimer = useAppStore((s) => s.stopTimeTimer);
+  const setShowTimeTimers = useAppStore((s) => s.setShowTimeTimers);
 
   const recordId = searchParams.get("id");
   const focusCompany = companies.find((c) => c.id === focusCompanyId) ?? null;
@@ -176,10 +191,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!timerRunning) return;
-    const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    if (!timeTimers.length) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [timerRunning]);
+  }, [timeTimers.length]);
 
   useEffect(() => {
     setNavOpen(false);
@@ -324,8 +339,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   ).filter(([kind]) => canCreateKind(user.role, kind));
   const canCreateAnything = activityCreates.length + operationCreates.length > 0 || can("add_note");
 
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
   const unread = notifications.filter((n) => !n.read).length;
 
   function toggleCollapsed() {
@@ -340,8 +353,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return {
       companyId: extra.companyId ?? focusCompanyId ?? undefined,
       projectId: extra.projectId ?? focusProject?.id,
+      milestoneId: extra.milestoneId,
+      taskId: extra.taskId,
+      workKind: extra.workKind,
       hours: extra.hours,
     };
+  }
+
+  function startShellTimer() {
+    const project = focusProject ?? projects[0];
+    if (!project) return;
+    startTimeTimer({
+      projectId: project.id,
+      projectName: project.name,
+      workKind: "project",
+      label: project.name,
+    });
+    setMenu(null);
+  }
+
+  function stopShellTimer(id: string) {
+    const timer = stopTimeTimer(id);
+    if (!timer) return;
+    openCreate("time", {
+      projectId: timer.projectId,
+      milestoneId: timer.milestoneId,
+      taskId: timer.taskId,
+      workKind: timer.workKind,
+      hours: timerClock(timer.startedAt).hours,
+    });
   }
 
   function openCreate(kind: CreateKind, defaults: typeof createDefaults = {}) {
@@ -500,21 +540,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
-            {timerRunning ? (
-              <button
-                type="button"
-                className="btn btn-ghost text-sm topbar-timer"
-                onClick={() => {
-                  const elapsedHours = Math.max(0.25, Math.round((seconds / 3600) * 4) / 4);
-                  setTimerRunning(false);
-                  openCreate("time", { hours: elapsedHours });
-                  setSeconds(0);
-                }}
-              >
-                <Clock3 size={16} className="text-[var(--color-danger)]" />
-                {mm}:{ss} Stop & log
-              </button>
-            ) : null}
+            {showTimeTimers
+              ? timeTimers.map((timer) => (
+                  <button
+                    key={timer.id}
+                    type="button"
+                    className="btn btn-ghost text-sm topbar-timer"
+                    onClick={() => stopShellTimer(timer.id)}
+                  >
+                    <Clock3 size={16} className="text-[var(--color-danger)]" />
+                    {timer.label} {timerClock(timer.startedAt, now).label} Stop and log
+                  </button>
+                ))
+              : null}
             {canCreateAnything ? (
             <div className="relative" data-shell-menu>
               <button type="button" className="icon-btn icon-btn-primary" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
@@ -566,17 +604,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <CalendarDays size={18} />
             </button>
             {can("log_time") ? (
-            <button
-              type="button"
-              className={clsx("icon-btn topbar-secondary", timerRunning && "active-soft")}
-              aria-label="Time"
-              onClick={() => {
-                setTimerRunning(true);
-                setSeconds(0);
-              }}
-            >
-              <Clock3 size={18} />
-            </button>
+            <div className="relative" data-shell-menu>
+              <button
+                type="button"
+                className={clsx("icon-btn topbar-secondary", timeTimers.length && "active-soft")}
+                aria-label="Time"
+                aria-expanded={menu === "time"}
+                onClick={() => setMenu((v) => (v === "time" ? null : "time"))}
+              >
+                <Clock3 size={18} />
+              </button>
+              {menu === "time" ? (
+                <div className="menu-popover ts-time-popover fade-in">
+                  <div className="menu-heading">Time</div>
+                  <button type="button" className="menu-row" onClick={startShellTimer}>
+                    <Timer size={15} /> Create timer
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => { setShowTimeTimers(!showTimeTimers); setMenu(null); }}>
+                    {showTimeTimers ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {showTimeTimers ? "Hide timers" : "Show timers"}
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => openCreate("time")}>
+                    <Plus size={15} /> Log time
+                  </button>
+                  <div className="menu-heading">Timesheets</div>
+                  {(["Overview", "Daily", "Weekly"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      className="menu-row"
+                      onClick={() => {
+                        setMenu(null);
+                        router.push(`/app/timesheets/?view=${tab}`);
+                      }}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             ) : null}
             <button type="button" className="icon-btn relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
               <Bell size={18} />
@@ -692,7 +759,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <CreateForms
-        key={`${createKind}-${createDefaults.hours ?? ""}-${createDefaults.projectId ?? ""}-${createDefaults.companyId ?? ""}`}
+        key={`${createKind}-${createDefaults.hours ?? ""}-${createDefaults.projectId ?? ""}-${createDefaults.milestoneId ?? ""}-${createDefaults.taskId ?? ""}-${createDefaults.companyId ?? ""}`}
         kind={createKind}
         defaults={createDefaults}
         onClose={() => {

@@ -31,12 +31,22 @@ export function CreateForms({
 }: {
   kind: CreateKind;
   onClose: () => void;
-  defaults?: { companyId?: string; projectId?: string; hours?: number; date?: string; start?: string };
+  defaults?: {
+    companyId?: string;
+    projectId?: string;
+    milestoneId?: string;
+    taskId?: string;
+    workKind?: "project" | "phase" | "task" | "subtask";
+    hours?: number;
+    date?: string;
+    start?: string;
+  };
 }) {
   const { user } = useAuth();
   const companies = useAppStore((s) => s.companies);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const milestones = useAppStore((s) => s.milestones);
   const router = useRouter();
   const createCompany = useAppStore((s) => s.createCompany);
   const createContact = useAppStore((s) => s.createContact);
@@ -173,8 +183,11 @@ export function CreateForms({
         <TimeForm
           projects={projects}
           tasks={tasks}
+          milestones={milestones}
           userName={user?.name ?? "Staff"}
           defaultProjectId={defaults?.projectId}
+          defaultMilestoneId={defaults?.milestoneId}
+          defaultTaskId={defaults?.taskId}
           defaultHours={defaults?.hours}
           defaultDate={defaults?.date}
           defaultStart={defaults?.start}
@@ -689,24 +702,32 @@ function ExpenseForm({
 function TimeForm({
   projects,
   tasks,
+  milestones,
   userName,
   defaultProjectId,
+  defaultMilestoneId,
+  defaultTaskId,
   defaultHours,
   defaultDate,
   defaultStart,
   onSubmit,
 }: {
   projects: { id: string; name: string }[];
-  tasks: { id: string; name: string; projectId: string }[];
+  tasks: { id: string; name: string; projectId: string; milestoneId?: string; parentTaskId?: string }[];
+  milestones: { id: string; name: string; projectId: string; kind?: string }[];
   userName: string;
   defaultProjectId?: string;
+  defaultMilestoneId?: string;
+  defaultTaskId?: string;
   defaultHours?: number;
   defaultDate?: string;
   defaultStart?: string;
   onSubmit: (v: {
     userName: string;
     projectId: string;
+    milestoneId?: string;
     taskId?: string;
+    workKind?: "project" | "phase" | "task" | "subtask";
     date: string;
     start?: string;
     hours: number;
@@ -714,22 +735,33 @@ function TimeForm({
     note: string;
   }) => void;
 }) {
-  const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
-  const [taskId, setTaskId] = useState("");
+  const seededTask = tasks.find((item) => item.id === defaultTaskId);
+  const [projectId, setProjectId] = useState(defaultProjectId ?? seededTask?.projectId ?? projects[0]?.id ?? "");
+  const [milestoneId, setMilestoneId] = useState(defaultMilestoneId ?? seededTask?.milestoneId ?? "");
+  const [taskId, setTaskId] = useState(seededTask?.parentTaskId ?? defaultTaskId ?? "");
+  const [subtaskId, setSubtaskId] = useState(seededTask?.parentTaskId ? seededTask.id : "");
   const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
   const [start, setStart] = useState(defaultStart || "09:00");
   const [hours, setHours] = useState(String(defaultHours && defaultHours > 0 ? defaultHours : 1));
   const [note, setNote] = useState("");
   const [billable, setBillable] = useState(true);
-  const projectTasks = tasks.filter((t) => t.projectId === projectId);
+  const phases = milestones.filter((item) => item.projectId === projectId && item.kind === "phase");
+  const parentTasks = tasks.filter(
+    (item) => item.projectId === projectId && !item.parentTaskId && (!milestoneId || item.milestoneId === milestoneId),
+  );
+  const subtasks = tasks.filter((item) => item.parentTaskId === taskId);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        const chosenTaskId = subtaskId || taskId || undefined;
+        const workKind = subtaskId ? "subtask" : taskId ? "task" : milestoneId ? "phase" : "project";
         onSubmit({
           userName,
           projectId,
-          taskId: taskId || undefined,
+          milestoneId: milestoneId || undefined,
+          taskId: chosenTaskId,
+          workKind,
           date,
           start,
           hours: Number(hours) || 0,
@@ -743,7 +775,9 @@ function TimeForm({
           value={projectId}
           onChange={(e) => {
             setProjectId(e.target.value);
+            setMilestoneId("");
             setTaskId("");
+            setSubtaskId("");
           }}
         >
           {projects.map((p) => (
@@ -753,10 +787,43 @@ function TimeForm({
           ))}
         </TextSelect>
       </Field>
+      <Field label="Phase (optional)">
+        <TextSelect
+          value={milestoneId}
+          onChange={(e) => {
+            setMilestoneId(e.target.value);
+            setTaskId("");
+            setSubtaskId("");
+          }}
+        >
+          <option value="">Whole project</option>
+          {phases.map((phase) => (
+            <option key={phase.id} value={phase.id}>
+              {phase.name}
+            </option>
+          ))}
+        </TextSelect>
+      </Field>
       <Field label="Task (optional)">
-        <TextSelect value={taskId} onChange={(e) => setTaskId(e.target.value)}>
+        <TextSelect
+          value={taskId}
+          onChange={(e) => {
+            setTaskId(e.target.value);
+            setSubtaskId("");
+          }}
+        >
           <option value="">No task</option>
-          {projectTasks.map((t) => (
+          {parentTasks.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </TextSelect>
+      </Field>
+      <Field label="Subtask (optional)">
+        <TextSelect value={subtaskId} onChange={(e) => setSubtaskId(e.target.value)} disabled={!subtasks.length}>
+          <option value="">{subtasks.length ? "No subtask" : "No subtasks on this task"}</option>
+          {subtasks.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
