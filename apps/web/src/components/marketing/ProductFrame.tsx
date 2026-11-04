@@ -3,25 +3,37 @@
 import type { ReactNode } from "react";
 import {
   Briefcase,
-  LayoutDashboard,
+  Building2,
+  ClipboardList,
+  Clock3,
+  FileText,
   Layers3,
-  Scale,
-  ShieldAlert,
-  Sparkles,
+  LayoutDashboard,
+  Lightbulb,
+  Receipt,
   Target,
+  Ticket,
   Users,
+  Workflow,
+  Zap,
 } from "lucide-react";
 import { clsx } from "clsx";
 
 const SIDE_ITEMS = [
   { label: "Home", icon: LayoutDashboard, key: "home" },
-  { label: "Strategy", icon: Target, key: "strategy" },
-  { label: "Portfolios", icon: Layers3, key: "portfolio" },
   { label: "Projects", icon: Briefcase, key: "projects" },
+  { label: "Work", icon: Workflow, key: "work" },
+  { label: "Tickets", icon: Ticket, key: "tickets" },
+  { label: "Timesheets", icon: Clock3, key: "timesheets" },
   { label: "Resources", icon: Users, key: "resources" },
-  { label: "Risks", icon: ShieldAlert, key: "risks" },
-  { label: "Governance", icon: Scale, key: "governance" },
-  { label: "Insights", icon: Sparkles, key: "ai" },
+  { label: "Companies", icon: Building2, key: "companies" },
+  { label: "Retainers", icon: ClipboardList, key: "retainers" },
+  { label: "Billing", icon: Receipt, key: "billing" },
+  { label: "Reports", icon: FileText, key: "reports" },
+  { label: "Automations", icon: Zap, key: "automations" },
+  { label: "Strategy", icon: Target, key: "strategy" },
+  { label: "Ideas", icon: Lightbulb, key: "ideas" },
+  { label: "Portfolios", icon: Layers3, key: "portfolio" },
 ];
 
 export function ProductFrame({
@@ -46,20 +58,7 @@ export function ProductFrame({
           </div>
         </div>
         <nav>
-          <div className="mkt-product-group">Overview</div>
-          {SIDE_ITEMS.slice(0, 1).map((item) => (
-            <SideLink key={item.key} item={item} active={active} />
-          ))}
-          <div className="mkt-product-group">Deliver</div>
-          {SIDE_ITEMS.slice(3, 4).map((item) => (
-            <SideLink key={item.key} item={item} active={active} />
-          ))}
-          <div className="mkt-product-group">Govern</div>
-          {SIDE_ITEMS.slice(4).map((item) => (
-            <SideLink key={item.key} item={item} active={active} />
-          ))}
-          <div className="mkt-product-group">Align</div>
-          {SIDE_ITEMS.slice(1, 3).map((item) => (
+          {SIDE_ITEMS.map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
         </nav>

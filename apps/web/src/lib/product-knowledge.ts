@@ -36,7 +36,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
       "Create or open a Strategy objective. That is the why.",
       "Submit an Idea and attach the objective. Score and advance it to Approved.",
       "Convert an approved idea to create a Project. Optionally land it in a Portfolio book.",
-      "Open the Project workspace to plan, staff, log time, and invoice. Home and Insights read this same chain.",
+      "Open the Project workspace to plan, staff, log time, and invoice. Home reads this same chain.",
     ],
     canDo: [
       "Create a strategy objective",
@@ -53,7 +53,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     keywords: ["home", "dashboard", "cockpit", "kpis", "right work"],
     summary: "Home is the PMO cockpit: right work, people, cost, and risk. It points you to the record that needs a decision.",
     howTo: [
-      "Open Home from Overview.",
+      "Open Home in the left nav.",
       "Read the KPI cards, then follow Needs a decision into a project, gate, or risk.",
       "Use the company selector to scope Home to one client.",
     ],
@@ -190,16 +190,6 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
       "Invoice or close an open period",
       "Export the retainer list",
     ],
-  },
-  {
-    id: "sales",
-    title: "Sales",
-    href: "/app/sales",
-    viewCap: "view_sales",
-    keywords: ["sales", "opportunity", "deal", "pipeline"],
-    summary: "Sales is the opportunity pipeline on companies, before work is a project.",
-    howTo: ["Open Sales and create an opportunity with company, amount, and close date.", "Advance moves it through the funnel."],
-    canDo: ["Create or advance an opportunity"],
   },
   {
     id: "strategy",
