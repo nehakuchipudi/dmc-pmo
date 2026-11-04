@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { parseHoursInput } from "./timesheet";
 import { searchTimesheetWork, timerClock, workFromEntry, workKey, workToLogDefaults } from "./timesheet-work";
 import type { Milestone, Task, TimeEntry } from "./types";
 
@@ -92,6 +93,9 @@ assert.equal(fromEntry.kind, "subtask");
 assert.equal(fromEntry.key, workKey({ kind: "subtask", projectId: "p-warehouse", taskId: "tk4a" }));
 assert.equal(workToLogDefaults(fromEntry, { date: "2026-11-04", hours: 2 }).milestoneId, "m2");
 assert.equal(timerClock(Date.now() - 90 * 60 * 1000).hours, 1.5);
+assert.equal(parseHoursInput("3:00"), 3);
+assert.equal(parseHoursInput("1:30"), 1.5);
+assert.equal(parseHoursInput("2"), 2);
 assert.doesNotMatch(`${fromEntry.label} ${fromEntry.detail}`, /[\u2013\u2014]/);
 
 console.log("timesheet-work.verify ok");

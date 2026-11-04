@@ -345,6 +345,11 @@ type AppState = {
   ) => void;
   removeProjectMember: (id: string) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
+  updateTimeEntry: (
+    id: string,
+    patch: Partial<Pick<TimeEntry, "hours" | "note" | "billable" | "start" | "date" | "milestoneId" | "taskId" | "workKind">>,
+  ) => void;
+  deleteTimeEntry: (id: string) => void;
   startTimeTimer: (input: Omit<TimeTimer, "id" | "startedAt">) => string;
   stopTimeTimer: (id: string) => TimeTimer | undefined;
   setShowTimeTimers: (show: boolean) => void;
@@ -2006,6 +2011,73 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast("Time entry saved");
     return id;
+  },
+
+  updateTimeEntry: (id, patch) => {
+    if (!requireCap(get, "log_time")) return;
+    const prev = get().timeEntries.find((item) => item.id === id);
+    if (!prev) return;
+    const actor = currentUser();
+    const own = prev.userName === actor?.name || prev.userName === "J. Kim";
+    if (actor?.role === "staff" && !own) {
+      get().pushToast("Staff can only edit their own time.", "danger");
+      return;
+    }
+    if (prev.status === "Approved" && !can(actor?.role, "approve_time")) {
+      get().pushToast("Approved time needs an approver to change.", "danger");
+      return;
+    }
+    const task = get().tasks.find((item) => item.id === (patch.taskId ?? prev.taskId));
+    const milestone =
+      get().milestones.find((item) => item.id === (patch.milestoneId ?? prev.milestoneId)) ??
+      get().milestones.find((item) => item.id === task?.milestoneId);
+    const nextHours = patch.hours ?? prev.hours;
+    const hoursDelta = nextHours - prev.hours;
+    set((s) => ({
+      timeEntries: s.timeEntries.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...patch,
+              taskId: patch.taskId !== undefined ? task?.id : item.taskId,
+              taskName: patch.taskId !== undefined ? task?.name : item.taskName,
+              milestoneId: patch.milestoneId !== undefined ? milestone?.id : item.milestoneId,
+              milestoneName: patch.milestoneId !== undefined ? milestone?.name : item.milestoneName,
+              workKind: patch.workKind ?? item.workKind,
+              status: item.status === "Approved" ? item.status : "Draft",
+            }
+          : item,
+      ),
+      projects: hoursDelta
+        ? s.projects.map((project) =>
+            project.id === prev.projectId ? { ...project, loggedHours: project.loggedHours + hoursDelta } : project,
+          )
+        : s.projects,
+    }));
+    get().pushToast("Time entry updated");
+  },
+
+  deleteTimeEntry: (id) => {
+    if (!requireCap(get, "log_time")) return;
+    const prev = get().timeEntries.find((item) => item.id === id);
+    if (!prev) return;
+    const actor = currentUser();
+    const own = prev.userName === actor?.name || prev.userName === "J. Kim";
+    if (actor?.role === "staff" && !own) {
+      get().pushToast("Staff can only delete their own time.", "danger");
+      return;
+    }
+    if (prev.status === "Approved" && !can(actor?.role, "approve_time")) {
+      get().pushToast("Approved time needs an approver to delete.", "danger");
+      return;
+    }
+    set((s) => ({
+      timeEntries: s.timeEntries.filter((item) => item.id !== id),
+      projects: s.projects.map((project) =>
+        project.id === prev.projectId ? { ...project, loggedHours: Math.max(0, project.loggedHours - prev.hours) } : project,
+      ),
+    }));
+    get().pushToast("Time entry deleted");
   },
 
   startTimeTimer: (input) => {
