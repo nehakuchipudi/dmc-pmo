@@ -332,7 +332,7 @@ export const NAV_CAPABILITY: Record<string, Capability> = {
   "/app/reports": "view_reports",
   "/app/ai": "view_insights",
   "/app/automations": "view_automations",
-  "/app/settings": "view_users",
+  "/app/settings": "view_home",
 };
 
 const CREATE_KIND_CAP: Record<CreateRecordKind, Capability> = {

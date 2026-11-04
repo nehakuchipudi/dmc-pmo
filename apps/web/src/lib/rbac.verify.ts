@@ -19,6 +19,8 @@ assert.equal(can("leadership", "manage_users"), false);
 assert.equal(can("client", "view_home"), false);
 assert.equal(canAccessHref("staff", "/app/billing"), false);
 assert.equal(canAccessHref("staff", "/app/timesheets"), true);
+assert.equal(canAccessHref("staff", "/app/settings"), true);
+assert.equal(canAccessHref("admin", "/app/settings"), true);
 assert.equal(canAccessHref("finance", "/app/billing"), true);
 assert.equal(canAccessHref("finance", "/app/strategy"), false);
 assert.equal(canAccessHref("admin", "/app/automations"), true);

@@ -63,10 +63,10 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof Building2; exact?: 
   { href: "/app/strategy", label: "Strategy", icon: Target },
   { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
   { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
-  { href: "/app/settings", label: "Users & roles", icon: Users },
 ];
 
 function deniedModuleName(pathname: string) {
+  if (pathname.startsWith("/app/settings")) return "Settings";
   const match = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   return match?.label;
 }
@@ -120,7 +120,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setHelpTab(tab);
     setHelpOpen(true);
   }
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [companyQuery, setCompanyQuery] = useState("");
@@ -408,10 +407,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <MessageSquare size={18} />
             {!collapsed ? <span>Feedback</span> : null}
           </button>
-          <button type="button" className="nav-link w-full" onClick={() => setSettingsOpen(true)}>
-            <Settings size={18} />
+          <Link
+            href="/app/settings"
+            className={clsx("nav-link", pathname.startsWith("/app/settings") && "active")}
+            title="Settings"
+            onClick={() => setNavOpen(false)}
+          >
+            <Settings size={17} />
             {!collapsed ? <span>Settings</span> : null}
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -803,19 +807,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     <CalendarDays size={15} /> My schedule
                   </button>
-                  <button
-                    type="button"
-                    className="menu-row"
-                    onClick={() => {
-                      setMenu(null);
-                      setSettingsOpen(true);
-                    }}
-                  >
+                  <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
                     <Settings size={15} /> Settings
-                  </button>
+                  </Link>
                   {can("view_users") ? (
                   <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
-                    <Users size={15} /> Users and roles
+                    <Users size={15} /> Users & roles
                   </Link>
                   ) : null}
                   <button
@@ -969,38 +966,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mt-1 text-xs text-[var(--color-muted)]">{n.createdAt}</div>
             </button>
           ))}
-        </div>
-      </Drawer>
-
-      <Drawer open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
-        <div className="space-y-4 text-sm">
-          <div className="panel p-3">
-            <div className="font-semibold">{user.name}</div>
-            <div className="text-[var(--color-muted)]">{roleLabel(user.role)} · {user.email}</div>
-          </div>
-          <label className="flex items-center justify-between gap-3">
-            <span>Email me overdue invoice alerts</span>
-            <input type="checkbox" defaultChecked />
-          </label>
-          <label className="flex items-center justify-between gap-3">
-            <span>Friday timesheet reminder</span>
-            <input type="checkbox" defaultChecked />
-          </label>
-          {can("view_users") ? (
-          <Link href="/app/settings" className="btn btn-primary w-full justify-center" onClick={() => setSettingsOpen(false)}>
-            Users and lifecycle
-          </Link>
-          ) : null}
-          {can("view_automations") ? (
-          <Link href="/app/automations" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
-            Manage automations
-          </Link>
-          ) : null}
-          {can("view_users") ? (
-          <Link href="/app/settings" className="btn btn-ghost w-full justify-center" onClick={() => setSettingsOpen(false)}>
-            Email domain / DNS records
-          </Link>
-          ) : null}
         </div>
       </Drawer>
 

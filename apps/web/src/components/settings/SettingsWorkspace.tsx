@@ -1,0 +1,369 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Globe, Settings as SettingsIcon, Users, Workflow } from "lucide-react";
+import { clsx } from "clsx";
+import { Avatar, Modal, StatusPill } from "@/components/ui";
+import { IfCan } from "@/components/auth/IfCan";
+import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
+import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
+import { roleLabel, useAuth } from "@/lib/auth";
+import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
+import { ROLE_SUMMARIES } from "@/lib/rbac";
+import { useAppStore } from "@/lib/store";
+import { inviteLandingHref } from "@/lib/user-invite";
+
+type SettingsSection = "users" | "lifecycle" | "email" | "prefs";
+
+const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?: boolean }[] = [
+  { id: "users", label: "Users & roles", icon: Users, needUsers: true },
+  { id: "lifecycle", label: "Lifecycle", icon: Workflow, needUsers: true },
+  { id: "email", label: "Email domain", icon: Globe, needUsers: true },
+  { id: "prefs", label: "Preferences", icon: SettingsIcon },
+];
+
+export function SettingsWorkspace() {
+  const { can } = useAuth();
+  const canViewUsers = can("view_users");
+  const canManageUsers = can("manage_users");
+  const canConfigure = can("configure_lifecycle");
+  const team = useAppStore((s) => s.team);
+  const addTeamMember = useAppStore((s) => s.addTeamMember);
+  const inviteTeamMember = useAppStore((s) => s.inviteTeamMember);
+  const updateTeamMember = useAppStore((s) => s.updateTeamMember);
+  const setTeamMemberActive = useAppStore((s) => s.setTeamMemberActive);
+  const pushToast = useAppStore((s) => s.pushToast);
+  const projectWorkflow = useAppStore((s) => s.projectWorkflow);
+  const setProjectWorkflowTransition = useAppStore((s) => s.setProjectWorkflowTransition);
+  const setProjectWorkflowRoles = useAppStore((s) => s.setProjectWorkflowRoles);
+  const [section, setSection] = useState<SettingsSection>(canViewUsers ? "users" : "prefs");
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
+  const [query, setQuery] = useState("");
+  const editing = team.find((m) => m.id === editId);
+
+  const items = RAIL.filter((item) => !item.needUsers || canViewUsers);
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return team.filter((m) => {
+      if (!showInactive && !m.active) return false;
+      if (!q) return true;
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        (m.title ?? "").toLowerCase().includes(q) ||
+        roleLabel(m.role).toLowerCase().includes(q)
+      );
+    });
+  }, [team, showInactive, query]);
+
+  return (
+    <div className="settings-shell fade-in">
+      <aside className="settings-rail" aria-label="Settings">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active = section === item.id;
+          return (
+            <div key={item.id}>
+              <button
+                type="button"
+                className={clsx("settings-rail-item", active && "is-active")}
+                onClick={() => setSection(item.id)}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </button>
+              {item.id === "users" && section === "users" ? (
+                <button type="button" className="settings-rail-child is-active" onClick={() => setSection("users")}>
+                  Users
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </aside>
+
+      <div className="settings-main">
+        {section === "users" ? (
+          <>
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Users & roles</h1>
+                <p className="page-sub">
+                  {canManageUsers
+                    ? "Add people, send an invite, assign roles, set rates, and decide who can see hours versus budgets."
+                    : "Review who is on the workspace and what each role can do. Only an admin can change access."}
+                </p>
+              </div>
+              <div className="page-header-actions">
+                <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+                  <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+                  Show inactive
+                </label>
+                <IfCan cap="manage_users">
+                  <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+                    Add user
+                  </button>
+                </IfCan>
+              </div>
+            </header>
+
+            <label className="settings-search">
+              <input
+                type="search"
+                placeholder="Search users"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+
+            <div className="panel overflow-hidden mb-4">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Title</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Finance</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((m) => (
+                    <tr key={m.id}>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <Avatar initials={m.initials} name={m.name} size={32} />
+                          <div>
+                            <div className="font-medium">{m.name}</div>
+                            {m.department ? <div className="text-xs text-[var(--color-muted)]">{m.department}</div> : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-[var(--color-muted)]">{m.title || "None"}</td>
+                      <td className="text-[var(--color-muted)]">{m.email}</td>
+                      <td>{roleLabel(m.role)}</td>
+                      <td className="text-[var(--color-muted)]">
+                        {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
+                      </td>
+                      <td>
+                        <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
+                        {m.invitedAt ? (
+                          <div className="mt-1 text-xs text-[var(--color-muted)]">Invited {m.invitedAt}</div>
+                        ) : null}
+                      </td>
+                      <td className="text-right space-x-2">
+                        {canManageUsers ? (
+                          <>
+                            <button type="button" className="btn btn-ghost text-sm" onClick={() => setEditId(m.id)}>
+                              Edit
+                            </button>
+                            <button type="button" className="btn btn-ghost text-sm" onClick={() => inviteTeamMember(m.id)}>
+                              {m.invitedAt ? "Resend invite" : "Send invite"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost text-sm"
+                              onClick={() => {
+                                const href = inviteLandingHref({
+                                  email: m.email,
+                                  firstName: m.firstName,
+                                  lastName: m.lastName,
+                                  role: m.role,
+                                });
+                                void navigator.clipboard.writeText(href);
+                                pushToast("Invite link copied");
+                              }}
+                            >
+                              Copy invite link
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost text-sm"
+                              onClick={() => setTeamMemberActive(m.id, !m.active)}
+                            >
+                              {m.active ? "Deactivate" : "Reactivate"}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-[var(--color-muted)]">View only</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {!rows.length ? (
+                    <tr>
+                      <td colSpan={7} className="empty-row">
+                        No users match that search.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {ROLE_SUMMARIES.filter((item) => item.role !== "client").map((item) => (
+                <RoleCard key={item.role} title={item.title} body={item.body} />
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        {section === "lifecycle" ? (
+          <div className="space-y-4">
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Lifecycle</h1>
+                <p className="page-sub">Manage who can change project status and which moves are allowed.</p>
+              </div>
+            </header>
+            <div className="panel p-4">
+              <h2 className="section-title">Who can change status</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">
+                Authorized roles can move a project from the header. Invalid transitions stay blocked.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {USER_ROLES.filter((role) => role !== "client").map((role) => {
+                  const checked = projectWorkflow.changerRoles.includes(role);
+                  return (
+                    <label key={role} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={role === "admin" ? true : checked}
+                        disabled={!canConfigure || role === "admin"}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...projectWorkflow.changerRoles, role]
+                            : projectWorkflow.changerRoles.filter((item) => item !== role);
+                          setProjectWorkflowRoles(next);
+                        }}
+                      />
+                      {roleLabel(role)}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="panel overflow-x-auto p-4">
+              <h2 className="section-title">Allowed transitions</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">
+                Check a cell to allow moving from the row status to the column status.
+              </p>
+              <table className="lifecycle-matrix">
+                <thead>
+                  <tr>
+                    <th>From</th>
+                    {PROJECT_LIFECYCLE_STATUSES.map((status) => (
+                      <th key={status}>{status}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PROJECT_LIFECYCLE_STATUSES.map((from) => (
+                    <tr key={from}>
+                      <td className="font-medium">{from}</td>
+                      {PROJECT_LIFECYCLE_STATUSES.map((to) => {
+                        const allowed = (projectWorkflow.transitions[from] ?? []).includes(to);
+                        return (
+                          <td key={`${from}-${to}`}>
+                            {from === to ? (
+                              <span className="text-[var(--color-muted)]">Current</span>
+                            ) : (
+                              <input
+                                type="checkbox"
+                                aria-label={`Allow ${from} to ${to}`}
+                                checked={allowed}
+                                disabled={!canConfigure}
+                                onChange={(e) => setProjectWorkflowTransition(from, to, e.target.checked)}
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        {section === "email" ? (
+          <>
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Email domain / DNS records</h1>
+                <p className="page-sub">
+                  Prove DMC PMO may send invoices and reminders as your company, so inboxes do not treat them as spam.
+                </p>
+              </div>
+            </header>
+            <EmailDomainRecords />
+          </>
+        ) : null}
+
+        {section === "prefs" ? (
+          <>
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Preferences</h1>
+                <p className="page-sub">Workspace alerts for your sign-in. These stay on this device.</p>
+              </div>
+            </header>
+            <div className="panel space-y-4 p-4 text-sm">
+              <label className="flex items-center justify-between gap-3">
+                <span>Email me overdue invoice alerts</span>
+                <input type="checkbox" defaultChecked />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Friday timesheet reminder</span>
+                <input type="checkbox" defaultChecked />
+              </label>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      <Modal open={open} title="Add user" onClose={() => setOpen(false)} xl>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const { sendInvite, ...value } = readTeamMemberForm(e.currentTarget);
+            addTeamMember({ ...value, sendInvite });
+            setOpen(false);
+          }}
+        >
+          <TeamMemberForm team={team} submitLabel="Create user" />
+        </form>
+      </Modal>
+
+      <Modal open={!!editing} title="Edit user" onClose={() => setEditId(null)} xl>
+        {editing ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const { sendInvite: _invite, ...value } = readTeamMemberForm(e.currentTarget);
+              updateTeamMember(editing.id, value);
+              setEditId(null);
+            }}
+          >
+            <TeamMemberForm member={editing} team={team} submitLabel="Save user" />
+          </form>
+        ) : null}
+      </Modal>
+    </div>
+  );
+}
+
+function RoleCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="panel p-4">
+      <div className="font-semibold text-[var(--color-navy)]">{title}</div>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">{body}</p>
+    </div>
+  );
+}

@@ -273,7 +273,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     id: "resources",
     title: "Resources",
-    group: "Govern",
+    group: "Deliver",
     href: "/app/resources",
     audience: "internal",
     viewCap: "view_resources",
@@ -290,7 +290,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     id: "risks",
     title: "Risks and issues",
-    group: "Govern",
+    group: "Admin",
     href: "/app/risks",
     audience: "internal",
     viewCap: "view_risks",
@@ -307,7 +307,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     id: "dependencies",
     title: "Dependencies",
-    group: "Govern",
+    group: "Admin",
     href: "/app/dependencies",
     audience: "internal",
     viewCap: "view_dependencies",
@@ -324,7 +324,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     id: "governance",
     title: "Governance",
-    group: "Govern",
+    group: "Admin",
     href: "/app/governance",
     audience: "internal",
     viewCap: "view_governance",
@@ -494,9 +494,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_users",
     keywords: ["lifecycle", "status", "transition", "draft", "active", "on hold"],
     summary:
-      "The Lifecycle tab defines who can change project status and which from-to moves are allowed. Admin always keeps the right to change status.",
+      "Settings > Lifecycle defines who can change project status and which from-to moves are allowed. Admin always keeps the right to change status.",
     steps: [
-      "Open Settings, then Lifecycle.",
+      "Open Settings in the left nav, then Lifecycle.",
       "Check the roles allowed to change status. Admin cannot be removed.",
       "Check the matrix cells to allow a transition.",
       "Project headers use this workflow when someone moves status.",
@@ -606,7 +606,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
 ];
 
-export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Govern", "Value", "Align", "Admin", "Portal"];
+export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Value", "Align", "Admin", "Portal"];
 
 export function articlesForAudience(audience: HelpAudience) {
   return HELP_ARTICLES.filter((article) => article.audience === audience || article.audience === "both");
