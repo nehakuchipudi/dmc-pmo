@@ -97,7 +97,7 @@ export function workFromEntry(
 
 export function searchTimesheetWork(input: {
   query: string;
-  objectType: "All" | TimesheetWorkKind;
+  objectType: "All" | TimesheetWorkKind | TimesheetWorkKind[];
   projects: ProjectRef[];
   tasks: TaskRef[];
   milestones: MilestoneRef[];
@@ -105,7 +105,8 @@ export function searchTimesheetWork(input: {
   const q = input.query.trim().toLowerCase();
   if (!q) return [];
   const hits: TimesheetWork[] = [];
-  const allow = (kind: TimesheetWorkKind) => input.objectType === "All" || input.objectType === kind;
+  const selected = Array.isArray(input.objectType) ? input.objectType : input.objectType === "All" ? [] : [input.objectType];
+  const allow = (kind: TimesheetWorkKind) => !selected.length || selected.includes(kind);
 
   if (allow("project")) {
     for (const project of input.projects) {

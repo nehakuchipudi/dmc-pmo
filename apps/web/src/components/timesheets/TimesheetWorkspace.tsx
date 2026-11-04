@@ -2,10 +2,15 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Timer } from "lucide-react";
+import { ChevronDown, Clock3, Eye, EyeOff, MoreHorizontal, Plus, Timer } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { TimesheetActivityModal } from "@/components/timesheets/TimesheetActivityModal";
-import { ConfirmModal, PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
+import {
+  TimesheetToolbar,
+  type ObjectTypeId,
+  type WorkTypeId,
+} from "@/components/timesheets/TimesheetToolbar";
+import { ConfirmModal, PageHeader, StatusPill, Tabs, TextInput, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { exportCsv } from "@/lib/pdf";
 import { money } from "@/lib/seed";
@@ -34,7 +39,6 @@ import {
 } from "@/lib/timesheet-work";
 
 const VIEW_TABS = ["Overview", "Daily", "Weekly"] as const;
-const OBJECT_TYPES = ["All", "project", "phase", "task", "subtask"] as const;
 const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 type ViewTab = (typeof VIEW_TABS)[number];
@@ -48,6 +52,41 @@ function kindLabel(kind: TimesheetWorkKind) {
   if (kind === "task") return "Task";
   if (kind === "subtask") return "Subtask";
   return "Project";
+}
+
+function entryMatchesWorkTypes(entry: TimeEntry, types: Set<WorkTypeId>) {
+  if (!types.size) return true;
+  if (types.has("logged") && entry.hours > 0) return true;
+  if (types.has("client") && entry.billable) return true;
+  if (types.has("internal") && !entry.billable) return true;
+  if (types.has("scheduled") || types.has("committed")) return true;
+  return false;
+}
+
+function rowMatchesWorkTypes(
+  row: { key: string; total: number },
+  work: TimesheetWork | undefined,
+  weekEntries: TimeEntry[],
+  types: Set<WorkTypeId>,
+  tasks: { id: string; status: string }[],
+) {
+  if (!types.size) return true;
+  const related = weekEntries.filter((entry) => {
+    if (!work) return false;
+    return (
+      (work.taskId && entry.taskId === work.taskId) ||
+      (!work.taskId && work.milestoneId && entry.milestoneId === work.milestoneId && !entry.taskId) ||
+      (!work.taskId && !work.milestoneId && entry.projectId === work.projectId && !entry.taskId && !entry.milestoneId)
+    );
+  });
+  const task = work?.taskId ? tasks.find((item) => item.id === work.taskId) : undefined;
+  if (types.has("logged") && row.total > 0) return true;
+  if (types.has("no-time") && row.total === 0) return true;
+  if (types.has("client") && related.some((entry) => entry.billable)) return true;
+  if (types.has("internal") && related.some((entry) => !entry.billable)) return true;
+  if (types.has("scheduled") && (work?.kind === "task" || work?.kind === "phase" || work?.kind === "subtask")) return true;
+  if (types.has("committed") && (task?.status === "In Progress" || task?.status === "Review")) return true;
+  return false;
 }
 
 export function TimesheetWorkspace() {
@@ -81,8 +120,8 @@ export function TimesheetWorkspace() {
   const [loggedOnly, setLoggedOnly] = useState(true);
   const [openCompanies, setOpenCompanies] = useState<Record<string, boolean>>({});
   const [dailyMode, setDailyMode] = useState<"Timeline" | "Grouped">("Timeline");
-  const [workFilter, setWorkFilter] = useState("All");
-  const [objectType, setObjectType] = useState<(typeof OBJECT_TYPES)[number]>("All");
+  const [workTypes, setWorkTypes] = useState<Set<WorkTypeId>>(new Set());
+  const [objectTypes, setObjectTypes] = useState<Set<ObjectTypeId>>(new Set());
   const [search, setSearch] = useState("");
   const [horizon, setHorizon] = useState(7);
   const [logDefaults, setLogDefaults] = useState<{
@@ -127,9 +166,9 @@ export function TimesheetWorkspace() {
         return who === "All" ? true : entry.userName === who;
       })
       .filter((entry) => (billableOnly ? entry.billable : true))
-      .filter((entry) => (workFilter === "Billable" ? entry.billable : workFilter === "Non-billable" ? !entry.billable : true))
+      .filter((entry) => entryMatchesWorkTypes(entry, workTypes))
       .sort((a, b) => a.start?.localeCompare(b.start ?? "") || b.date.localeCompare(a.date));
-  }, [entries, staffOnly, user?.name, reportPerson, sheetPerson, view, billableOnly, workFilter]);
+  }, [entries, staffOnly, user?.name, reportPerson, sheetPerson, view, billableOnly, workTypes]);
 
   const overviewEntries = scoped.filter((entry) => entry.date >= rangeStart && entry.date <= rangeEnd);
   const report = overviewByCompany(overviewEntries, projects, team);
@@ -169,11 +208,19 @@ export function TimesheetWorkspace() {
   ];
   const visibleRows = weekRows.filter((row) => {
     const work = workByKey.get(row.key);
-    return objectType === "All" || !work || work.kind === objectType;
+    if (objectTypes.size && work && !objectTypes.has(work.kind)) return false;
+    return rowMatchesWorkTypes(row, work, weekEntries, workTypes, tasks);
   });
   const workHits = useMemo(
-    () => searchTimesheetWork({ query: search, objectType, projects, tasks, milestones }),
-    [search, objectType, projects, tasks, milestones],
+    () =>
+      searchTimesheetWork({
+        query: search,
+        objectType: objectTypes.size ? [...objectTypes] : "All",
+        projects,
+        tasks,
+        milestones,
+      }),
+    [search, objectTypes, projects, tasks, milestones],
   );
 
   const selectedPerson = sheetPerson === "All" ? user?.name : sheetPerson;
@@ -247,11 +294,29 @@ export function TimesheetWorkspace() {
     setWeekStart(startOfWeek(today));
     setRangeStart(startOfWeek(today));
     setRangeEnd(addDays(startOfWeek(today), 6));
-    setWorkFilter("All");
-    setObjectType("All");
+    setWorkTypes(new Set());
+    setObjectTypes(new Set());
     setReportPerson("All");
     setSheetPerson(user?.name ?? "All");
     setSearch("");
+  }
+
+  function toggleWorkType(id: WorkTypeId) {
+    setWorkTypes((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleObjectType(id: ObjectTypeId) {
+    setObjectTypes((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function finishTimer(id: string) {
@@ -366,55 +431,29 @@ export function TimesheetWorkspace() {
 
       {view === "Overview" ? (
         <section>
-          <div className="ts-toolbar">
-            <div className="ts-toolbar-group">
-              <label className="ts-inline">
-                <span>Person</span>
-                <TextSelect value={reportPerson} onChange={(e) => setReportPerson(e.target.value)} aria-label="Person">
-                  {people.map((name) => (
-                    <option key={name} value={name}>
-                      {name === "All" ? "Users and groups" : name}
-                    </option>
-                  ))}
-                </TextSelect>
-              </label>
-              <label className="ts-inline">
-                <span>Work type</span>
-                <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
-                  <option>All</option>
-                  <option>Billable</option>
-                  <option>Non-billable</option>
-                </TextSelect>
-              </label>
-              <label className="ts-inline">
-                <span>From</span>
-                <TextInput type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} />
-              </label>
-              <label className="ts-inline">
-                <span>To</span>
-                <TextInput type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
-              </label>
-              <label className="ts-inline">
-                <span>Object type</span>
-                <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
-                  <option value="All">All</option>
-                  <option value="project">Project</option>
-                  <option value="phase">Phase</option>
-                  <option value="task">Task</option>
-                  <option value="subtask">Subtask</option>
-                </TextSelect>
-              </label>
-              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
-                <RefreshCw size={16} />
-              </button>
-              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: rangeStart })}>
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="ts-toolbar-group">
-              <span className="ts-date-label">{formatDuration(reportTotals.total)} logged</span>
-            </div>
-          </div>
+          <TimesheetToolbar
+            people={people}
+            team={team}
+            person={reportPerson}
+            onPerson={setReportPerson}
+            workTypes={workTypes}
+            onToggleWorkType={toggleWorkType}
+            objectTypes={objectTypes}
+            onToggleObjectType={toggleObjectType}
+            onRefresh={refreshSheet}
+            onAddTime={() => openLog({ date: rangeStart })}
+            rangeLabel={`${formatWeekRange(rangeStart)} · ${formatDuration(reportTotals.total)}`}
+            onPrev={() => {
+              setRangeStart(addDays(rangeStart, -7));
+              setRangeEnd(addDays(rangeEnd, -7));
+            }}
+            onNext={() => {
+              setRangeStart(addDays(rangeStart, 7));
+              setRangeEnd(addDays(rangeEnd, 7));
+            }}
+            prevLabel="Previous range"
+            nextLabel="Next range"
+          />
           <div className="panel overflow-auto">
             <table className="table">
               <thead>
@@ -494,50 +533,25 @@ export function TimesheetWorkspace() {
 
       {view === "Daily" ? (
         <section>
-          <div className="ts-toolbar">
-            <div className="ts-toolbar-group">
-              <button type="button" className="icon-btn" aria-label="Previous day" onClick={() => setDay(addDays(day, -1))}>
-                <ChevronLeft size={16} />
-              </button>
-              <strong className="ts-date-label">{formatLongDay(day)}</strong>
-              <button type="button" className="icon-btn" aria-label="Next day" onClick={() => setDay(addDays(day, 1))}>
-                <ChevronRight size={16} />
-              </button>
-              <div className="ts-day-total">
-                Total: {formatDuration(dayTotal)}
-                <span>
-                  ({formatDuration(dayBillable)} - {formatDuration(dayNonbillable)})
-                </span>
-              </div>
-            </div>
-            <div className="ts-toolbar-group">
-              <TextSelect value={sheetPerson} onChange={(e) => setSheetPerson(e.target.value)} aria-label="Person">
-                {people.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </TextSelect>
-              <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
-                <option>All</option>
-                <option>Billable</option>
-                <option>Non-billable</option>
-              </TextSelect>
-              <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
-                <option value="All">All</option>
-                <option value="project">Project</option>
-                <option value="phase">Phase</option>
-                <option value="task">Task</option>
-                <option value="subtask">Subtask</option>
-              </TextSelect>
-              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
-                <RefreshCw size={16} />
-              </button>
-              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: day })}>
-                <Plus size={16} />
-              </button>
-            </div>
-          </div>
+          <TimesheetToolbar
+            people={people}
+            team={team}
+            person={sheetPerson}
+            onPerson={setSheetPerson}
+            workTypes={workTypes}
+            onToggleWorkType={toggleWorkType}
+            objectTypes={objectTypes}
+            onToggleObjectType={toggleObjectType}
+            onRefresh={refreshSheet}
+            onAddTime={() => openLog({ date: day })}
+            rangeLabel={`${formatLongDay(day)} · ${formatDuration(dayTotal)}`}
+            onPrev={() => setDay(addDays(day, -1))}
+            onNext={() => setDay(addDays(day, 1))}
+            prevLabel="Previous day"
+            nextLabel="Next day"
+            jumpLabel="Weekly timesheet"
+            onJump={() => changeView("Weekly")}
+          />
           <div className="panel ts-timeline-panel">
             <div className="ts-timeline">
               <button type="button" className="btn btn-ghost" onClick={() => setHorizon((h) => Math.max(5, h - 2))}>
@@ -690,44 +704,25 @@ export function TimesheetWorkspace() {
 
       {view === "Weekly" ? (
         <section>
-          <div className="ts-toolbar">
-            <div className="ts-toolbar-group">
-              <TextSelect value={sheetPerson} onChange={(e) => setSheetPerson(e.target.value)} aria-label="Person">
-                {people.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </TextSelect>
-              <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)} aria-label="Work type">
-                <option>All</option>
-                <option>Billable</option>
-                <option>Non-billable</option>
-              </TextSelect>
-              <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
-                <option value="All">All</option>
-                <option value="project">Project</option>
-                <option value="phase">Phase</option>
-                <option value="task">Task</option>
-                <option value="subtask">Subtask</option>
-              </TextSelect>
-              <button type="button" className="icon-btn" aria-label="Refresh timesheet" title="Refresh" onClick={refreshSheet}>
-                <RefreshCw size={16} />
-              </button>
-              <button type="button" className="icon-btn ts-add-btn" aria-label="Add time" title="Add time" onClick={() => openLog({ date: weekStart })}>
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="ts-toolbar-group">
-              <button type="button" className="icon-btn" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>
-                <ChevronLeft size={16} />
-              </button>
-              <strong className="ts-date-label">{formatWeekRange(weekStart)}</strong>
-              <button type="button" className="icon-btn" aria-label="Next week" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <TimesheetToolbar
+            people={people}
+            team={team}
+            person={sheetPerson}
+            onPerson={setSheetPerson}
+            workTypes={workTypes}
+            onToggleWorkType={toggleWorkType}
+            objectTypes={objectTypes}
+            onToggleObjectType={toggleObjectType}
+            onRefresh={refreshSheet}
+            onAddTime={() => openLog({ date: weekStart })}
+            rangeLabel={formatWeekRange(weekStart)}
+            onPrev={() => setWeekStart(addDays(weekStart, -7))}
+            onNext={() => setWeekStart(addDays(weekStart, 7))}
+            prevLabel="Previous week"
+            nextLabel="Next week"
+            jumpLabel="Daily timesheet"
+            onJump={() => changeView("Daily")}
+          />
           <div className="ts-work-search">
             <TextInput
               value={search}
