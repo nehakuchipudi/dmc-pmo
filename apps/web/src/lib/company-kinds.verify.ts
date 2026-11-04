@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignPhaseContractor, companyKindOf, isVendorKind, phaseContractorLabel, phaseContractorMeta } from "./cip";
+import { assignPhaseContractor, companyKindOf, isVendorKind, phaseContractorLabel, phaseContractorMeta } from "./company-kinds";
 import type { Company, Milestone } from "./types";
 
 const agency: Company = {
@@ -40,4 +40,4 @@ assert.equal(assigned.contractorCompanyId, "c-trinity");
 assert.equal(phaseContractorLabel(assigned), "Trinity Ridge Engineering · Design · PS-4412");
 assert.equal(phaseContractorMeta(assigned), "Design · PS-4412");
 
-console.log("cip.verify ok");
+console.log("company-kinds.verify ok");

@@ -218,7 +218,6 @@ export interface Project {
   rates?: ProjectRate[];
   statusHistory?: ProjectStatusChange[];
   requestId?: string;
-  cipNumber?: string;
   location?: string;
   deliveryMethod?: string;
   fundingSource?: string;
