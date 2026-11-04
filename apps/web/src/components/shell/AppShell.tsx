@@ -8,7 +8,6 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
-  ChartColumn,
   ChevronDown,
   CircleHelp,
   ClipboardList,
@@ -16,8 +15,6 @@ import {
   Eye,
   EyeOff,
   FileText,
-  GitBranch,
-  Landmark,
   Layers3,
   LayoutDashboard,
   Lightbulb,
@@ -26,10 +23,8 @@ import {
   MessageSquare,
   Plus,
   Receipt,
-  Scale,
   Search,
   Settings,
-  ShieldAlert,
   Sparkles,
   Target,
   Ticket,
@@ -53,66 +48,26 @@ import { CommandSearch } from "@/components/shell/CommandSearch";
 import { HelpSupport, HelpTrigger } from "@/components/help/HelpSupport";
 import { timerClock } from "@/lib/timesheet-work";
 
-const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] }[] = [
-  {
-    label: "Overview",
-    items: [{ href: "/app/home", label: "Home", icon: LayoutDashboard, exact: true }],
-  },
-  {
-    label: "Deliver",
-    items: [
-      { href: "/app/projects", label: "Projects", icon: Briefcase },
-      { href: "/app/work", label: "Work", icon: Workflow },
-      { href: "/app/tickets", label: "Tickets", icon: Ticket },
-      { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
-    ],
-  },
-  {
-    label: "Clients",
-    items: [
-      { href: "/app/companies", label: "Companies", icon: Building2 },
-      { href: "/app/sales", label: "Sales", icon: ChartColumn },
-      { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
-    ],
-  },
-  {
-    label: "Govern",
-    items: [
-      { href: "/app/resources", label: "Resources", icon: Users },
-      { href: "/app/risks", label: "Risks", icon: ShieldAlert },
-      { href: "/app/dependencies", label: "Dependencies", icon: GitBranch },
-      { href: "/app/governance", label: "Governance", icon: Scale },
-    ],
-  },
-  {
-    label: "Value",
-    items: [
-      { href: "/app/billing", label: "Billing", icon: Receipt },
-      { href: "/app/benefits", label: "Benefits", icon: Landmark },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { href: "/app/reports", label: "Reports", icon: FileText },
-      { href: "/app/ai", label: "Insights", icon: Sparkles },
-      { href: "/app/automations", label: "Automations", icon: Zap },
-    ],
-  },
-  {
-    label: "Align",
-    items: [
-      { href: "/app/strategy", label: "Strategy", icon: Target },
-      { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
-      { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
-    ],
-  },
+const NAV_ITEMS: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] = [
+  { href: "/app/home", label: "Home", icon: LayoutDashboard, exact: true },
+  { href: "/app/projects", label: "Projects", icon: Briefcase },
+  { href: "/app/work", label: "Work", icon: Workflow },
+  { href: "/app/tickets", label: "Tickets", icon: Ticket },
+  { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
+  { href: "/app/resources", label: "Resources", icon: Users },
+  { href: "/app/companies", label: "Companies", icon: Building2 },
+  { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
+  { href: "/app/billing", label: "Billing", icon: Receipt },
+  { href: "/app/reports", label: "Reports", icon: FileText },
+  { href: "/app/automations", label: "Automations", icon: Zap },
+  { href: "/app/strategy", label: "Strategy", icon: Target },
+  { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
+  { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
+  { href: "/app/settings", label: "Users & roles", icon: Users },
 ];
 
 function deniedModuleName(pathname: string) {
-  const match = NAV_GROUPS.flatMap((group) => group.items).find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const match = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   return match?.label;
 }
 
@@ -319,10 +274,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
-  const navGroups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => canAccessHref(user.role, item.href)),
-  })).filter((group) => group.items.length);
+  const navItems = NAV_ITEMS.filter((item) => canAccessHref(user.role, item.href));
   const routeAllowed = canAccessHref(user.role, pathname);
   const activityCreates = (
     [
@@ -420,21 +372,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav>
-          {navGroups.map((group) => (
-            <div key={group.label}>
-              {!collapsed ? <div className="nav-group">{group.label}</div> : null}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-                return (
-                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                    <Icon size={17} />
-                    {!collapsed ? <span>{item.label}</span> : null}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+            return (
+              <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
+                <Icon size={17} />
+                {!collapsed ? <span>{item.label}</span> : null}
+              </Link>
+            );
+          })}
         </nav>
         <div className="nav-footer space-y-1">
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />

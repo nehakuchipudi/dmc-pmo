@@ -520,7 +520,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Users & roles is the firm roster. Admin adds people, sends an invitation email, assigns a role, sets bill and cost rates, and chooses hours-only versus rates and budgets.",
     steps: [
-      "Open Users and roles from your profile or Settings.",
+      "Open Settings, then Users & roles. You can also open it from your profile.",
       "Admin: Add user, fill Profile, Organization, Rates, and Access.",
       "Keep Send an invitation email checked. Sign in with Microsoft so the invite leaves the outbox and reaches their inbox.",
       "Admin: Edit to change role. That role applies on the next page they open.",
