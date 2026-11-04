@@ -362,6 +362,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="brand-sub">PMO / PPM</div>
             </div>
           ) : null}
+          <button
+            type="button"
+            className="brand-collapse"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            title={collapsed ? "Expand navigation" : "Collapse navigation"}
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
         <nav>
           {navGroups.map((group) => (
@@ -381,10 +390,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="nav-footer space-y-1">
-          <button type="button" className="nav-link w-full" onClick={toggleCollapsed}>
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            {!collapsed ? <span>Collapse</span> : null}
-          </button>
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
           <button
             type="button"
