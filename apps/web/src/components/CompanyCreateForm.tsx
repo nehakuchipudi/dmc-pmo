@@ -5,21 +5,10 @@ import { Building2, Link2, MapPin, Plus, Shield, UserPlus, Users, X } from "luci
 import { Field, TextInput, TextSelect } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
 import { COMPANY_KINDS } from "@/lib/company-kinds";
+import { industryChoices } from "@/lib/industries";
 import type { CompanyAddress, CompanyCustomField, CompanyKind, CompanyPrivacy, CompanyStatus } from "@/lib/types";
 
 const STATUSES: CompanyStatus[] = ["Active", "Prospect", "Overdue Inv."];
-const INDUSTRIES = [
-  "Manufacturing & Distribution",
-  "Professional Services",
-  "Technology",
-  "Retail",
-  "Legal",
-  "Logistics",
-  "Healthcare",
-  "Finance",
-  "Public Sector",
-  "Construction",
-];
 const SALUTATIONS = ["", "Mr", "Ms", "Mx", "Dr", "Prof"];
 const PRONOUNS = ["", "she/her", "he/him", "they/them", "prefer not to say"];
 const CONTACT_CATEGORIES = ["", "Primary", "Billing", "Technical", "Executive"];
@@ -140,13 +129,10 @@ export function CompanyCreateForm({
       .sort();
   }, [companies, managerQuery, managers]);
 
-  const industryChoices = useMemo(() => {
-    const names = new Set(INDUSTRIES);
-    companies.forEach((company) => {
-      if (company.industry) names.add(company.industry);
-    });
-    return [...names].sort();
-  }, [companies]);
+  const industryOptions = useMemo(
+    () => industryChoices(companies.map((company) => company.industry)),
+    [companies],
+  );
 
   function addCategory() {
     const next = categoryDraft.trim();
@@ -306,7 +292,7 @@ export function CompanyCreateForm({
               placeholder="Search industry"
             />
             <datalist id="company-industry-options">
-              {industryChoices.map((item) => (
+              {industryOptions.map((item) => (
                 <option key={item} value={item} />
               ))}
             </datalist>
