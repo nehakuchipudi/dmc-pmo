@@ -686,7 +686,13 @@ button, input, select, textarea { font: inherit; }
 .page-header-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 20;
+}
+.page-header-actions .row-menu {
+  z-index: 40;
 }
 .page-title {
   margin: 0;

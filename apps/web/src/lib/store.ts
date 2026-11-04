@@ -377,6 +377,7 @@ type AppState = {
   updateRetainer: (id: string, patch: Partial<Retainer>) => void;
   deleteRetainer: (id: string) => void;
   addRetainerPeriod: (retainerId: string, start: string, end: string, budgetHours: number) => string;
+  updateRetainerPeriod: (id: string, patch: Partial<Pick<RetainerPeriod, "status" | "usedHours" | "budgetHours" | "start" | "end">>) => void;
   createInvoiceDraft: (companyId: string, opts?: CreateInvoiceInput) => string;
   updateInvoice: (id: string, patch: Partial<Invoice>) => void;
   createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
@@ -2453,7 +2454,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
     if (!period || !retainer) return "";
     const hours = period.usedHours;
-    const rate = 175;
+    const rate = retainer.rate && retainer.rate > 0 ? retainer.rate : 175;
     const serviceLine = emptyInvoiceLine("service", {
       description: `${retainer.name} (${period.start} to ${period.end})`,
       hours,
@@ -2471,6 +2472,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       retainerPeriods: s.retainerPeriods.map((p) =>
         p.id === periodId ? { ...p, status: "Invoiced", invoiceId: invId } : p,
       ),
+      retainers:
+        period.status === "Opened"
+          ? s.retainers.map((r) =>
+              r.id === retainer.id ? { ...r, openPeriods: Math.max(0, r.openPeriods - 1) } : r,
+            )
+          : s.retainers,
     }));
     return invId;
   },
@@ -2495,6 +2502,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       budgetHours: input.budgetHours,
       status: "Active",
       autoRenew: true,
+      started: todayIso(),
+      nextRenew: input.expires,
+      rate: 175,
       expires: input.expires,
       openPeriods: 1,
       files: [],
@@ -2557,12 +2567,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
       retainers: s.retainers.map((r) =>
         r.id === retainerId
-          ? { ...r, openPeriods: r.openPeriods + 1, periodLabel: `${start} to ${end}`, budgetHours, expires: end }
+          ? {
+              ...r,
+              openPeriods: r.openPeriods + 1,
+              periodLabel: `${start} to ${end}`,
+              expires: end > r.expires ? end : r.expires,
+            }
           : r,
       ),
     }));
     get().pushToast("Period added");
     return id;
+  },
+
+  updateRetainerPeriod: (id, patch) => {
+    if (!requireCap(get, "manage_retainer")) return;
+    const prev = get().retainerPeriods.find((item) => item.id === id);
+    if (!prev) return;
+    set((s) => ({
+      retainerPeriods: s.retainerPeriods.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      retainers:
+        patch.status && patch.status !== "Opened" && prev.status === "Opened"
+          ? s.retainers.map((item) =>
+              item.id === prev.retainerId ? { ...item, openPeriods: Math.max(0, item.openPeriods - 1) } : item,
+            )
+          : s.retainers,
+    }));
+    get().pushToast(patch.status === "Closed" ? "Period closed" : "Period updated");
   },
 
   addProjectFile: (projectId, file) => {
