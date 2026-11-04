@@ -118,6 +118,13 @@ function deniedModuleName(pathname: string) {
 
 type MenuId = "create" | "profile" | "company" | "time" | null;
 
+function hoverMenuProps(id: Exclude<MenuId, null>, setMenu: (value: MenuId | ((current: MenuId) => MenuId)) => void) {
+  return {
+    onMouseEnter: () => setMenu(id),
+    onMouseLeave: () => setMenu((current) => (current === id ? null : current)),
+  };
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isInternal, logout, can } = useAuth();
   const pathname = usePathname();
@@ -477,10 +484,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <kbd className="search-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
-            <div className="relative" data-shell-menu>
+            <div className="relative" data-shell-menu {...hoverMenuProps("company", setMenu)}>
               <button
                 type="button"
                 className="context-btn"
+                title="Companies"
+                aria-label="Companies"
                 aria-expanded={menu === "company"}
                 onClick={() => setMenu((v) => (v === "company" ? null : "company"))}
               >
@@ -554,8 +563,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))
               : null}
             {canCreateAnything ? (
-            <div className="relative" data-shell-menu>
-              <button type="button" className="icon-btn icon-btn-primary" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
+            <div className="relative" data-shell-menu {...hoverMenuProps("create", setMenu)}>
+              <button type="button" className="icon-btn icon-btn-primary" title="Create" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
                 <Plus size={18} />
               </button>
               {menu === "create" ? (
@@ -597,17 +606,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <button type="button" className="icon-btn topbar-secondary" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
+            <button type="button" className="icon-btn topbar-secondary" title="Tasks" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
               <Briefcase size={18} />
             </button>
-            <button type="button" className="icon-btn topbar-secondary" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
+            <button type="button" className="icon-btn topbar-secondary" title="Schedule" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
               <CalendarDays size={18} />
             </button>
             {can("log_time") ? (
-            <div className="relative" data-shell-menu>
+            <div className="relative" data-shell-menu {...hoverMenuProps("time", setMenu)}>
               <button
                 type="button"
                 className={clsx("icon-btn topbar-secondary", timeTimers.length && "active-soft")}
+                title="Time"
                 aria-label="Time"
                 aria-expanded={menu === "time"}
                 onClick={() => setMenu((v) => (v === "time" ? null : "time"))}
@@ -645,7 +655,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <button type="button" className="icon-btn relative" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
+            <button type="button" className="icon-btn relative" title="Notifications" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
               <Bell size={18} />
               {unread ? (
                 <span className="notify-dot">
@@ -653,16 +663,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
               ) : null}
             </button>
-            <button type="button" className="icon-btn" aria-label="Workspace AI" onClick={() => openHelp("chat")}>
-              <Sparkles size={18} />
-            </button>
-            <button type="button" className="icon-btn topbar-secondary" aria-label="Help and Support" onClick={() => openHelp("guide")}>
+            <button type="button" className="icon-btn topbar-secondary" title="Help and Support" aria-label="Help and Support" onClick={() => openHelp("guide")}>
               <CircleHelp size={18} />
             </button>
-            <div className="relative" data-shell-menu>
+            <div className="relative" data-shell-menu {...hoverMenuProps("profile", setMenu)}>
               <button
                 type="button"
                 className="profile-btn"
+                title="Profile"
+                aria-label="Profile"
                 aria-expanded={menu === "profile"}
                 onClick={() => setMenu((v) => (v === "profile" ? null : "profile"))}
               >

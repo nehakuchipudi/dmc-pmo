@@ -172,7 +172,7 @@ export function RetainerDetail({ id }: { id: string }) {
             <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
               Edit
             </button>
-            <div className="row-actions">
+            <div className="row-actions" onMouseEnter={() => setMoreOpen(true)} onMouseLeave={() => setMoreOpen(false)}>
               <button
                 type="button"
                 className="icon-btn"
@@ -443,7 +443,11 @@ export function RetainerDetail({ id }: { id: string }) {
                         </button>
                       )}
                     </td>
-                    <td className="row-actions text-right">
+                    <td
+                      className="row-actions text-right"
+                      onMouseEnter={() => setPeriodMenu(p.id)}
+                      onMouseLeave={() => setPeriodMenu((id) => (id === p.id ? null : id))}
+                    >
                       <button
                         type="button"
                         className="btn btn-ghost"

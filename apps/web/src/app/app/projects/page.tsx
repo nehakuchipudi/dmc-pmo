@@ -128,7 +128,11 @@ export default function ProjectsPage() {
                 </td>
                 <td>{formatDisplayDate(p.due)}</td>
                 <td className="tabular-nums">{hiddenMoney(canSeeFinancials, money(p.budgetAmount))}</td>
-                <td className="row-actions text-right">
+                <td
+                  className="row-actions text-right"
+                  onMouseEnter={() => setMenuId(p.id)}
+                  onMouseLeave={() => setMenuId((id) => (id === p.id ? null : id))}
+                >
                   <button
                     type="button"
                     className="btn btn-ghost"

@@ -85,7 +85,7 @@ export default function RetainersPage() {
                 <Plus size={16} /> New retainer
               </button>
             </IfCan>
-            <div className="row-actions">
+            <div className="row-actions" onMouseEnter={() => setHeaderMore(true)} onMouseLeave={() => setHeaderMore(false)}>
               <button
                 type="button"
                 className="icon-btn"
@@ -171,7 +171,14 @@ export default function RetainersPage() {
                     </div>
                     <ProgressBar value={Math.min(pct, 100)} />
                   </td>
-                  <td className="row-actions text-right">
+                  <td
+                    className="row-actions text-right"
+                    onMouseEnter={() => {
+                      setHeaderMore(false);
+                      setMenuId(r.id);
+                    }}
+                    onMouseLeave={() => setMenuId((id) => (id === r.id ? null : id))}
+                  >
                     <button
                       type="button"
                       className="btn btn-ghost"
