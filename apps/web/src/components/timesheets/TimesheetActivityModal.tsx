@@ -123,7 +123,11 @@ export function TimesheetActivityModal({
                   </div>
                   <span className="tabular-nums font-semibold">{formatClockHours(entry.hours) || "0:00"}</span>
                   <StatusPill tone={statusTone(entry.status)}>{entry.status}</StatusPill>
-                  <div className="ts-more">
+                  <div
+                    className="ts-more"
+                    onMouseEnter={() => setMenuId(entry.id)}
+                    onMouseLeave={() => setMenuId((id) => (id === entry.id ? null : id))}
+                  >
                     <button
                       type="button"
                       className="icon-btn"

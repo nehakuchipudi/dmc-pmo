@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Briefcase,
@@ -71,12 +71,24 @@ function deniedModuleName(pathname: string) {
   return match?.label;
 }
 
-type MenuId = "create" | "profile" | "company" | "time" | null;
+type MenuId = "create" | "profile" | "company" | "time" | "tasks" | "schedule" | "notifications" | "help" | null;
 
-function hoverMenuProps(id: Exclude<MenuId, null>, setMenu: (value: MenuId | ((current: MenuId) => MenuId)) => void) {
+function hoverMenuProps(
+  id: Exclude<MenuId, null>,
+  setMenu: (value: MenuId | ((current: MenuId) => MenuId)) => void,
+  timer: { current: number },
+) {
   return {
-    onMouseEnter: () => setMenu(id),
-    onMouseLeave: () => setMenu((current) => (current === id ? null : current)),
+    onMouseEnter: () => {
+      window.clearTimeout(timer.current);
+      setMenu(id);
+    },
+    onMouseLeave: () => {
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => {
+        setMenu((current) => (current === id ? null : current));
+      }, 180);
+    },
   };
 }
 
@@ -88,6 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [menu, setMenu] = useState<MenuId>(null);
+  const hoverTimer = useRef(0);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{
     companyId?: string;
@@ -431,7 +444,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <kbd className="search-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
-            <div className="relative" data-shell-menu {...hoverMenuProps("company", setMenu)}>
+            <div className="relative" data-shell-menu {...hoverMenuProps("company", setMenu, hoverTimer)}>
               <button
                 type="button"
                 className="context-btn"
@@ -510,7 +523,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))
               : null}
             {canCreateAnything ? (
-            <div className="relative" data-shell-menu {...hoverMenuProps("create", setMenu)}>
+            <div className="relative" data-shell-menu {...hoverMenuProps("create", setMenu, hoverTimer)}>
               <button type="button" className="icon-btn icon-btn-primary" title="Create" aria-label="Create" onClick={() => setMenu((v) => (v === "create" ? null : "create"))}>
                 <Plus size={18} />
               </button>
@@ -553,14 +566,75 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <button type="button" className="icon-btn topbar-secondary" title="Tasks" aria-label="Tasks" onClick={() => setTasksOpen(true)}>
-              <Briefcase size={18} />
-            </button>
-            <button type="button" className="icon-btn topbar-secondary" title="Schedule" aria-label="Schedule" onClick={() => setScheduleOpen(true)}>
-              <CalendarDays size={18} />
-            </button>
+            <div className="relative" data-shell-menu {...hoverMenuProps("tasks", setMenu, hoverTimer)}>
+              <button
+                type="button"
+                className="icon-btn topbar-secondary"
+                title="Tasks"
+                aria-label="Tasks"
+                aria-expanded={menu === "tasks"}
+                onClick={() => setMenu((v) => (v === "tasks" ? null : "tasks"))}
+              >
+                <Briefcase size={18} />
+              </button>
+              {menu === "tasks" ? (
+                <div className="menu-popover icon-popover fade-in">
+                  <div className="menu-heading">My tasks</div>
+                  {myTasks.map((t) => (
+                    <div key={t.id} className="icon-popover-item">
+                      <div>
+                        <div className="font-medium">{t.name}</div>
+                        <div className="text-xs text-[var(--color-muted)]">{t.projectName} · due {formatDisplayDate(t.due)}</div>
+                      </div>
+                      <button type="button" className="btn btn-ghost text-sm" onClick={() => useAppStore.getState().updateTaskStatus(t.id, "Done")}>
+                        Done
+                      </button>
+                    </div>
+                  ))}
+                  {!myTasks.length ? <p className="menu-empty">No open tasks.</p> : null}
+                  {can("create_task") ? (
+                    <button type="button" className="menu-row" onClick={() => openCreate("task")}>
+                      New task
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="relative" data-shell-menu {...hoverMenuProps("schedule", setMenu, hoverTimer)}>
+              <button
+                type="button"
+                className="icon-btn topbar-secondary"
+                title="Schedule"
+                aria-label="Schedule"
+                aria-expanded={menu === "schedule"}
+                onClick={() => setMenu((v) => (v === "schedule" ? null : "schedule"))}
+              >
+                <CalendarDays size={18} />
+              </button>
+              {menu === "schedule" ? (
+                <div className="menu-popover icon-popover fade-in">
+                  <div className="menu-heading">My schedule</div>
+                  {tasks
+                    .filter((t) => t.status !== "Done")
+                    .slice(0, 8)
+                    .map((t) => (
+                      <div key={t.id} className="icon-popover-item">
+                        <div>
+                          <div className="font-medium">{t.name}</div>
+                          <div className="text-xs text-[var(--color-muted)]">{t.projectName}</div>
+                        </div>
+                        <div className="text-xs text-[var(--color-navy)]">{formatDisplayDate(t.due)}</div>
+                      </div>
+                    ))}
+                  {!tasks.some((t) => t.status !== "Done") ? <p className="menu-empty">Nothing scheduled.</p> : null}
+                  <Link href="/app/timesheets" className="menu-row" onClick={() => setMenu(null)}>
+                    Open timesheets
+                  </Link>
+                </div>
+              ) : null}
+            </div>
             {can("log_time") ? (
-            <div className="relative" data-shell-menu {...hoverMenuProps("time", setMenu)}>
+            <div className="relative" data-shell-menu {...hoverMenuProps("time", setMenu, hoverTimer)}>
               <button
                 type="button"
                 className={clsx("icon-btn topbar-secondary", timeTimers.length && "active-soft")}
@@ -602,18 +676,78 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <button type="button" className="icon-btn relative" title="Notifications" aria-label="Notifications" onClick={() => setNotesOpen(true)}>
-              <Bell size={18} />
-              {unread ? (
-                <span className="notify-dot">
-                  {unread}
-                </span>
+            <div className="relative" data-shell-menu {...hoverMenuProps("notifications", setMenu, hoverTimer)}>
+              <button
+                type="button"
+                className="icon-btn relative"
+                title="Notifications"
+                aria-label="Notifications"
+                aria-expanded={menu === "notifications"}
+                onClick={() => setMenu((v) => (v === "notifications" ? null : "notifications"))}
+              >
+                <Bell size={18} />
+                {unread ? (
+                  <span className="notify-dot">
+                    {unread}
+                  </span>
+                ) : null}
+              </button>
+              {menu === "notifications" ? (
+                <div className="menu-popover icon-popover fade-in">
+                  <div className="menu-heading">Notifications</div>
+                  <div className="icon-popover-toolbar">
+                    <span className="text-xs text-[var(--color-muted)]">{notifications.length ? `${notifications.length} updates` : "You are caught up"}</span>
+                    {notifications.length ? (
+                      <button type="button" className="text-xs font-semibold text-[var(--color-navy)]" onClick={markAll}>
+                        Mark all read
+                      </button>
+                    ) : null}
+                  </div>
+                  {notifications.slice(0, 8).map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      className={clsx("menu-row notify-menu-row", !n.read && "is-unread")}
+                      onClick={() => {
+                        markRead(n.id);
+                        if (n.href) router.push(n.href);
+                        setMenu(null);
+                      }}
+                    >
+                      <span>
+                        <span className="block font-medium">{n.title}</span>
+                        <span className="block text-xs text-[var(--color-muted)]">{n.body}</span>
+                      </span>
+                    </button>
+                  ))}
+                  {!notifications.length ? <p className="menu-empty">No notifications yet.</p> : null}
+                </div>
               ) : null}
-            </button>
-            <button type="button" className="icon-btn topbar-secondary" title="Help and Support" aria-label="Help and Support" onClick={() => openHelp("guide")}>
-              <CircleHelp size={18} />
-            </button>
-            <div className="relative" data-shell-menu {...hoverMenuProps("profile", setMenu)}>
+            </div>
+            <div className="relative" data-shell-menu {...hoverMenuProps("help", setMenu, hoverTimer)}>
+              <button
+                type="button"
+                className="icon-btn topbar-secondary"
+                title="Help and Support"
+                aria-label="Help and Support"
+                aria-expanded={menu === "help"}
+                onClick={() => setMenu((v) => (v === "help" ? null : "help"))}
+              >
+                <CircleHelp size={18} />
+              </button>
+              {menu === "help" ? (
+                <div className="menu-popover fade-in">
+                  <div className="menu-heading">Help</div>
+                  <button type="button" className="menu-row" onClick={() => { setMenu(null); openHelp("guide"); }}>
+                    <CircleHelp size={15} /> Help & Support
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => { setMenu(null); openHelp("chat"); }}>
+                    <Sparkles size={15} /> Ask AI
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div className="relative" data-shell-menu {...hoverMenuProps("profile", setMenu, hoverTimer)}>
               <button
                 type="button"
                 className="profile-btn"
