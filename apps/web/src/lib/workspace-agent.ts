@@ -1786,8 +1786,8 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
         amount: intent.amount ?? 10000,
         close: intent.due ?? addDays(todayIso(), 30),
       });
-      done(Boolean(id), id ? `Created ${name}` : "Could not create the opportunity", id ? `I created opportunity ${name}.` : "I could not create that opportunity.");
-      pushHref("/app/sales", "Open Sales");
+      done(Boolean(id), id ? `Created ${name}` : "Could not create the opportunity", id ? `I created opportunity ${name} on ${host.name}.` : "I could not create that opportunity.");
+      pushHref(`/app/companies/view/?id=${host.id}`, "Open company");
     }
 
     if (intent.type === "advance_opportunity") {

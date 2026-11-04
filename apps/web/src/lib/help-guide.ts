@@ -28,7 +28,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Home is the PMO cockpit. It answers whether the firm is on the right work, with the right people, cost, and risk. Use the company selector in the top bar to scope Home to one client.",
     steps: [
-      "Open Home from Overview in the left nav.",
+      "Open Home in the left nav.",
       "Read the KPI cards for work mix, resources, cost, and risk.",
       "Use the company selector if you only want one client in focus.",
       "Follow Needs a decision items into the matching project, gate, or risk.",
@@ -253,23 +253,6 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Portal access is the Enabled / Not Invited flag on the contact."],
   },
   {
-    id: "sales",
-    title: "Sales",
-    group: "Clients",
-    href: "/app/sales",
-    audience: "internal",
-    viewCap: "view_sales",
-    keywords: ["sales", "opportunity", "pipeline", "deal", "won"],
-    summary:
-      "Sales is the opportunity pipeline. Advance a deal through Qualify, Propose, Negotiate, Won, or Lost. Won work becomes a project.",
-    steps: [
-      "Open Sales.",
-      "Create an opportunity with company, amount, and close date.",
-      "Advance moves the stage forward.",
-    ],
-    tips: ["Staff cannot open Sales. PM, Finance, Leadership, and Admin can."],
-  },
-  {
     id: "retainers",
     title: "Retainers",
     group: "Clients",
@@ -374,26 +357,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Staff cannot open Billing. PM can create invoices. Only Finance and Admin can record payment."],
   },
   {
-    id: "benefits",
-    title: "Benefits",
-    group: "Value",
-    href: "/app/benefits",
-    audience: "internal",
-    viewCap: "view_benefits",
-    keywords: ["benefits", "outcome", "metric", "realization", "value"],
-    summary:
-      "Benefits tracks outcome metrics tied to objectives and projects: baseline, target, current, and progress.",
-    steps: [
-      "Open Benefits.",
-      "Read each benefit against its objective.",
-      "Follow the project link when one is attached.",
-    ],
-    tips: ["Use Benefits when leadership asks whether funded work is producing the outcome."],
-  },
-  {
     id: "reports",
     title: "Reports",
-    group: "Insights",
+    group: "Value",
     href: "/app/reports",
     audience: "internal",
     viewCap: "view_reports",
@@ -408,30 +374,13 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Staff cannot open Reports."],
   },
   {
-    id: "insights",
-    title: "Insights",
-    group: "Insights",
-    href: "/app/ai",
-    audience: "internal",
-    viewCap: "view_insights",
-    keywords: ["insights", "watch", "critical", "intelligence"],
-    summary:
-      "Insights reads live store data and writes watch items for at-risk projects, overload, risks, blocked dependencies, and gates.",
-    steps: [
-      "Open Insights.",
-      "Filter the list if you are hunting one theme.",
-      "Click an item to jump to the record.",
-    ],
-    tips: ["This page is generated from current workspace data, not a separate model."],
-  },
-  {
     id: "workspace-ai",
     title: "Workspace AI",
-    group: "Insights",
+    group: "Admin",
     audience: "internal",
     keywords: ["ai", "assistant", "do this", "update status", "add milestone", "workspace ai", "ask ai", "email", "delete", "assign"],
     summary:
-      "Ask AI knows every module and the live workspace. It answers how the tool works, looks up records, and can create, update, delete, assign, and email across companies, contacts, projects, plan, tasks, tickets, time, billing, retainers, sales, ideas, portfolios, strategy, risks, governance, and the email outbox.",
+      "Ask AI knows every module and the live workspace. It answers how the tool works, looks up records, and can create, update, delete, assign, and email across companies, contacts, projects, plan, tasks, tickets, time, billing, retainers, ideas, portfolios, strategy, risks, governance, and the email outbox.",
     steps: [
       "Open Help & Support, then Ask AI.",
       "Ask how a module works, how Strategy, Ideas, Portfolios, and Projects connect, or what a live record looks like.",
@@ -448,7 +397,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     id: "automations",
     title: "Automations",
-    group: "Insights",
+    group: "Admin",
     href: "/app/automations",
     audience: "internal",
     viewCap: "view_automations",
@@ -657,7 +606,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
 ];
 
-export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Govern", "Value", "Insights", "Align", "Admin", "Portal"];
+export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Govern", "Value", "Align", "Admin", "Portal"];
 
 export function articlesForAudience(audience: HelpAudience) {
   return HELP_ARTICLES.filter((article) => article.audience === audience || article.audience === "both");

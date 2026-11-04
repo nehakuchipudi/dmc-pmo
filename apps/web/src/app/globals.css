@@ -107,15 +107,6 @@ button, input, select, textarea { font: inherit; }
   overflow-y: auto;
   padding-right: 2px;
 }
-.nav-group {
-  margin: 14px 10px 4px;
-  font-size: 0.62rem;
-  letter-spacing: 0.16em;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.38);
-}
-.app-shell.collapsed .nav-group { display: none; }
 
 .brand {
   display: flex;
