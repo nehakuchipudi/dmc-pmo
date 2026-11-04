@@ -165,7 +165,11 @@ export function FilesNotesPanel({
                     {linked.length ? linked.join(", ") : "-"}
                   </span>
                   <span className="text-sm tabular-nums text-[var(--color-muted)]">{f.sizeKb} KB</span>
-                  <div className="relative justify-self-end">
+                  <div
+                    className="row-actions justify-self-end"
+                    onMouseEnter={() => setMenuId(f.id)}
+                    onMouseLeave={() => setMenuId((id) => (id === f.id ? null : id))}
+                  >
                     <button
                       type="button"
                       className="icon-btn"
