@@ -22,6 +22,7 @@ import {
   TextSelect,
 } from "@/components/ui";
 import { COMPANY_KINDS, companyKindOf } from "@/lib/company-kinds";
+import { industryChoices } from "@/lib/industries";
 import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
@@ -1179,7 +1180,12 @@ export function CompanyDetail({ id }: { id: string }) {
             </TextSelect>
           </Field>
           <Field label="Industry">
-            <TextInput name="industry" defaultValue={company.industry} />
+            <TextInput name="industry" defaultValue={company.industry} list="company-edit-industry-options" />
+            <datalist id="company-edit-industry-options">
+              {industryChoices([company.industry]).map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
           </Field>
           <Field label="Billing terms">
             <TextInput name="billingTerms" defaultValue={company.billingTerms} />
