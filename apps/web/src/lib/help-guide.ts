@@ -205,16 +205,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/app/timesheets",
     audience: "internal",
     viewCap: "view_timesheets",
-    keywords: ["timesheet", "time", "hours", "log time", "approve time", "daily", "weekly", "overview", "timer", "phase", "subtask"],
+    keywords: ["timesheet", "time", "hours", "log time", "approve time", "daily", "weekly", "overview", "timer", "phase", "subtask", "edit time", "delete time"],
     summary:
-      "Timesheets has Overview, Daily, and Weekly views. Search adds a project, phase, task, or subtask row. The Time menu starts timers and jumps between views. Staff see their own lines. PM, Finance, and Admin can approve or reject submitted time.",
+      "Timesheets has Overview, Daily, and Weekly views. Search adds a project, phase, task, or subtask row. Click a day to add or edit activity. Extra filters and timers sit in the three-dot menu.",
     steps: [
-      "Open Timesheets, or use Time in the top bar for Overview, Daily, or Weekly.",
-      "On Weekly, search for a project, phase, task, or subtask and add it as a row.",
-      "Click a day cell to log against that work. Use the + on a day to add another entry, such as a different phase on the same date.",
-      "Create timer from Time, or Log time from Create (+). Submit a draft. Approvers approve or reject it.",
+      "Open Timesheets and stay on Weekly for day-to-day logging.",
+      "Search a project, phase, task, or subtask, then click a day cell.",
+      "Add hours, or open a logged line to edit, submit, or delete it from the three-dot menu.",
+      "Use + on a day to add another activity on the same work.",
     ],
-    tips: ["Staff cannot approve time or log time for someone else. Object type filters the weekly search and rows."],
+    tips: ["Staff can edit or delete their own drafts. Approvers change approved time. Extra filters live under the three dots."],
   },
   {
     id: "companies",

@@ -2,9 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Plus, Timer } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, MoreHorizontal, Plus, Timer } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
-import { PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
+import { TimesheetActivityModal } from "@/components/timesheets/TimesheetActivityModal";
+import { ConfirmModal, PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { exportCsv } from "@/lib/pdf";
 import { money } from "@/lib/seed";
@@ -29,7 +30,6 @@ import {
   searchTimesheetWork,
   timerClock,
   workFromEntry,
-  workToLogDefaults,
   type TimesheetWork,
 } from "@/lib/timesheet-work";
 
@@ -62,6 +62,7 @@ export function TimesheetWorkspace() {
   const submit = useAppStore((s) => s.submitTimeEntry);
   const approve = useAppStore((s) => s.approveTimeEntry);
   const reject = useAppStore((s) => s.rejectTimeEntry);
+  const deleteTimeEntry = useAppStore((s) => s.deleteTimeEntry);
   const timers = useAppStore((s) => s.timeTimers);
   const showTimers = useAppStore((s) => s.showTimeTimers);
   const startTimer = useAppStore((s) => s.startTimeTimer);
@@ -95,7 +96,8 @@ export function TimesheetWorkspace() {
   }>({});
   const [myWorkFilter, setMyWorkFilter] = useState<"Committed" | "Overdue" | "All">("Committed");
   const [pinnedWork, setPinnedWork] = useState<TimesheetWork[]>([]);
-  const [timeMenu, setTimeMenu] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [activity, setActivity] = useState<{ work: TimesheetWork; date: string; add?: boolean } | null>(null);
   const [now, setNow] = useState(Date.now());
 
   const canApprove = can("approve_time");
@@ -185,8 +187,13 @@ export function TimesheetWorkspace() {
 
   function changeView(next: ViewTab) {
     setView(next);
-    setTimeMenu(false);
+    setMoreOpen(false);
     router.replace(`/app/timesheets/?view=${next}`);
+  }
+
+  function openActivity(work: TimesheetWork, date: string, add?: boolean) {
+    setActivity({ work, date, add });
+    setMoreOpen(false);
   }
 
   function openLog(next?: {
@@ -200,7 +207,7 @@ export function TimesheetWorkspace() {
   }) {
     setLogDefaults(next ?? { date: view === "Weekly" ? weekStart : day });
     setCreateKind("time");
-    setTimeMenu(false);
+    setMoreOpen(false);
   }
 
   function pinWork(work: TimesheetWork) {
@@ -231,7 +238,7 @@ export function TimesheetWorkspace() {
       workKind: "project",
       label: project.name,
     });
-    setTimeMenu(false);
+    setMoreOpen(false);
   }
 
   function finishTimer(id: string) {
@@ -253,39 +260,100 @@ export function TimesheetWorkspace() {
     <div className="fade-in">
       <PageHeader
         title={view === "Overview" ? "Timesheet overview" : view === "Daily" ? "Daily timesheet" : "Weekly timesheet"}
-        subtitle="Review logged work, fill a day on the timeline, or close the week."
+        subtitle="Search work, click a day to log or edit, and keep extra tools in the menu."
         actions={
           <div className="ts-header-actions">
-            <div className="ts-time-menu">
-              <button type="button" className="btn btn-ghost" aria-expanded={timeMenu} onClick={() => setTimeMenu((open) => !open)}>
-                <Clock3 size={16} /> Time
-                <ChevronDown size={14} />
+            <div className="ts-more">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="More timesheet actions"
+                aria-expanded={moreOpen}
+                onClick={() => setMoreOpen((open) => !open)}
+              >
+                <MoreHorizontal size={18} />
               </button>
-              {timeMenu ? (
-                <div className="menu-popover ts-time-popover fade-in">
-                  <div className="menu-heading">Time</div>
+              {moreOpen ? (
+                <div className="menu-popover ts-more-popover fade-in">
+                  <button type="button" className="menu-row" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
+                    Log time
+                  </button>
                   <button type="button" className="menu-row" onClick={startBlankTimer}>
                     <Timer size={15} /> Create timer
                   </button>
-                  <button type="button" className="menu-row" onClick={() => { setShowTimers(!showTimers); setTimeMenu(false); }}>
+                  <button type="button" className="menu-row" onClick={() => { setShowTimers(!showTimers); setMoreOpen(false); }}>
                     {showTimers ? <EyeOff size={15} /> : <Eye size={15} />}
                     {showTimers ? "Hide timers" : "Show timers"}
                   </button>
-                  <button type="button" className="menu-row" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
-                    <Plus size={15} /> Log time
-                  </button>
-                  <div className="menu-heading">Timesheets</div>
+                  <div className="menu-heading">Views</div>
                   {VIEW_TABS.map((tab) => (
                     <button key={tab} type="button" className="menu-row" onClick={() => changeView(tab)}>
                       {tab}
                     </button>
                   ))}
+                  {view === "Weekly" ? (
+                    <>
+                      <div className="menu-heading">Filters</div>
+                      <label className="menu-row ts-more-field">
+                        Work type
+                        <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
+                          <option>All</option>
+                          <option>Billable</option>
+                          <option>Non-billable</option>
+                        </TextSelect>
+                      </label>
+                      <label className="menu-row ts-more-field">
+                        Object type
+                        <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])}>
+                          <option value="All">All</option>
+                          <option value="project">Project</option>
+                          <option value="phase">Phase</option>
+                          <option value="task">Task</option>
+                          <option value="subtask">Subtask</option>
+                        </TextSelect>
+                      </label>
+                    </>
+                  ) : null}
+                  {view === "Overview" ? (
+                    <>
+                      <div className="menu-heading">Report</div>
+                      <label className="menu-row">
+                        <input type="checkbox" checked={loggedOnly} onChange={(e) => setLoggedOnly(e.target.checked)} />
+                        Logged time only
+                      </label>
+                      <label className="menu-row">
+                        <input type="checkbox" checked={billableOnly} onChange={(e) => setBillableOnly(e.target.checked)} />
+                        Billable only
+                      </label>
+                      <button
+                        type="button"
+                        className="menu-row"
+                        onClick={() => {
+                          exportCsv(
+                            "timesheet-overview.csv",
+                            report.flatMap((company) =>
+                              company.projects.map((project) => ({
+                                company: company.companyName,
+                                project: project.projectName,
+                                activities: project.activities,
+                                nonbillable: project.nonbillable,
+                                billable: project.billable,
+                                total: project.total,
+                                amount: project.amount,
+                                cost: project.cost,
+                              })),
+                            ),
+                          );
+                          setMoreOpen(false);
+                        }}
+                      >
+                        Export
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
             </div>
-            <button type="button" className="btn btn-primary" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
-              <Plus size={16} /> Log time
-            </button>
           </div>
         }
       />
@@ -337,38 +405,8 @@ export function TimesheetWorkspace() {
                 <TextInput type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
               </label>
             </div>
-            <div className="ts-toolbar-group ts-toolbar-toggles">
-              <label>
-                <input type="checkbox" checked={loggedOnly} onChange={(e) => setLoggedOnly(e.target.checked)} />
-                Show only logged time
-              </label>
-              <label>
-                <input type="checkbox" checked={billableOnly} onChange={(e) => setBillableOnly(e.target.checked)} />
-                Show only billable time
-              </label>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() =>
-                  exportCsv(
-                    "timesheet-overview.csv",
-                    report.flatMap((company) =>
-                      company.projects.map((project) => ({
-                        company: company.companyName,
-                        project: project.projectName,
-                        activities: project.activities,
-                        nonbillable: project.nonbillable,
-                        billable: project.billable,
-                        total: project.total,
-                        amount: project.amount,
-                        cost: project.cost,
-                      })),
-                    ),
-                  )
-                }
-              >
-                Export
-              </button>
+            <div className="ts-toolbar-group">
+              <span className="ts-date-label">{formatDuration(reportTotals.total)} logged</span>
             </div>
           </div>
           <div className="panel overflow-auto">
@@ -467,19 +505,6 @@ export function TimesheetWorkspace() {
               </div>
             </div>
             <div className="ts-toolbar-group">
-              <button type="button" className="btn btn-ghost" onClick={() => setDay(todayIso())}>
-                Today
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setWeekStart(startOfWeek(day));
-                  changeView("Weekly");
-                }}
-              >
-                Weekly view
-              </button>
               <TextSelect value={sheetPerson} onChange={(e) => setSheetPerson(e.target.value)} aria-label="Person">
                 {people.map((name) => (
                   <option key={name} value={name}>
@@ -534,9 +559,6 @@ export function TimesheetWorkspace() {
                 Grouped
               </button>
             </div>
-            <button type="button" className="btn btn-primary" onClick={() => openLog({ date: day, start: "09:00" })}>
-              Log time
-            </button>
           </div>
           <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
             <div className="panel ts-day-list">
@@ -558,9 +580,11 @@ export function TimesheetWorkspace() {
                           userName={user.name}
                           staffOnly={staffOnly}
                           canApprove={canApprove}
+                          onOpen={() => openActivity(workFromEntry(entry, projects, tasks, milestones), entry.date)}
                           onSubmit={submit}
                           onApprove={approve}
                           onReject={reject}
+                          onDelete={deleteTimeEntry}
                         />
                       ))}
                     </div>
@@ -572,9 +596,11 @@ export function TimesheetWorkspace() {
                       userName={user.name}
                       staffOnly={staffOnly}
                       canApprove={canApprove}
+                      onOpen={() => openActivity(workFromEntry(entry, projects, tasks, milestones), entry.date)}
                       onSubmit={submit}
                       onApprove={approve}
                       onReject={reject}
+                      onDelete={deleteTimeEntry}
                     />
                   ))}
               {!dayEntries.length ? <p className="p-6 text-sm text-[var(--color-muted)]">No time on this day yet.</p> : null}
@@ -600,15 +626,30 @@ export function TimesheetWorkspace() {
                       type="button"
                       className="ts-work-item"
                       onClick={() =>
-                        openLog({
-                          projectId: task.projectId,
-                          milestoneId: task.milestoneId,
-                          taskId: task.id,
-                          workKind: task.parentTaskId ? "subtask" : "task",
-                          date: day,
-                          hours: 1,
-                          start: "09:00",
-                        })
+                        openActivity(
+                          workFromEntry(
+                            {
+                              id: task.id,
+                              userName: user.name,
+                              projectId: task.projectId,
+                              projectName: task.projectName,
+                              milestoneId: task.milestoneId,
+                              taskId: task.id,
+                              taskName: task.name,
+                              workKind: task.parentTaskId ? "subtask" : "task",
+                              date: day,
+                              hours: 1,
+                              billable: true,
+                              note: "",
+                              status: "Draft",
+                            },
+                            projects,
+                            tasks,
+                            milestones,
+                          ),
+                          day,
+                          true,
+                        )
                       }
                     >
                       <strong>{task.name}</strong>
@@ -634,34 +675,6 @@ export function TimesheetWorkspace() {
                   </option>
                 ))}
               </TextSelect>
-              <label className="ts-inline">
-                <span>Work type</span>
-                <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
-                  <option>All</option>
-                  <option>Billable</option>
-                  <option>Non-billable</option>
-                </TextSelect>
-              </label>
-              <label className="ts-inline">
-                <span>Object type</span>
-                <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
-                  <option value="All">All</option>
-                  <option value="project">Project</option>
-                  <option value="phase">Phase</option>
-                  <option value="task">Task</option>
-                  <option value="subtask">Subtask</option>
-                </TextSelect>
-              </label>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setDay(weekStart);
-                  changeView("Daily");
-                }}
-              >
-                Daily timesheet
-              </button>
             </div>
             <div className="ts-toolbar-group">
               <button type="button" className="icon-btn" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>
@@ -689,11 +702,8 @@ export function TimesheetWorkspace() {
                       <strong>{work.label}</strong>
                       <span>{work.detail}</span>
                     </button>
-                    <button type="button" className="btn btn-ghost text-sm" onClick={() => openLog({ ...workToLogDefaults(work, { date: weekStart, hours: 1 }) })}>
-                      Log
-                    </button>
-                    <button type="button" className="icon-btn" aria-label={`Start timer on ${work.label}`} onClick={() => startOnWork(work)}>
-                      <Timer size={14} />
+                    <button type="button" className="btn btn-ghost text-sm" onClick={() => openActivity(work, weekStart, true)}>
+                      Add
                     </button>
                   </li>
                 ))}
@@ -736,13 +746,7 @@ export function TimesheetWorkspace() {
                           <button
                             type="button"
                             className="timesheet-cell ts-week-hit"
-                            onClick={() =>
-                              openLog(
-                                work
-                                  ? workToLogDefaults(work, { date, hours: hours || 1 })
-                                  : { date, hours: hours || 1 },
-                              )
-                            }
+                            onClick={() => work && openActivity(work, date, !hours)}
                           >
                             {hours ? formatClockHours(hours) : ""}
                           </button>
@@ -750,13 +754,7 @@ export function TimesheetWorkspace() {
                             type="button"
                             className="ts-week-add"
                             aria-label={`Add another entry on ${date}`}
-                            onClick={() =>
-                              openLog({
-                                projectId: work?.projectId,
-                                date,
-                                hours: 1,
-                              })
-                            }
+                            onClick={() => work && openActivity(work, date, true)}
                           >
                             <Plus size={12} />
                           </button>
@@ -782,6 +780,18 @@ export function TimesheetWorkspace() {
         </section>
       ) : null}
 
+      {activity ? (
+        <TimesheetActivityModal
+          work={activity.work}
+          date={activity.date}
+          startOnAdd={activity.add}
+          entries={scoped.filter(
+            (entry) =>
+              entry.date === activity.date && workFromEntry(entry, projects, tasks, milestones).key === activity.work.key,
+          )}
+          onClose={() => setActivity(null)}
+        />
+      ) : null}
       <CreateForms
         key={`${createKind}-${logDefaults.projectId ?? ""}-${logDefaults.milestoneId ?? ""}-${logDefaults.taskId ?? ""}-${logDefaults.date ?? ""}-${logDefaults.hours ?? ""}`}
         kind={createKind}
@@ -805,52 +815,88 @@ function DailyCard({
   userName,
   staffOnly,
   canApprove,
+  onOpen,
   onSubmit,
   onApprove,
   onReject,
+  onDelete,
 }: {
   entry: TimeEntry;
   userName: string;
   staffOnly: boolean;
   canApprove: boolean;
+  onOpen: () => void;
   onSubmit: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const window = entryWindow(entry);
   const trail = [entry.taskName, entry.milestoneName, entry.projectName].filter(Boolean);
+  const [menu, setMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const canChange = entry.userName === userName || entry.userName === "J. Kim" || !staffOnly;
   return (
     <article className="ts-entry">
-      <div>
+      <button type="button" className="ts-entry-main" onClick={onOpen}>
         <strong>{entry.note || entry.taskName || entry.milestoneName || entry.projectName}</strong>
         <p>
           {trail.join(" / ")}
           {entry.userName !== userName ? ` · ${entry.userName}` : ""}
-          {entry.billable ? "" : " · Non-billable"}
+          {entry.billable ? "" : " · Internal"}
         </p>
-      </div>
+      </button>
       <div className="ts-entry-time">
         {formatClock(window.start)} to {formatClock(window.end)}
       </div>
       <StatusPill tone={statusTone(entry.status)}>{entry.status}</StatusPill>
       <div className="ts-entry-actions">
         <span className="tabular-nums font-semibold">{formatDuration(entry.hours)}</span>
-        {entry.status === "Draft" && (entry.userName === userName || entry.userName === "J. Kim" || !staffOnly) ? (
-          <button type="button" className="btn btn-ghost text-sm" onClick={() => onSubmit(entry.id)}>
-            Submit
+        <div className="ts-more">
+          <button type="button" className="icon-btn" aria-label="More activity actions" aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
+            <MoreHorizontal size={16} />
           </button>
-        ) : null}
-        {entry.status === "Submitted" && canApprove ? (
-          <>
-            <button type="button" className="btn btn-primary text-sm" onClick={() => onApprove(entry.id)}>
-              Approve
-            </button>
-            <button type="button" className="btn btn-ghost text-sm" onClick={() => onReject(entry.id)}>
-              Reject
-            </button>
-          </>
-        ) : null}
+          {menu ? (
+            <div className="menu-popover ts-more-popover fade-in">
+              <button type="button" className="menu-row" onClick={() => { setMenu(false); onOpen(); }}>
+                Edit
+              </button>
+              {entry.status === "Draft" && canChange ? (
+                <button type="button" className="menu-row" onClick={() => { setMenu(false); onSubmit(entry.id); }}>
+                  Submit
+                </button>
+              ) : null}
+              {entry.status === "Submitted" && canApprove ? (
+                <>
+                  <button type="button" className="menu-row" onClick={() => { setMenu(false); onApprove(entry.id); }}>
+                    Approve
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => { setMenu(false); onReject(entry.id); }}>
+                    Reject
+                  </button>
+                </>
+              ) : null}
+              {canChange ? (
+                <button type="button" className="menu-row is-danger" onClick={() => { setMenu(false); setConfirmDelete(true); }}>
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
+      <ConfirmModal
+        open={confirmDelete}
+        title="Delete time entry"
+        body="This removes the activity from the timesheet."
+        confirmLabel="Delete"
+        danger
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          onDelete(entry.id);
+          setConfirmDelete(false);
+        }}
+      />
     </article>
   );
 }

@@ -73,6 +73,16 @@ export function formatClockHours(hours: number) {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+export function parseHoursInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  if (trimmed.includes(":")) {
+    const [hours, minutes] = trimmed.split(":");
+    return (Number(hours) || 0) + (Number(minutes) || 0) / 60;
+  }
+  return Number(trimmed) || 0;
+}
+
 export function parseClock(value: string) {
   const [h, m] = value.split(":").map(Number);
   return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
