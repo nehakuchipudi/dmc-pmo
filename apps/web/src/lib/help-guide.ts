@@ -205,16 +205,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/app/timesheets",
     audience: "internal",
     viewCap: "view_timesheets",
-    keywords: ["timesheet", "time", "hours", "log time", "approve time", "daily", "weekly", "overview"],
+    keywords: ["timesheet", "time", "hours", "log time", "approve time", "daily", "weekly", "overview", "timer", "phase", "subtask"],
     summary:
-      "Timesheets has Overview, Daily, and Weekly views. Staff see their own lines. PM, Finance, and Admin can approve or reject submitted time.",
+      "Timesheets has Overview, Daily, and Weekly views. Search adds a project, phase, task, or subtask row. The Time menu starts timers and jumps between views. Staff see their own lines. PM, Finance, and Admin can approve or reject submitted time.",
     steps: [
-      "Open Timesheets.",
-      "Overview is hours by company. Daily is a timeline. Weekly is the grid.",
-      "Log time from Create (+), the timer, or a project.",
-      "Submit a draft line. Approvers change it to Approved or Rejected.",
+      "Open Timesheets, or use Time in the top bar for Overview, Daily, or Weekly.",
+      "On Weekly, search for a project, phase, task, or subtask and add it as a row.",
+      "Click a day cell to log against that work. Use the + on a day to add another entry, such as a different phase on the same date.",
+      "Create timer from Time, or Log time from Create (+). Submit a draft. Approvers approve or reject it.",
     ],
-    tips: ["Staff cannot approve time or log time for someone else."],
+    tips: ["Staff cannot approve time or log time for someone else. Object type filters the weekly search and rows."],
   },
   {
     id: "companies",

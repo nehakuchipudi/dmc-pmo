@@ -126,6 +126,7 @@ import type {
   User,
   TicketMessage,
   TimeEntry,
+  TimeTimer,
 } from "./types";
 import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
 
@@ -183,7 +184,9 @@ type CreateTaskInput = {
 type CreateTimeInput = {
   userName: string;
   projectId: string;
+  milestoneId?: string;
   taskId?: string;
+  workKind?: TimeEntry["workKind"];
   date: string;
   start?: string;
   hours: number;
@@ -227,6 +230,8 @@ type AppState = {
   invoices: Invoice[];
   invoiceTemplates: InvoiceTemplate[];
   timeEntries: TimeEntry[];
+  timeTimers: TimeTimer[];
+  showTimeTimers: boolean;
   notifications: NotificationItem[];
   activities: ActivityItem[];
   retainers: Retainer[];
@@ -340,6 +345,9 @@ type AppState = {
   ) => void;
   removeProjectMember: (id: string) => void;
   createTimeEntry: (input: CreateTimeInput) => string;
+  startTimeTimer: (input: Omit<TimeTimer, "id" | "startedAt">) => string;
+  stopTimeTimer: (id: string) => TimeTimer | undefined;
+  setShowTimeTimers: (show: boolean) => void;
   createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
   advanceOpportunity: (id: string) => void;
@@ -631,6 +639,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   invoices: seedInvoices,
   invoiceTemplates: seedInvoiceTemplates,
   timeEntries: seedTimeEntries,
+  timeTimers: [],
+  showTimeTimers: true,
   notifications: [...readAccountExtras().notes, ...seedNotifications],
   activities: seedActivities,
   retainers: seedRetainers,
@@ -1951,14 +1961,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const project = get().projects.find((p) => p.id === input.projectId);
     if (!project) return "";
     const task = get().tasks.find((t) => t.id === input.taskId);
+    const milestone =
+      get().milestones.find((item) => item.id === input.milestoneId) ??
+      get().milestones.find((item) => item.id === task?.milestoneId);
+    const workKind = input.workKind ?? (task?.parentTaskId ? "subtask" : task ? "task" : milestone ? "phase" : "project");
     const id = uid("te");
     const entry: TimeEntry = {
       id,
       userName: input.userName,
       projectId: project.id,
       projectName: project.name,
+      milestoneId: milestone?.id,
+      milestoneName: milestone?.name,
       taskId: task?.id,
       taskName: task?.name,
+      workKind,
       date: input.date,
       start: input.start,
       hours: input.hours,
@@ -1978,9 +1995,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           action: `logged ${input.hours}h`,
           companyId: project.companyId,
           projectId: project.id,
-          entityType: task ? "task" : "project",
+          entityType: task ? "task" : milestone ? "milestone" : "project",
           entityId: id,
-          entityLabel: task?.name ?? project.name,
+          entityLabel: task?.name ?? milestone?.name ?? project.name,
           href: `/app/projects/view/?id=${project.id}`,
           text: `${input.userName} logged ${input.hours}h on ${project.name}.`,
         }),
@@ -1990,6 +2007,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Time entry saved");
     return id;
   },
+
+  startTimeTimer: (input) => {
+    if (!requireCap(get, "log_time")) return "";
+    const id = uid("tmr");
+    const timer: TimeTimer = { ...input, id, startedAt: Date.now() };
+    set((s) => ({ timeTimers: [timer, ...s.timeTimers], showTimeTimers: true }));
+    get().pushToast(`Timer started on ${input.label}`);
+    return id;
+  },
+
+  stopTimeTimer: (id) => {
+    const timer = get().timeTimers.find((item) => item.id === id);
+    set((s) => ({ timeTimers: s.timeTimers.filter((item) => item.id !== id) }));
+    return timer;
+  },
+
+  setShowTimeTimers: (show) => set({ showTimeTimers: show }),
 
   createExpense: (input) => {
     if (!requireCap(get, "create_expense")) return "";

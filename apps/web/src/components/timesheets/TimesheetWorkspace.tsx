@@ -1,14 +1,15 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Plus, Timer } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { PageHeader, StatusPill, Tabs, TextInput, TextSelect, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { exportCsv } from "@/lib/pdf";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
-import type { TimeEntry } from "@/lib/types";
+import type { TimeEntry, TimesheetWorkKind } from "@/lib/types";
 import {
   addDays,
   entryWindow,
@@ -24,20 +25,50 @@ import {
   weekDays,
   weekMatrix,
 } from "@/lib/timesheet";
+import {
+  searchTimesheetWork,
+  timerClock,
+  workFromEntry,
+  workToLogDefaults,
+  type TimesheetWork,
+} from "@/lib/timesheet-work";
 
-const VIEW_TABS = ["Overview", "Daily", "Weekly"];
+const VIEW_TABS = ["Overview", "Daily", "Weekly"] as const;
+const OBJECT_TYPES = ["All", "project", "phase", "task", "subtask"] as const;
 const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+
+type ViewTab = (typeof VIEW_TABS)[number];
+
+function isViewTab(value: string | null): value is ViewTab {
+  return value === "Overview" || value === "Daily" || value === "Weekly";
+}
+
+function kindLabel(kind: TimesheetWorkKind) {
+  if (kind === "phase") return "Phase";
+  if (kind === "task") return "Task";
+  if (kind === "subtask") return "Subtask";
+  return "Project";
+}
 
 export function TimesheetWorkspace() {
   const { user, can } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const entries = useAppStore((s) => s.timeEntries);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const milestones = useAppStore((s) => s.milestones);
   const team = useAppStore((s) => s.team);
   const submit = useAppStore((s) => s.submitTimeEntry);
   const approve = useAppStore((s) => s.approveTimeEntry);
   const reject = useAppStore((s) => s.rejectTimeEntry);
-  const [view, setView] = useState(VIEW_TABS[0]);
+  const timers = useAppStore((s) => s.timeTimers);
+  const showTimers = useAppStore((s) => s.showTimeTimers);
+  const startTimer = useAppStore((s) => s.startTimeTimer);
+  const stopTimer = useAppStore((s) => s.stopTimeTimer);
+  const setShowTimers = useAppStore((s) => s.setShowTimeTimers);
+  const initialView = searchParams.get("view");
+  const [view, setView] = useState<ViewTab>(isViewTab(initialView) ? initialView : "Overview");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [day, setDay] = useState(todayIso());
   const [weekStart, setWeekStart] = useState(startOfWeek(todayIso()));
@@ -50,10 +81,22 @@ export function TimesheetWorkspace() {
   const [openCompanies, setOpenCompanies] = useState<Record<string, boolean>>({});
   const [dailyMode, setDailyMode] = useState<"Timeline" | "Grouped">("Timeline");
   const [workFilter, setWorkFilter] = useState("All");
+  const [objectType, setObjectType] = useState<(typeof OBJECT_TYPES)[number]>("All");
   const [search, setSearch] = useState("");
   const [horizon, setHorizon] = useState(7);
-  const [logDefaults, setLogDefaults] = useState<{ projectId?: string; date?: string; hours?: number; start?: string }>({});
+  const [logDefaults, setLogDefaults] = useState<{
+    projectId?: string;
+    milestoneId?: string;
+    taskId?: string;
+    workKind?: TimesheetWorkKind;
+    date?: string;
+    hours?: number;
+    start?: string;
+  }>({});
   const [myWorkFilter, setMyWorkFilter] = useState<"Committed" | "Overdue" | "All">("Committed");
+  const [pinnedWork, setPinnedWork] = useState<TimesheetWork[]>([]);
+  const [timeMenu, setTimeMenu] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   const canApprove = can("approve_time");
   const staffOnly = user?.role === "staff";
@@ -62,6 +105,17 @@ export function TimesheetWorkspace() {
     entries.forEach((entry) => names.add(entry.userName));
     return ["All", ...[...names].sort()];
   }, [team, entries]);
+
+  useEffect(() => {
+    const next = searchParams.get("view");
+    if (isViewTab(next)) setView(next);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!timers.length) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [timers.length]);
 
   const scoped = useMemo(() => {
     return entries
@@ -95,13 +149,29 @@ export function TimesheetWorkspace() {
   const dayTotal = dayBillable + dayNonbillable;
   const weekEnd = addDays(weekStart, 6);
   const weekEntries = scoped.filter((entry) => entry.date >= weekStart && entry.date <= weekEnd);
-  const matrix = weekMatrix(weekEntries, weekStart, (entry) => entry.projectName);
-  const visibleRows = matrix.rows.filter((row) => !search || row.key.toLowerCase().includes(search.toLowerCase()));
-  const addableProjects = projects.filter(
-    (project) =>
-      search &&
-      project.name.toLowerCase().includes(search.toLowerCase()) &&
-      !matrix.rows.some((row) => row.key === project.name),
+  const workByKey = useMemo(() => {
+    const map = new Map<string, TimesheetWork>();
+    for (const entry of weekEntries) {
+      const work = workFromEntry(entry, projects, tasks, milestones);
+      map.set(work.key, work);
+    }
+    for (const pin of pinnedWork) map.set(pin.key, pin);
+    return map;
+  }, [weekEntries, projects, tasks, milestones, pinnedWork]);
+  const matrix = weekMatrix(weekEntries, weekStart, (entry) => workFromEntry(entry, projects, tasks, milestones).key);
+  const weekRows = [
+    ...matrix.rows,
+    ...pinnedWork
+      .filter((work) => !matrix.rows.some((row) => row.key === work.key))
+      .map((work) => ({ key: work.key, cells: [0, 0, 0, 0, 0, 0, 0], total: 0 })),
+  ];
+  const visibleRows = weekRows.filter((row) => {
+    const work = workByKey.get(row.key);
+    return objectType === "All" || !work || work.kind === objectType;
+  });
+  const workHits = useMemo(
+    () => searchTimesheetWork({ query: search, objectType, projects, tasks, milestones }),
+    [search, objectType, projects, tasks, milestones],
   );
 
   const selectedPerson = sheetPerson === "All" ? user?.name : sheetPerson;
@@ -113,9 +183,68 @@ export function TimesheetWorkspace() {
     return true;
   });
 
-  function openLog(next?: { projectId?: string; date?: string; hours?: number; start?: string }) {
+  function changeView(next: ViewTab) {
+    setView(next);
+    setTimeMenu(false);
+    router.replace(`/app/timesheets/?view=${next}`);
+  }
+
+  function openLog(next?: {
+    projectId?: string;
+    milestoneId?: string;
+    taskId?: string;
+    workKind?: TimesheetWorkKind;
+    date?: string;
+    hours?: number;
+    start?: string;
+  }) {
     setLogDefaults(next ?? { date: view === "Weekly" ? weekStart : day });
     setCreateKind("time");
+    setTimeMenu(false);
+  }
+
+  function pinWork(work: TimesheetWork) {
+    setPinnedWork((current) => (current.some((item) => item.key === work.key) ? current : [...current, work]));
+    setSearch("");
+  }
+
+  function startOnWork(work: TimesheetWork) {
+    startTimer({
+      projectId: work.projectId,
+      projectName: work.projectName,
+      milestoneId: work.milestoneId,
+      milestoneName: work.milestoneName,
+      taskId: work.taskId,
+      taskName: work.taskName,
+      workKind: work.kind,
+      label: work.label,
+    });
+    pinWork(work);
+  }
+
+  function startBlankTimer() {
+    const project = projects[0];
+    if (!project) return;
+    startTimer({
+      projectId: project.id,
+      projectName: project.name,
+      workKind: "project",
+      label: project.name,
+    });
+    setTimeMenu(false);
+  }
+
+  function finishTimer(id: string) {
+    const timer = stopTimer(id);
+    if (!timer) return;
+    openLog({
+      projectId: timer.projectId,
+      milestoneId: timer.milestoneId,
+      taskId: timer.taskId,
+      workKind: timer.workKind,
+      date: view === "Weekly" ? weekStart : day,
+      hours: timerClock(timer.startedAt).hours,
+    });
   }
 
   if (!user) return null;
@@ -126,12 +255,56 @@ export function TimesheetWorkspace() {
         title={view === "Overview" ? "Timesheet overview" : view === "Daily" ? "Daily timesheet" : "Weekly timesheet"}
         subtitle="Review logged work, fill a day on the timeline, or close the week."
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
-            <Plus size={16} /> Log time
-          </button>
+          <div className="ts-header-actions">
+            <div className="ts-time-menu">
+              <button type="button" className="btn btn-ghost" aria-expanded={timeMenu} onClick={() => setTimeMenu((open) => !open)}>
+                <Clock3 size={16} /> Time
+                <ChevronDown size={14} />
+              </button>
+              {timeMenu ? (
+                <div className="menu-popover ts-time-popover fade-in">
+                  <div className="menu-heading">Time</div>
+                  <button type="button" className="menu-row" onClick={startBlankTimer}>
+                    <Timer size={15} /> Create timer
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => { setShowTimers(!showTimers); setTimeMenu(false); }}>
+                    {showTimers ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {showTimers ? "Hide timers" : "Show timers"}
+                  </button>
+                  <button type="button" className="menu-row" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
+                    <Plus size={15} /> Log time
+                  </button>
+                  <div className="menu-heading">Timesheets</div>
+                  {VIEW_TABS.map((tab) => (
+                    <button key={tab} type="button" className="menu-row" onClick={() => changeView(tab)}>
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <button type="button" className="btn btn-primary" onClick={() => openLog({ date: view === "Weekly" ? weekStart : day })}>
+              <Plus size={16} /> Log time
+            </button>
+          </div>
         }
       />
-      <Tabs tabs={VIEW_TABS} active={view} onChange={setView} />
+      <Tabs tabs={[...VIEW_TABS]} active={view} onChange={(tab) => changeView(tab as ViewTab)} />
+
+      {showTimers && timers.length ? (
+        <ul className="ts-timer-strip">
+          {timers.map((timer) => (
+            <li key={timer.id}>
+              <button type="button" className="ts-timer-chip" onClick={() => finishTimer(timer.id)}>
+                <Clock3 size={14} />
+                <span>{timer.label}</span>
+                <strong>{timerClock(timer.startedAt, now).label}</strong>
+                Stop and log
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {view === "Overview" ? (
         <section>
@@ -302,7 +475,7 @@ export function TimesheetWorkspace() {
                 className="btn btn-ghost"
                 onClick={() => {
                   setWeekStart(startOfWeek(day));
-                  setView("Weekly");
+                  changeView("Weekly");
                 }}
               >
                 Weekly view
@@ -341,7 +514,7 @@ export function TimesheetWorkspace() {
                         type="button"
                         className={entry.billable ? "ts-block" : "ts-block is-internal"}
                         style={{ left: `${Math.max(left, 0)}%`, width: `${Math.max(width, 1.8)}%` }}
-                        title={`${entry.note || entry.taskName || entry.projectName} ${formatDuration(entry.hours)}`}
+                        title={`${entry.note || entry.taskName || entry.milestoneName || entry.projectName} ${formatDuration(entry.hours)}`}
                       />
                     );
                   })}
@@ -370,13 +543,14 @@ export function TimesheetWorkspace() {
               {dailyMode === "Grouped"
                 ? Object.entries(
                     dayEntries.reduce<Record<string, typeof dayEntries>>((acc, entry) => {
-                      acc[entry.projectName] = acc[entry.projectName] ?? [];
-                      acc[entry.projectName].push(entry);
+                      const work = workFromEntry(entry, projects, tasks, milestones);
+                      acc[work.label] = acc[work.label] ?? [];
+                      acc[work.label].push(entry);
                       return acc;
                     }, {}),
-                  ).map(([projectName, rows]) => (
-                    <div key={projectName} className="ts-group">
-                      <h3>{projectName}</h3>
+                  ).map(([label, rows]) => (
+                    <div key={label} className="ts-group">
+                      <h3>{label}</h3>
                       {rows.map((entry) => (
                         <DailyCard
                           key={entry.id}
@@ -425,7 +599,17 @@ export function TimesheetWorkspace() {
                     <button
                       type="button"
                       className="ts-work-item"
-                      onClick={() => openLog({ projectId: task.projectId, date: day, hours: 1, start: "09:00" })}
+                      onClick={() =>
+                        openLog({
+                          projectId: task.projectId,
+                          milestoneId: task.milestoneId,
+                          taskId: task.id,
+                          workKind: task.parentTaskId ? "subtask" : "task",
+                          date: day,
+                          hours: 1,
+                          start: "09:00",
+                        })
+                      }
                     >
                       <strong>{task.name}</strong>
                       <span>{task.projectName}</span>
@@ -450,17 +634,30 @@ export function TimesheetWorkspace() {
                   </option>
                 ))}
               </TextSelect>
-              <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
-                <option>All</option>
-                <option>Billable</option>
-                <option>Non-billable</option>
-              </TextSelect>
+              <label className="ts-inline">
+                <span>Work type</span>
+                <TextSelect value={workFilter} onChange={(e) => setWorkFilter(e.target.value)}>
+                  <option>All</option>
+                  <option>Billable</option>
+                  <option>Non-billable</option>
+                </TextSelect>
+              </label>
+              <label className="ts-inline">
+                <span>Object type</span>
+                <TextSelect value={objectType} onChange={(e) => setObjectType(e.target.value as (typeof OBJECT_TYPES)[number])} aria-label="Object type">
+                  <option value="All">All</option>
+                  <option value="project">Project</option>
+                  <option value="phase">Phase</option>
+                  <option value="task">Task</option>
+                  <option value="subtask">Subtask</option>
+                </TextSelect>
+              </label>
               <button
                 type="button"
                 className="btn btn-ghost"
                 onClick={() => {
                   setDay(weekStart);
-                  setView("Daily");
+                  changeView("Daily");
                 }}
               >
                 Daily timesheet
@@ -476,24 +673,33 @@ export function TimesheetWorkspace() {
               </button>
             </div>
           </div>
-          <div className="mb-3">
+          <div className="ts-work-search">
             <TextInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Find work to add to your timesheet"
+              placeholder="Find work to add: project, phase, task, or subtask"
+              aria-label="Find work to add to your timesheet"
             />
+            {workHits.length ? (
+              <ul className="ts-work-hits">
+                {workHits.map((work) => (
+                  <li key={work.key}>
+                    <button type="button" className="ts-work-hit" onClick={() => pinWork(work)}>
+                      <span className="ts-kind">{kindLabel(work.kind)}</span>
+                      <strong>{work.label}</strong>
+                      <span>{work.detail}</span>
+                    </button>
+                    <button type="button" className="btn btn-ghost text-sm" onClick={() => openLog({ ...workToLogDefaults(work, { date: weekStart, hours: 1 }) })}>
+                      Log
+                    </button>
+                    <button type="button" className="icon-btn" aria-label={`Start timer on ${work.label}`} onClick={() => startOnWork(work)}>
+                      <Timer size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-          {addableProjects.length ? (
-            <ul className="ts-add-work">
-              {addableProjects.slice(0, 4).map((project) => (
-                <li key={project.id}>
-                  <button type="button" className="btn btn-ghost" onClick={() => openLog({ projectId: project.id, date: weekStart })}>
-                    Add {project.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
           <div className="panel overflow-auto">
             <div className="timesheet-week">
               <div className="timesheet-week-head">
@@ -505,7 +711,7 @@ export function TimesheetWorkspace() {
                     className="timesheet-cell"
                     onClick={() => {
                       setDay(iso);
-                      setView("Daily");
+                      changeView("Daily");
                     }}
                   >
                     {formatWeekday(iso)}
@@ -515,26 +721,48 @@ export function TimesheetWorkspace() {
                 <div>Total</div>
               </div>
               {visibleRows.map((row) => {
-                const project = projects.find((item) => item.name === row.key);
+                const work = workByKey.get(row.key);
                 return (
                   <div key={row.key} className="timesheet-week-row">
-                    <div className="font-medium text-[var(--color-navy)]">{row.key}</div>
-                    {row.cells.map((hours, index) => (
-                      <button
-                        key={`${row.key}-${index}`}
-                        type="button"
-                        className="timesheet-cell ts-week-hit"
-                        onClick={() =>
-                          openLog({
-                            projectId: project?.id,
-                            date: weekDays(weekStart)[index],
-                            hours: hours || 1,
-                          })
-                        }
-                      >
-                        {hours ? formatClockHours(hours) : ""}
-                      </button>
-                    ))}
+                    <div className="ts-week-work">
+                      {work ? <span className="ts-kind">{kindLabel(work.kind)}</span> : null}
+                      <strong>{work?.label ?? row.key}</strong>
+                      {work?.detail ? <span>{work.detail}</span> : null}
+                    </div>
+                    {row.cells.map((hours, index) => {
+                      const date = weekDays(weekStart)[index];
+                      return (
+                        <div key={`${row.key}-${date}`} className="ts-week-cell">
+                          <button
+                            type="button"
+                            className="timesheet-cell ts-week-hit"
+                            onClick={() =>
+                              openLog(
+                                work
+                                  ? workToLogDefaults(work, { date, hours: hours || 1 })
+                                  : { date, hours: hours || 1 },
+                              )
+                            }
+                          >
+                            {hours ? formatClockHours(hours) : ""}
+                          </button>
+                          <button
+                            type="button"
+                            className="ts-week-add"
+                            aria-label={`Add another entry on ${date}`}
+                            onClick={() =>
+                              openLog({
+                                projectId: work?.projectId,
+                                date,
+                                hours: 1,
+                              })
+                            }
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      );
+                    })}
                     <div className="timesheet-cell font-semibold">{formatClockHours(row.total)}</div>
                   </div>
                 );
@@ -549,17 +777,21 @@ export function TimesheetWorkspace() {
                 <div className="timesheet-cell font-semibold">{formatClockHours(matrix.grand) || "0:00"}</div>
               </div>
             </div>
-            {!visibleRows.length ? <p className="p-6 text-sm text-[var(--color-muted)]">No time in this week. Search to add work.</p> : null}
+            {!visibleRows.length ? <p className="p-6 text-sm text-[var(--color-muted)]">No time in this week. Search a project, phase, task, or subtask to add a row.</p> : null}
           </div>
         </section>
       ) : null}
 
       <CreateForms
+        key={`${createKind}-${logDefaults.projectId ?? ""}-${logDefaults.milestoneId ?? ""}-${logDefaults.taskId ?? ""}-${logDefaults.date ?? ""}-${logDefaults.hours ?? ""}`}
         kind={createKind}
         onClose={() => setCreateKind(null)}
         defaults={{
           date: logDefaults.date ?? (view === "Daily" ? day : todayIso()),
           projectId: logDefaults.projectId,
+          milestoneId: logDefaults.milestoneId,
+          taskId: logDefaults.taskId,
+          workKind: logDefaults.workKind,
           hours: logDefaults.hours,
           start: logDefaults.start,
         }}
@@ -586,12 +818,13 @@ function DailyCard({
   onReject: (id: string) => void;
 }) {
   const window = entryWindow(entry);
+  const trail = [entry.taskName, entry.milestoneName, entry.projectName].filter(Boolean);
   return (
     <article className="ts-entry">
       <div>
-        <strong>{entry.note || entry.taskName || entry.projectName}</strong>
+        <strong>{entry.note || entry.taskName || entry.milestoneName || entry.projectName}</strong>
         <p>
-          {entry.projectName}
+          {trail.join(" / ")}
           {entry.userName !== userName ? ` · ${entry.userName}` : ""}
           {entry.billable ? "" : " · Non-billable"}
         </p>

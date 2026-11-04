@@ -378,19 +378,37 @@ export interface Invoice {
   taxAmount?: number;
 }
 
+export type TimesheetWorkKind = "project" | "phase" | "task" | "subtask";
+
 export interface TimeEntry {
   id: string;
   userName: string;
   projectId: string;
   projectName: string;
+  milestoneId?: string;
+  milestoneName?: string;
   taskId?: string;
   taskName?: string;
+  workKind?: TimesheetWorkKind;
   date: string;
   start?: string;
   hours: number;
   billable: boolean;
   note: string;
   status: TimeEntryStatus;
+}
+
+export interface TimeTimer {
+  id: string;
+  projectId: string;
+  projectName: string;
+  milestoneId?: string;
+  milestoneName?: string;
+  taskId?: string;
+  taskName?: string;
+  workKind: TimesheetWorkKind;
+  label: string;
+  startedAt: number;
 }
 
 export interface NotificationItem {
