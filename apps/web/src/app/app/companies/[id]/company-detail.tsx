@@ -21,7 +21,7 @@ import {
   TextInput,
   TextSelect,
 } from "@/components/ui";
-import { COMPANY_KINDS, companyKindOf } from "@/lib/cip";
+import { COMPANY_KINDS, companyKindOf } from "@/lib/company-kinds";
 import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";

@@ -11,7 +11,7 @@ import {
   utilizationLabel,
   weeklyHoursFromAllocation,
 } from "@/lib/project-team";
-import { PHASE_ROLES, phaseContractorLabel, vendorCompanies } from "@/lib/cip";
+import { PHASE_ROLES, phaseContractorLabel, vendorCompanies } from "@/lib/company-kinds";
 import { useAppStore } from "@/lib/store";
 import type { PhaseRole } from "@/lib/types";
 

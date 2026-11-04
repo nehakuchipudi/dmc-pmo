@@ -29,7 +29,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
-import { companyKindOf, phaseContractorMeta, vendorCompanies } from "@/lib/cip";
+import { companyKindOf, phaseContractorMeta, vendorCompanies } from "@/lib/company-kinds";
 import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -462,12 +462,6 @@ export function ProjectDetail({ id }: { id: string }) {
                   <div>
                     <div className="metric-label">Request</div>
                     <div className="text-sm font-medium">{project.requestId}</div>
-                  </div>
-                ) : null}
-                {project.cipNumber ? (
-                  <div>
-                    <div className="metric-label">CIP</div>
-                    <div className="text-sm font-medium">{project.cipNumber}</div>
                   </div>
                 ) : null}
                 {project.location ? (
@@ -1286,7 +1280,6 @@ export function ProjectDetail({ id }: { id: string }) {
               companyId,
               companyName: companies.find((c) => c.id === companyId)?.name ?? project.companyName,
               requestId: String(fd.get("requestId") || ""),
-              cipNumber: String(fd.get("cipNumber") || ""),
               location: String(fd.get("location") || ""),
               deliveryMethod: String(fd.get("deliveryMethod") || ""),
               fundingSource: String(fd.get("fundingSource") || ""),
@@ -1343,14 +1336,9 @@ export function ProjectDetail({ id }: { id: string }) {
           <Field label="Description">
             <TextInput name="description" defaultValue={project.description} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Request ID">
-              <TextInput name="requestId" defaultValue={project.requestId ?? ""} />
-            </Field>
-            <Field label="CIP number">
-              <TextInput name="cipNumber" defaultValue={project.cipNumber ?? ""} />
-            </Field>
-          </div>
+          <Field label="Request ID">
+            <TextInput name="requestId" defaultValue={project.requestId ?? ""} />
+          </Field>
           <Field label="Location">
             <TextInput name="location" defaultValue={project.location ?? ""} />
           </Field>

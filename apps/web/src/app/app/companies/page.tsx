@@ -14,7 +14,7 @@ import {
 } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { exportCsv } from "@/lib/pdf";
-import { companyKindOf } from "@/lib/cip";
+import { companyKindOf } from "@/lib/company-kinds";
 import { useAppStore } from "@/lib/store";
 
 const FILTERS = [

@@ -64,7 +64,7 @@ export const seedObjectives: StrategicObjective[] = [
     status: "On Track",
     target: "Close the downtown sidewalk gap on Main Street",
     progress: 28,
-    description: "Rowlett CIP focus area for safe pedestrian connections and quality infrastructure.",
+    description: "Rowlett focus area for safe pedestrian connections and quality infrastructure.",
   },
 ];
 
@@ -153,13 +153,13 @@ export const seedPortfolios: Portfolio[] = [
   },
   {
     id: "pf-cip26",
-    name: "CIP 2026 Mobility",
+    name: "2026 Mobility",
     owner: "A. Chen",
     theme: "Capital program",
     budget: 1250000,
     projectIds: ["p-sidewalk"],
     objectiveIds: ["so-mobility", "so-gov"],
-    description: "City of Rowlett adopted CIP book for pedestrian and street connections. Downtown Sidewalk Connector is the first funded job.",
+    description: "City of Rowlett mobility book for pedestrian and street connections. Downtown Sidewalk Connector is the first funded job.",
   },
 ];
 
@@ -395,13 +395,13 @@ export const seedGates: GovernanceGate[] = [
   },
   {
     id: "gt-sw-1",
-    name: "TG1 Scope and CIP",
+    name: "TG1 Scope",
     projectId: "p-sidewalk",
     stage: "TG1",
     owner: "P. Rivera",
     due: "2026-03-30",
     status: "Approved",
-    criteria: "Charter accepted. Advance Downtown Sidewalk Connector into CIP 2026 Mobility.",
+    criteria: "Charter accepted. Advance Downtown Sidewalk Connector into the 2026 Mobility book.",
   },
   {
     id: "gt-sw-2",
@@ -457,5 +457,5 @@ export const seedAllocations: ResourceAllocation[] = [
   { id: "al-9", memberId: "tm-ja", memberName: "J. Alvarez", projectId: "p-pos", projectName: "POS Integration", allocationPct: 20, hoursPerWeek: 8, start: "2026-07-10", end: "2026-08-28", projectRole: "Project Manager", responsibility: "ERP sync" },
   { id: "al-sw-0", memberId: "tm-ap", memberName: "Aishwarya Phalak", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 20, hoursPerWeek: 8, start: "2025-10-15", end: "2027-02-28", projectRole: "Owner", responsibility: "DMC owner, intake, and assignment notifications" },
   { id: "al-sw-1", memberId: "tm-ac", memberName: "A. Chen", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 45, hoursPerWeek: 18, start: "2025-10-15", end: "2027-02-28", projectRole: "Project Manager", responsibility: "City PM, design reviews, vendor invoices" },
-  { id: "al-sw-2", memberId: "tm-pr", memberName: "P. Rivera", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 10, hoursPerWeek: 4, start: "2025-10-15", end: "2027-02-28", projectRole: "Sponsor support", responsibility: "PRC and CIP cadence" },
+  { id: "al-sw-2", memberId: "tm-pr", memberName: "P. Rivera", projectId: "p-sidewalk", projectName: "Downtown Sidewalk Connector", allocationPct: 10, hoursPerWeek: 4, start: "2025-10-15", end: "2027-02-28", projectRole: "Sponsor support", responsibility: "PRC cadence" },
 ];

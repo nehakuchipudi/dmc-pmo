@@ -145,25 +145,6 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Finance cannot edit the plan. Staff can update assigned tasks only."],
   },
   {
-    id: "rowlett-cip",
-    title: "City of Rowlett CIP example",
-    group: "Deliver",
-    href: "/app/projects/view/?id=p-sidewalk",
-    audience: "internal",
-    viewCap: "view_projects",
-    keywords: ["rowlett", "cip", "sidewalk", "capital", "contractor", "phase", "prc", "tollgate"],
-    summary:
-      "Downtown Sidewalk Connector (RQ-2025-0127) is the live City of Rowlett capital example. Aishwarya Phalak is the Owner. Public Works is the agency. Trinity Ridge Engineering holds Design on PS-4412. Construction stays unassigned until Council award.",
-    steps: [
-      "Open Companies and find City of Rowlett Public Works (Agency).",
-      "Open Downtown Sidewalk Connector. CIP fields, funding, and the six playbook phases are on Overview.",
-      "Confirm Aishwarya Phalak on Team as Owner. Creating or assigning a project emails the owner immediately.",
-      "Use Team to assign Roadway Solutions, Inc. to Construction after M16.",
-      "Review TG0 through TG5 on Governance.",
-    ],
-    tips: ["Munis stays the financial source of truth. This workspace holds the delivery record and vendor-on-phase assignments."],
-  },
-  {
     id: "project-team",
     title: "Project team",
     group: "Deliver",

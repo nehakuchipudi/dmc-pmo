@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Building2, Link2, MapPin, Plus, Shield, UserPlus, Users, X } from "lucide-react";
 import { Field, TextInput, TextSelect } from "@/components/primitives";
 import { useAppStore } from "@/lib/store";
-import { COMPANY_KINDS } from "@/lib/cip";
+import { COMPANY_KINDS } from "@/lib/company-kinds";
 import type { CompanyAddress, CompanyCustomField, CompanyKind, CompanyPrivacy, CompanyStatus } from "@/lib/types";
 
 const STATUSES: CompanyStatus[] = ["Active", "Prospect", "Overdue Inv."];
