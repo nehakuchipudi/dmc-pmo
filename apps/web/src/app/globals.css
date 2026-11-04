@@ -158,13 +158,14 @@ button, input, select, textarea { font: inherit; }
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-.brand-copy { min-width: 0; }
+.brand-copy { min-width: 0; flex: 1; }
 .brand-title {
   font-family: var(--font-body), "Manrope", sans-serif;
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   font-weight: 650;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .brand-sub {
   margin-top: 2px;
