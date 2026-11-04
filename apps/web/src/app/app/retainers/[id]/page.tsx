@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { seedRetainers } from "@/lib/seed";
+import { seedRetainers, staticRecordIds } from "@/lib/seed";
 import { RetainerDetail } from "./retainer-detail";
 
 export function generateStaticParams() {
-  return seedRetainers.map((r) => ({ id: r.id }));
+  return staticRecordIds(seedRetainers);
 }
 
 export default async function RetainerPage({

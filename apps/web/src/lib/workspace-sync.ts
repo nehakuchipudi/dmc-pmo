@@ -48,6 +48,9 @@ export async function pushAzureWorkspace(snapshot: WorkspaceSnapshot) {
 export function applyWorkspaceSnapshot(snapshot: WorkspaceSnapshot) {
   const patch = workspacePatch(snapshot);
   if (Object.keys(patch).length) useAppStore.setState(patch);
+  if (patch.focusCompanyId === null && typeof window !== "undefined") {
+    window.localStorage.removeItem("dmc-pmo-focus-company");
+  }
 }
 
 export function startWorkspaceSync(onStatus?: (message: string) => void) {

@@ -66,6 +66,7 @@ import {
   seedPortfolios,
   seedRisks,
 } from "./ppm-seed";
+import { EMPTY_WORKSPACE_GENERATION } from "./workspace-snapshot";
 import { ideaComposite } from "./ppm";
 import {
   buildDnsRecords,
@@ -251,6 +252,7 @@ type AppState = {
   gates: GovernanceGate[];
   allocations: ResourceAllocation[];
   toasts: Toast[];
+  seedGeneration: string;
   recentlyViewed: { type: string; id: string; label: string }[];
   focusCompanyId: string | null;
   projectWorkflow: ProjectWorkflow;
@@ -666,12 +668,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   gates: seedGates,
   allocations: seedAllocations,
   toasts: [],
-  recentlyViewed: [
-    { type: "company", id: "c-rowlett", label: "City of Rowlett Public Works" },
-    { type: "company", id: "c-cascade", label: "Cascade Ventures" },
-    { type: "company", id: "c-trinity", label: "Trinity Ridge Engineering" },
-  ],
-  focusCompanyId: typeof window !== "undefined" ? window.localStorage.getItem("dmc-pmo-focus-company") : null,
+  seedGeneration: EMPTY_WORKSPACE_GENERATION,
+  recentlyViewed: [],
+  focusCompanyId: null,
   projectWorkflow: loadProjectWorkflow(),
 
   pushToast: (message, tone = "success") => {

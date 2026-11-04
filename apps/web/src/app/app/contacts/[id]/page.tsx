@@ -1,8 +1,8 @@
-import { seedContacts } from "@/lib/seed";
+import { seedContacts, staticRecordIds } from "@/lib/seed";
 import { ContactDetail } from "./contact-detail";
 
 export function generateStaticParams() {
-  return seedContacts.map((c) => ({ id: c.id }));
+  return staticRecordIds(seedContacts);
 }
 
 export default async function ContactDetailPage({

@@ -155,8 +155,8 @@ function greeting(role?: Role | null): HelpAnswer {
     hrefs: [],
     starters: [
       "How do Strategy, Ideas, Portfolios, and Projects connect?",
-      "Set warehouse to On Hold and add a Go-live milestone",
-      "What is the status of Downtown Sidewalk Connector?",
+      "How do I create a company?",
+      "What can you do?",
       "What can my role do?",
     ],
   };

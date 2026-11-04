@@ -6,7 +6,7 @@ import { RetainerDetail } from "../[id]/retainer-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "r1";
+  const id = params.get("id") ?? "";
   return <RetainerDetail id={id} />;
 }
 

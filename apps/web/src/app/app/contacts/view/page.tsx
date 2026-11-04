@@ -6,7 +6,7 @@ import { ContactDetail } from "../[id]/contact-detail";
 
 function Inner() {
   const params = useSearchParams();
-  const id = params.get("id") ?? "ct-dana";
+  const id = params.get("id") ?? "";
   return <ContactDetail id={id} />;
 }
 
