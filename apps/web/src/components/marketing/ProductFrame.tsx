@@ -50,16 +50,16 @@ export function ProductFrame({
           {SIDE_ITEMS.slice(0, 1).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
-          <div className="mkt-product-group">Align</div>
-          {SIDE_ITEMS.slice(1, 3).map((item) => (
-            <SideLink key={item.key} item={item} active={active} />
-          ))}
           <div className="mkt-product-group">Deliver</div>
           {SIDE_ITEMS.slice(3, 4).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
           <div className="mkt-product-group">Govern</div>
           {SIDE_ITEMS.slice(4).map((item) => (
+            <SideLink key={item.key} item={item} active={active} />
+          ))}
+          <div className="mkt-product-group">Align</div>
+          {SIDE_ITEMS.slice(1, 3).map((item) => (
             <SideLink key={item.key} item={item} active={active} />
           ))}
         </nav>
