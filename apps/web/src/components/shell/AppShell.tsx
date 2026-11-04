@@ -788,16 +788,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className="menu-row"
                     onClick={() => {
                       setMenu(null);
-                      openHelp("chat");
-                    }}
-                  >
-                    <Sparkles size={15} /> Workspace AI
-                  </button>
-                  <button
-                    type="button"
-                    className="menu-row"
-                    onClick={() => {
-                      setMenu(null);
                       setTasksOpen(true);
                     }}
                   >
