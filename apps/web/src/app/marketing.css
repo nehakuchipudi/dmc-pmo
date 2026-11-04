@@ -440,7 +440,7 @@
 .mkt-hero-shot {
   position: relative;
   z-index: 1;
-  border-radius: 22px;
+  border-radius: 0;
   overflow: hidden;
   background: #1a2836;
   border: 1px solid rgba(36, 52, 71, 0.4);
@@ -452,10 +452,11 @@
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 0;
 }
 
 .mkt-shot {
-  border-radius: 20px;
+  border-radius: 0;
   overflow: hidden;
   background: #fff;
   border: 1px solid var(--mkt-line);
@@ -533,14 +534,19 @@
   gap: 22px;
   align-items: center;
   margin-top: 22px;
-  padding: 16px;
+  padding: 24px;
   border: 1px solid var(--mkt-line);
   border-radius: 24px;
   background: #fff;
   text-align: left;
 }
 
-.mkt-connect-preview .mkt-shot { margin: 0; box-shadow: none; }
+.mkt-connect-preview .mkt-shot {
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: hidden;
+}
 
 .mkt-connect-preview-copy .mkt-kicker { margin-bottom: 8px; }
 
