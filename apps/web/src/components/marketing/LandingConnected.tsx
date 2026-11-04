@@ -26,7 +26,7 @@ const PILLARS = [
     title: "Project planning",
     body: "Turn projects into structured plans with milestones, tasks, dependencies and accountability.",
     detail: "Phases, dates, and owners sit on the same plan the delivery team runs each week.",
-    image: "/marketing/card-plan.jpg",
+    image: "/marketing/card-plan.jpg?v=6",
     watch: "watch-projects",
   },
   {
@@ -50,7 +50,7 @@ const PILLARS = [
     title: "PMO insights",
     body: "Move from project-level information to management-level visibility and decision making.",
     detail: "A weekly brief of capacity, risk, gates, and cash that needs a call.",
-    image: "/marketing/card-insights.jpg",
+    image: "/marketing/card-insights.jpg?v=6",
     watch: "watch-ai",
   },
 ] as const;
