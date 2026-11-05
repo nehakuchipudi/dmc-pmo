@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Globe, Settings as SettingsIcon, Users, Workflow } from "lucide-react";
+import { Globe, Layers, Settings as SettingsIcon, Users, Workflow } from "lucide-react";
 import { clsx } from "clsx";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
@@ -9,13 +9,15 @@ import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
+import { NAV_MODULES, PACKS, type PackId } from "@/lib/modules";
 import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { inviteLandingHref } from "@/lib/user-invite";
 
-type SettingsSection = "users" | "lifecycle" | "email" | "prefs";
+type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "prefs";
 
 const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?: boolean }[] = [
+  { id: "capabilities", label: "Capabilities", icon: Layers },
   { id: "users", label: "Users & roles", icon: Users, needUsers: true },
   { id: "lifecycle", label: "Lifecycle", icon: Workflow, needUsers: true },
   { id: "email", label: "Email domain", icon: Globe, needUsers: true },
@@ -26,7 +28,10 @@ export function SettingsWorkspace() {
   const { can } = useAuth();
   const canViewUsers = can("view_users");
   const canManageUsers = can("manage_users");
+  const canManagePacks = can("manage_users") || can("manage_service_ops");
   const canConfigure = can("configure_lifecycle");
+  const enabledPacks = useAppStore((s) => s.enabledPacks);
+  const setEnabledPacks = useAppStore((s) => s.setEnabledPacks);
   const team = useAppStore((s) => s.team);
   const addTeamMember = useAppStore((s) => s.addTeamMember);
   const inviteTeamMember = useAppStore((s) => s.inviteTeamMember);
@@ -36,7 +41,7 @@ export function SettingsWorkspace() {
   const projectWorkflow = useAppStore((s) => s.projectWorkflow);
   const setProjectWorkflowTransition = useAppStore((s) => s.setProjectWorkflowTransition);
   const setProjectWorkflowRoles = useAppStore((s) => s.setProjectWorkflowRoles);
-  const [section, setSection] = useState<SettingsSection>(canViewUsers ? "users" : "prefs");
+  const [section, setSection] = useState<SettingsSection>("capabilities");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
@@ -85,6 +90,53 @@ export function SettingsWorkspace() {
       </aside>
 
       <div className="settings-main">
+        {section === "capabilities" ? (
+          <>
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Capabilities</h1>
+                <p className="page-sub">
+                  DMC PMO is one modular platform. Turn on only the packs this customer needs: project management,
+                  project delivery, or field service operations.
+                </p>
+              </div>
+            </header>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {PACKS.map((pack) => {
+                const on = enabledPacks.includes(pack.id);
+                const modules = NAV_MODULES.filter((item) => item.pack === pack.id);
+                return (
+                  <div key={pack.id} className="panel p-4">
+                    <label className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-[var(--color-navy)]">{pack.label}</div>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">{pack.summary}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        aria-label={`Enable ${pack.label}`}
+                        checked={on}
+                        disabled={!canManagePacks}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...enabledPacks, pack.id]
+                            : enabledPacks.filter((id) => id !== pack.id);
+                          setEnabledPacks(Array.from(new Set(next)) as PackId[]);
+                        }}
+                      />
+                    </label>
+                    <ul className="mt-3 space-y-1 text-sm text-[var(--color-muted)]">
+                      {modules.map((item) => (
+                        <li key={item.href}>{item.label}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
         {section === "users" ? (
           <>
             <header className="page-header">

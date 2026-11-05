@@ -130,6 +130,23 @@ import type {
   TimeTimer,
 } from "./types";
 import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
+import { DEFAULT_PACKS, type PackId } from "./modules";
+import {
+  DEFAULT_INSTANCES,
+  DEFAULT_ROLE_PACKS,
+  DEFAULT_TRIAL,
+  clockHours,
+  nextFromFrequency,
+  type FieldClock,
+  type PromotionalTrial,
+  type RecurringFrequency,
+  type RecurringService,
+  type RolePacks,
+  type ServiceDocument,
+  type WorkOrder,
+  type WorkOrderPriority,
+  type WorkspaceInstance,
+} from "./service-ops";
 
 type CreateCompanyInput = {
   name: string;
@@ -256,6 +273,14 @@ type AppState = {
   recentlyViewed: { type: string; id: string; label: string }[];
   focusCompanyId: string | null;
   projectWorkflow: ProjectWorkflow;
+  enabledPacks: PackId[];
+  rolePacks: RolePacks;
+  workOrders: WorkOrder[];
+  recurringServices: RecurringService[];
+  serviceDocuments: ServiceDocument[];
+  fieldClocks: FieldClock[];
+  workspaceInstances: WorkspaceInstance[];
+  promotionalTrial: PromotionalTrial;
 
   pushToast: (message: string, tone?: Toast["tone"]) => void;
   setFocusCompanyId: (id: string | null) => void;
@@ -423,6 +448,34 @@ type AppState = {
   updateIssueStatus: (id: string, status: IssueItem["status"]) => void;
   decideGate: (id: string, status: Extract<GateStatus, "Approved" | "Rejected">) => void;
   createDependency: (input: { predecessorProjectId: string; successorProjectId: string; type: CrossDependency["type"]; note: string }) => string;
+  setEnabledPacks: (packs: PackId[]) => void;
+  setRolePacks: (role: Role, packs: PackId[]) => void;
+  createWorkOrder: (input: {
+    title: string;
+    companyId: string;
+    assignee: string;
+    priority?: WorkOrderPriority;
+    scheduled?: string;
+    notes?: string;
+  }) => string;
+  updateWorkOrder: (id: string, patch: Partial<WorkOrder>) => void;
+  createRecurringService: (input: {
+    title: string;
+    companyId: string;
+    frequency: RecurringFrequency;
+    nextOn?: string;
+    assignee: string;
+  }) => string;
+  toggleRecurringService: (id: string) => void;
+  generateRecurringJob: (id: string) => string;
+  addServiceDocument: (input: { name: string; companyId: string; kind: ServiceDocument["kind"] }) => string;
+  deleteServiceDocument: (id: string) => void;
+  clockInField: (memberName: string) => void;
+  clockOutField: (memberName: string) => void;
+  createInstance: (input: { name: string; owner: string; packs: PackId[]; status?: WorkspaceInstance["status"] }) => string;
+  updateInstance: (id: string, patch: Partial<WorkspaceInstance>) => void;
+  saveTrial: (patch: Partial<PromotionalTrial>) => void;
+  startTrial: () => void;
 };
 
 function todayIso() {
@@ -439,6 +492,95 @@ function displayNow() {
 }
 
 const WORKFLOW_KEY = "dmc-pmo-project-workflow";
+const PACKS_KEY = "dmc-pmo-capability-packs";
+const SERVICE_KEY = "dmc-pmo-service-records";
+
+function loadCapabilityPacks(): { enabledPacks: PackId[]; rolePacks: RolePacks } {
+  if (typeof window === "undefined") return { enabledPacks: DEFAULT_PACKS, rolePacks: DEFAULT_ROLE_PACKS };
+  try {
+    const raw = window.localStorage.getItem(PACKS_KEY);
+    if (!raw) return { enabledPacks: DEFAULT_PACKS, rolePacks: DEFAULT_ROLE_PACKS };
+    const parsed = JSON.parse(raw) as { enabledPacks?: PackId[]; rolePacks?: RolePacks };
+    return {
+      enabledPacks: parsed.enabledPacks?.length ? parsed.enabledPacks : DEFAULT_PACKS,
+      rolePacks: parsed.rolePacks ?? DEFAULT_ROLE_PACKS,
+    };
+  } catch {
+    return { enabledPacks: DEFAULT_PACKS, rolePacks: DEFAULT_ROLE_PACKS };
+  }
+}
+
+function persistCapabilityPacks(enabledPacks: PackId[], rolePacks: RolePacks) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PACKS_KEY, JSON.stringify({ enabledPacks, rolePacks }));
+}
+
+function loadServiceRecords() {
+  if (typeof window === "undefined") {
+    return {
+      workOrders: [] as WorkOrder[],
+      recurringServices: [] as RecurringService[],
+      serviceDocuments: [] as ServiceDocument[],
+      fieldClocks: [] as FieldClock[],
+      workspaceInstances: DEFAULT_INSTANCES,
+      promotionalTrial: DEFAULT_TRIAL,
+    };
+  }
+  try {
+    const raw = window.localStorage.getItem(SERVICE_KEY);
+    if (!raw) {
+      return {
+        workOrders: [] as WorkOrder[],
+        recurringServices: [] as RecurringService[],
+        serviceDocuments: [] as ServiceDocument[],
+        fieldClocks: [] as FieldClock[],
+        workspaceInstances: DEFAULT_INSTANCES,
+        promotionalTrial: DEFAULT_TRIAL,
+      };
+    }
+    const parsed = JSON.parse(raw) as Partial<{
+      workOrders: WorkOrder[];
+      recurringServices: RecurringService[];
+      serviceDocuments: ServiceDocument[];
+      fieldClocks: FieldClock[];
+      workspaceInstances: WorkspaceInstance[];
+      promotionalTrial: PromotionalTrial;
+    }>;
+    return {
+      workOrders: parsed.workOrders ?? [],
+      recurringServices: parsed.recurringServices ?? [],
+      serviceDocuments: parsed.serviceDocuments ?? [],
+      fieldClocks: parsed.fieldClocks ?? [],
+      workspaceInstances: parsed.workspaceInstances ?? DEFAULT_INSTANCES,
+      promotionalTrial: parsed.promotionalTrial ?? DEFAULT_TRIAL,
+    };
+  } catch {
+    return {
+      workOrders: [] as WorkOrder[],
+      recurringServices: [] as RecurringService[],
+      serviceDocuments: [] as ServiceDocument[],
+      fieldClocks: [] as FieldClock[],
+      workspaceInstances: DEFAULT_INSTANCES,
+      promotionalTrial: DEFAULT_TRIAL,
+    };
+  }
+}
+
+function persistServiceRecords(get: () => AppState) {
+  if (typeof window === "undefined") return;
+  const state = get();
+  window.localStorage.setItem(
+    SERVICE_KEY,
+    JSON.stringify({
+      workOrders: state.workOrders,
+      recurringServices: state.recurringServices,
+      serviceDocuments: state.serviceDocuments,
+      fieldClocks: state.fieldClocks,
+      workspaceInstances: state.workspaceInstances,
+      promotionalTrial: state.promotionalTrial,
+    }),
+  );
+}
 
 function loadProjectWorkflow() {
   if (typeof window === "undefined") return DEFAULT_PROJECT_WORKFLOW;
@@ -672,6 +814,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   recentlyViewed: [],
   focusCompanyId: null,
   projectWorkflow: loadProjectWorkflow(),
+  ...loadCapabilityPacks(),
+  ...loadServiceRecords(),
 
   pushToast: (message, tone = "success") => {
     const id = uid("toast");
@@ -3217,6 +3361,191 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().pushToast("Dependency recorded");
     return id;
+  },
+
+  setEnabledPacks: (packs) => {
+    if (!requireAny(get, "manage_service_ops", "manage_users")) return;
+    const next: PackId[] = packs.length ? packs : ["project_management"];
+    set({ enabledPacks: next });
+    persistCapabilityPacks(next, get().rolePacks);
+    get().pushToast("Capabilities updated");
+  },
+
+  setRolePacks: (role, packs) => {
+    if (!requireCap(get, "manage_users")) return;
+    set((s) => ({ rolePacks: { ...s.rolePacks, [role]: packs } }));
+    persistCapabilityPacks(get().enabledPacks, get().rolePacks);
+    get().pushToast("Role access updated");
+  },
+
+  createWorkOrder: (input) => {
+    if (!requireCap(get, "view_service_ops")) return "";
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const id = uid("wo");
+    const order: WorkOrder = {
+      id,
+      title: input.title.trim() || "Site visit",
+      companyId: input.companyId,
+      companyName: company?.name ?? "Company",
+      assignee: input.assignee,
+      priority: input.priority ?? "Medium",
+      status: "Scheduled",
+      scheduled: input.scheduled ?? todayIso(),
+      notes: input.notes ?? "",
+    };
+    set((s) => ({ workOrders: [order, ...s.workOrders] }));
+    persistServiceRecords(get);
+    get().pushToast("Work order created");
+    return id;
+  },
+
+  updateWorkOrder: (id, patch) => {
+    if (!requireCap(get, "view_service_ops")) return;
+    set((s) => ({ workOrders: s.workOrders.map((row) => (row.id === id ? { ...row, ...patch } : row)) }));
+    persistServiceRecords(get);
+    get().pushToast("Work order updated");
+  },
+
+  createRecurringService: (input) => {
+    if (!requireAny(get, "manage_service_ops", "view_service_ops")) return "";
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const id = uid("rs");
+    const row: RecurringService = {
+      id,
+      title: input.title.trim() || "Recurring visit",
+      companyId: input.companyId,
+      companyName: company?.name ?? "Company",
+      frequency: input.frequency,
+      nextOn: input.nextOn ?? todayIso(),
+      assignee: input.assignee,
+      paused: false,
+    };
+    set((s) => ({ recurringServices: [row, ...s.recurringServices] }));
+    persistServiceRecords(get);
+    get().pushToast("Recurring service added");
+    return id;
+  },
+
+  toggleRecurringService: (id) => {
+    set((s) => ({
+      recurringServices: s.recurringServices.map((row) => (row.id === id ? { ...row, paused: !row.paused } : row)),
+    }));
+    persistServiceRecords(get);
+    get().pushToast("Recurring service updated");
+  },
+
+  generateRecurringJob: (id) => {
+    const service = get().recurringServices.find((row) => row.id === id);
+    if (!service || service.paused) return "";
+    const workId = get().createWorkOrder({
+      title: service.title,
+      companyId: service.companyId,
+      assignee: service.assignee,
+      scheduled: service.nextOn,
+    });
+    set((s) => ({
+      recurringServices: s.recurringServices.map((row) =>
+        row.id === id ? { ...row, nextOn: nextFromFrequency(row.nextOn, row.frequency) } : row,
+      ),
+    }));
+    persistServiceRecords(get);
+    return workId;
+  },
+
+  addServiceDocument: (input) => {
+    if (!input.name.trim()) return "";
+    const company = get().companies.find((c) => c.id === input.companyId);
+    const id = uid("doc");
+    set((s) => ({
+      serviceDocuments: [
+        {
+          id,
+          name: input.name.trim(),
+          companyId: input.companyId,
+          companyName: company?.name ?? "Company",
+          kind: input.kind,
+          added: todayIso(),
+        },
+        ...s.serviceDocuments,
+      ],
+    }));
+    get().pushToast("Document added");
+    persistServiceRecords(get);
+    return id;
+  },
+
+  deleteServiceDocument: (id) => {
+    set((s) => ({ serviceDocuments: s.serviceDocuments.filter((row) => row.id !== id) }));
+    persistServiceRecords(get);
+    get().pushToast("Document removed");
+  },
+
+  clockInField: (memberName) => {
+    if (get().fieldClocks.some((row) => row.memberName === memberName && !row.stoppedAt)) return;
+    set((s) => ({
+      fieldClocks: [{ id: uid("clk"), memberName, startedAt: new Date().toISOString() }, ...s.fieldClocks],
+    }));
+    persistServiceRecords(get);
+    get().pushToast("Clocked in");
+  },
+
+  clockOutField: (memberName) => {
+    const open = get().fieldClocks.find((row) => row.memberName === memberName && !row.stoppedAt);
+    if (!open) return;
+    const stoppedAt = new Date().toISOString();
+    set((s) => ({
+      fieldClocks: s.fieldClocks.map((row) =>
+        row.id === open.id ? { ...row, stoppedAt, hours: clockHours(row.startedAt, Date.parse(stoppedAt)) } : row,
+      ),
+    }));
+    persistServiceRecords(get);
+    get().pushToast("Clocked out");
+  },
+
+  createInstance: (input) => {
+    if (!requireAny(get, "manage_users", "manage_service_ops")) return "";
+    const id = uid("inst");
+    set((s) => ({
+      workspaceInstances: [
+        { id, name: input.name.trim() || "New instance", owner: input.owner, packs: input.packs, status: input.status ?? "Trial" },
+        ...s.workspaceInstances,
+      ],
+    }));
+    persistServiceRecords(get);
+    get().pushToast("Instance created");
+    return id;
+  },
+
+  updateInstance: (id, patch) => {
+    set((s) => ({ workspaceInstances: s.workspaceInstances.map((row) => (row.id === id ? { ...row, ...patch } : row)) }));
+    persistServiceRecords(get);
+    get().pushToast("Instance updated");
+  },
+
+  saveTrial: (patch) => {
+    if (!requireAny(get, "manage_users", "manage_service_ops")) return;
+    set((s) => ({ promotionalTrial: { ...s.promotionalTrial, ...patch } }));
+    persistServiceRecords(get);
+    get().pushToast("Trial saved");
+  },
+
+  startTrial: () => {
+    if (!requireAny(get, "manage_users", "manage_service_ops")) return;
+    const packs: PackId[] = get().enabledPacks.includes("service_operations")
+      ? get().enabledPacks
+      : [...get().enabledPacks, "service_operations"];
+    set((s) => ({
+      enabledPacks: packs,
+      promotionalTrial: {
+        ...s.promotionalTrial,
+        active: true,
+        startedOn: todayIso(),
+        used: Math.min(s.promotionalTrial.slots, s.promotionalTrial.used + 1),
+      },
+    }));
+    persistCapabilityPacks(packs, get().rolePacks);
+    persistServiceRecords(get);
+    get().pushToast("Service operations trial started");
   },
 }));
 

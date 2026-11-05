@@ -33,6 +33,14 @@ export const WORKSPACE_KEYS = [
   "recentlyViewed",
   "focusCompanyId",
   "projectWorkflow",
+  "enabledPacks",
+  "rolePacks",
+  "workOrders",
+  "recurringServices",
+  "serviceDocuments",
+  "fieldClocks",
+  "workspaceInstances",
+  "promotionalTrial",
 ] as const;
 
 export const EMPTY_WORKSPACE_GENERATION = "empty-v1";
@@ -66,6 +74,10 @@ const WIPED_KEYS = [
   "gates",
   "allocations",
   "recentlyViewed",
+  "workOrders",
+  "recurringServices",
+  "serviceDocuments",
+  "fieldClocks",
 ] as const;
 
 export type WorkspaceSnapshot = {
@@ -101,6 +113,10 @@ export function workspacePatch(snapshot: WorkspaceSnapshot | null | undefined) {
         emailDomains: snapshot.data.emailDomains,
         invoiceTemplates: snapshot.data.invoiceTemplates,
         projectWorkflow: snapshot.data.projectWorkflow,
+        enabledPacks: snapshot.data.enabledPacks,
+        rolePacks: snapshot.data.rolePacks,
+        workspaceInstances: snapshot.data.workspaceInstances,
+        promotionalTrial: snapshot.data.promotionalTrial,
       }
     : snapshot.data;
   const patch: Record<string, unknown> = {};
