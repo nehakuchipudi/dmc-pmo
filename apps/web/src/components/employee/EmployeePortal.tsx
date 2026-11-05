@@ -11,7 +11,6 @@ import {
   allocationPct,
   firmAnnouncements,
   isPortalTab,
-  loadEmployeeRequests,
   loggedWeekHours,
   memberManager,
   mineTasks,
@@ -369,7 +368,7 @@ export function EmployeePortal() {
                     </div>
                   ))
               ) : (
-                <p className="text-sm text-[var(--color-muted)]">No field jobs on today's date.</p>
+                <p className="text-sm text-[var(--color-muted)]">No field jobs scheduled today.</p>
               )}
             </div>
             <div className="panel p-5">
