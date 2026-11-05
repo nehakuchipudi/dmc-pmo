@@ -40,7 +40,6 @@ import {
   Settings,
   Shield,
   Sparkles,
-  Target,
   Ticket,
   Timer,
   UserRound,
@@ -96,16 +95,17 @@ const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/instances": Layers,
   "/app/promotional-trial": Gift,
   "/app/audit": ScrollText,
+  "/app/settings": Settings,
 };
 
 const GROUP_ICONS: Record<string, typeof Building2> = {
   project_management: Briefcase,
-  portfolio_strategy: Target,
   resource_management: Users,
   service_operations: Wrench,
   business_management: Building2,
   intelligence: BarChart3,
   administration: Shield,
+  settings: Settings,
 };
 
 function deniedModuleName(pathname: string) {
@@ -347,9 +347,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       (item) =>
         item.group === group &&
         canAccessHref(user.role, item.href) &&
-        canUsePack(item.pack, enabledPacks, user.role, rolePacks),
+        canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
     ),
   })).filter((group) => group.items.length);
+  const settingsGroup = {
+    id: "settings" as const,
+    label: "Settings",
+    items: NAV_MODULES.filter(
+      (item) =>
+        item.group === "settings" &&
+        canAccessHref(user.role, item.href) &&
+        canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
+    ),
+  };
   const routePack = packForHref(pathname);
   const workspaceHasPack = !routePack || hasPack(enabledPacks, routePack);
   const routeAllowed = canAccessHref(user.role, pathname) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
@@ -427,10 +437,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCreateKind(kind);
   }
 
+  const allNavGroups = [...navGroups, settingsGroup];
+
   function openFlyout(id: string, el: HTMLElement) {
     window.clearTimeout(flyoutTimer.current);
     const rect = el.getBoundingClientRect();
-    const height = 48 + (navGroups.find((group) => group.id === id)?.items.length ?? 0) * 38;
+    const height = 48 + (allNavGroups.find((group) => group.id === id)?.items.length ?? 0) * 38;
     const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
     setFlyout({ id, top, left: Math.round(rect.right + 8) });
   }
@@ -440,7 +452,54 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     flyoutTimer.current = window.setTimeout(() => setFlyout(null), 160);
   }
 
-  const flyoutGroup = flyout ? navGroups.find((group) => group.id === flyout.id) : null;
+  function renderCategory(group: (typeof allNavGroups)[number]) {
+    const Icon = GROUP_ICONS[group.id] ?? Briefcase;
+    const hasActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+    const open = flyout?.id === group.id;
+    const flyoutProps = {
+      onMouseEnter: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+      onMouseLeave: closeFlyoutSoon,
+      onFocus: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+      onBlur: closeFlyoutSoon,
+      onClick: (event: { currentTarget: HTMLElement }) => {
+        if (open) setFlyout(null);
+        else openFlyout(group.id, event.currentTarget);
+      },
+    };
+    if (collapsed) {
+      return (
+        <button
+          key={group.id}
+          type="button"
+          className={clsx("nav-category is-collapsed", hasActive && "is-active", open && "is-open")}
+          aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+          aria-expanded={open}
+          title={group.label}
+          {...flyoutProps}
+        >
+          <Icon size={17} />
+        </button>
+      );
+    }
+    return (
+      <div key={group.id} className={clsx("nav-category", hasActive && "is-active", open && "is-open")}>
+        <Icon size={17} />
+        <span className="nav-category-copy">{group.label}</span>
+        <button
+          type="button"
+          className="nav-category-arrow"
+          aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+          aria-expanded={open}
+          title={`Show ${group.label}`}
+          {...flyoutProps}
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  const flyoutGroup = flyout ? allNavGroups.find((group) => group.id === flyout.id) : null;
 
   return (
     <div className={clsx("app-shell", collapsed && "collapsed", navOpen && "nav-open")}>
@@ -471,52 +530,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {!collapsed ? <span>Home</span> : null}
             </Link>
           ) : null}
-          {navGroups.map((group) => {
-            const Icon = GROUP_ICONS[group.id] ?? Briefcase;
-            const hasActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-            const open = flyout?.id === group.id;
-            const flyoutProps = {
-              onMouseEnter: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
-              onMouseLeave: closeFlyoutSoon,
-              onFocus: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
-              onBlur: closeFlyoutSoon,
-              onClick: (event: { currentTarget: HTMLElement }) => {
-                if (open) setFlyout(null);
-                else openFlyout(group.id, event.currentTarget);
-              },
-            };
-            if (collapsed) {
-              return (
-                <button
-                  key={group.id}
-                  type="button"
-                  className={clsx("nav-category is-collapsed", hasActive && "is-active", open && "is-open")}
-                  aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
-                  aria-expanded={open}
-                  title={group.label}
-                  {...flyoutProps}
-                >
-                  <Icon size={17} />
-                </button>
-              );
-            }
-            return (
-              <div key={group.id} className={clsx("nav-category", hasActive && "is-active", open && "is-open")}>
-                <Icon size={17} />
-                <span className="nav-category-copy">{group.label}</span>
-                <button
-                  type="button"
-                  className="nav-category-arrow"
-                  aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
-                  aria-expanded={open}
-                  title={`Show ${group.label}`}
-                  {...flyoutProps}
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            );
-          })}
+          {navGroups.map((group) => renderCategory(group))}
         </nav>
         <div className="nav-footer space-y-1">
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
@@ -530,15 +544,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <MessageSquare size={18} />
             {!collapsed ? <span>Feedback</span> : null}
           </button>
-          <Link
-            href="/app/settings"
-            className={clsx("nav-link", pathname.startsWith("/app/settings") && "active")}
-            title="Settings"
-            onClick={() => setNavOpen(false)}
-          >
-            <Settings size={17} />
-            {!collapsed ? <span>Settings</span> : null}
-          </Link>
+          {settingsGroup.items.length ? renderCategory(settingsGroup) : null}
         </div>
       </aside>
       {flyoutGroup && flyout ? (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Globe, Layers, Settings as SettingsIcon, Users, Workflow } from "lucide-react";
+import Link from "next/link";
+import { Globe, Layers, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
@@ -87,6 +88,12 @@ export function SettingsWorkspace() {
             </div>
           );
         })}
+        {can("view_automations") ? (
+          <Link href="/app/automations" className="settings-rail-item">
+            <Zap size={16} />
+            <span>Automations</span>
+          </Link>
+        ) : null}
       </aside>
 
       <div className="settings-main">

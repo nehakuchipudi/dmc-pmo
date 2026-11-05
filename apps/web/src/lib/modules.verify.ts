@@ -4,12 +4,13 @@ import { canUsePack, DEFAULT_ROLE_PACKS, packsForRole } from "./service-ops";
 
 assert.equal(PACKS.length, 3);
 assert.equal(NAV_GROUPS.length, 7);
-assert.ok(NAV_MODULES.every((item) => PACKS.some((pack) => pack.id === item.pack)));
+assert.ok(NAV_MODULES.every((item) => !item.pack || PACKS.some((pack) => pack.id === item.pack)));
 assert.ok(NAV_MODULES.every((item) => NAV_GROUPS.some((group) => group.id === item.group)));
 assert.equal(packForHref("/app/work-orders"), "service_operations");
 assert.equal(packForHref("/app/projects"), "project_delivery");
 assert.equal(packForHref("/app/companies"), "project_management");
 assert.equal(packForHref("/app/quotes"), "project_delivery");
+assert.equal(packForHref("/app/automations"), "project_management");
 assert.equal(packForHref("/app/home"), null);
 assert.equal(packForHref("/app/settings"), null);
 assert.deepEqual(packsOf(undefined), DEFAULT_PACKS);
@@ -24,5 +25,19 @@ assert.ok(NAV_MODULES.some((item) => item.href === "/app/contacts"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/quotes"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/analytics"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/audit"));
+assert.ok(NAV_MODULES.some((item) => item.href === "/app/ideas" && item.group === "project_management"));
+assert.ok(NAV_MODULES.some((item) => item.href === "/app/automations" && item.group === "settings"));
+assert.deepEqual(
+  NAV_GROUPS.map((group) => group.id),
+  [
+    "project_management",
+    "resource_management",
+    "service_operations",
+    "business_management",
+    "intelligence",
+    "administration",
+    "settings",
+  ],
+);
 
 console.log("modules.verify ok");

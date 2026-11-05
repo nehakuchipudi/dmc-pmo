@@ -2,18 +2,18 @@ export type PackId = "project_management" | "project_delivery" | "service_operat
 
 export type NavGroupId =
   | "project_management"
-  | "portfolio_strategy"
   | "resource_management"
   | "service_operations"
   | "business_management"
   | "intelligence"
-  | "administration";
+  | "administration"
+  | "settings";
 
 export const PACKS: { id: PackId; label: string; summary: string }[] = [
   {
     id: "project_management",
     label: "Project management",
-    summary: "Ideas, reports, automations, and the office book of work.",
+    summary: "Ideas, reports, and the office book of work.",
   },
   {
     id: "project_delivery",
@@ -29,12 +29,12 @@ export const PACKS: { id: PackId; label: string; summary: string }[] = [
 
 export const NAV_GROUPS: { id: NavGroupId; label: string; summary: string }[] = [
   { id: "project_management", label: "Project Management", summary: "Plan, execute, and track projects." },
-  { id: "portfolio_strategy", label: "Portfolio & Strategy", summary: "Align work to business goals." },
   { id: "resource_management", label: "Resource Management", summary: "Manage people, capacity, and teams." },
   { id: "service_operations", label: "Service Operations", summary: "End-to-end service and field operations." },
   { id: "business_management", label: "Business Management", summary: "Contracts, billing, and client relationships." },
   { id: "intelligence", label: "Intelligence & Analytics", summary: "Track performance and drive insights." },
   { id: "administration", label: "Administration", summary: "Configure, control, and manage your organization." },
+  { id: "settings", label: "Settings", summary: "Workspace setup and automations." },
 ];
 
 export const DEFAULT_PACKS: PackId[] = ["project_management", "project_delivery", "service_operations"];
@@ -42,7 +42,7 @@ export const DEFAULT_PACKS: PackId[] = ["project_management", "project_delivery"
 export type NavModule = {
   href: string;
   label: string;
-  pack: PackId;
+  pack?: PackId;
   group: NavGroupId;
   exact?: boolean;
 };
@@ -52,8 +52,7 @@ export const NAV_MODULES: NavModule[] = [
   { href: "/app/work", label: "Work", pack: "project_delivery", group: "project_management" },
   { href: "/app/tickets", label: "Tickets", pack: "project_delivery", group: "project_management" },
   { href: "/app/timesheets", label: "Timesheets", pack: "project_delivery", group: "project_management" },
-  { href: "/app/ideas", label: "Ideas", pack: "project_management", group: "portfolio_strategy" },
-  { href: "/app/automations", label: "Automations", pack: "project_management", group: "portfolio_strategy" },
+  { href: "/app/ideas", label: "Ideas", pack: "project_management", group: "project_management" },
   { href: "/app/resources", label: "Resources", pack: "project_delivery", group: "resource_management" },
   { href: "/app/team", label: "Team Management", pack: "service_operations", group: "resource_management" },
   { href: "/app/employee", label: "Employee Portal", pack: "service_operations", group: "resource_management" },
@@ -75,11 +74,12 @@ export const NAV_MODULES: NavModule[] = [
   { href: "/app/instances", label: "Instances", pack: "service_operations", group: "administration" },
   { href: "/app/promotional-trial", label: "Promotional Trial", pack: "service_operations", group: "administration" },
   { href: "/app/audit", label: "Audit Trail", pack: "project_management", group: "administration" },
+  { href: "/app/settings", label: "Settings", group: "settings" },
+  { href: "/app/automations", label: "Automations", pack: "project_management", group: "settings" },
 ];
 
 export const NAV_GROUP_ORDER: NavGroupId[] = [
   "project_management",
-  "portfolio_strategy",
   "resource_management",
   "service_operations",
   "business_management",
