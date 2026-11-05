@@ -8,6 +8,7 @@ import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWid
 import { RecordFact } from "@/components/records/RecordChrome";
 import { IfCan } from "@/components/auth/IfCan";
 import { Modal, PageHeader } from "@/components/ui";
+import { ideaObjectiveLabel } from "@/lib/ppm";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 
@@ -104,7 +105,7 @@ function IdeaView() {
                   {objective.code} {objective.name}
                 </Link>
               ) : (
-                "None yet"
+                ideaObjectiveLabel(idea, objectives) || "None yet"
               )}
             </RecordFact>
             <RecordFact label="Stage">

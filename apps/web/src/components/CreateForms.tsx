@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
+import { resolveIdeaObjective } from "@/lib/ppm";
 import { canCreateKind } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -219,7 +220,7 @@ export function CreateForms({
               submitter: user?.name ?? "Staff",
               requestedBudget: Number(data.get("budget") ?? 0),
               companyId: String(data.get("companyId") || "") || undefined,
-              objectiveId: String(data.get("objectiveId") || "") || undefined,
+              ...resolveIdeaObjective(String(data.get("objective") ?? ""), objectives),
             });
             onClose();
             router.push(`/app/ideas/view/?id=${id}`);
@@ -239,14 +240,7 @@ export function CreateForms({
             </TextSelect>
           </Field>
           <Field label="Objective">
-            <TextSelect name="objectiveId" defaultValue="">
-              <option value="">None yet</option>
-              {objectives.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.code} {o.name}
-                </option>
-              ))}
-            </TextSelect>
+            <TextInput name="objective" placeholder="What outcome does this idea serve?" />
           </Field>
           <Field label="Requested budget">
             <TextInput name="budget" type="number" defaultValue={25000} />

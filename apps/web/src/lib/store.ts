@@ -429,7 +429,7 @@ type AppState = {
   checkEmailDomain: (id: string) => Promise<EmailDomain | undefined>;
   createObjective: (input: { name: string; owner: string; horizon: string; target: string; description: string }) => string;
   updateObjective: (id: string, patch: Partial<StrategicObjective>) => void;
-  createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string }) => string;
+  createIdea: (input: { name: string; summary: string; submitter: string; requestedBudget: number; companyId?: string; objectiveId?: string; objectiveName?: string }) => string;
   updateIdea: (id: string, patch: Partial<Idea>) => void;
   advanceIdea: (id: string) => void;
   convertIdea: (id: string) => string | undefined;
@@ -3216,6 +3216,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       valueScore: 5,
       riskScore: 5,
       objectiveId: input.objectiveId,
+      objectiveName: input.objectiveId ? undefined : input.objectiveName,
       requestedBudget: input.requestedBudget,
       summary: input.summary,
     };
@@ -3236,6 +3237,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyId,
       companyName: companyId ? (company?.name ?? patch.companyName ?? prev.companyName) : undefined,
       objectiveId: patch.objectiveId === "" ? undefined : (patch.objectiveId ?? prev.objectiveId),
+      objectiveName:
+        patch.objectiveId && patch.objectiveId !== ""
+          ? undefined
+          : patch.objectiveName !== undefined
+            ? patch.objectiveName || undefined
+            : prev.objectiveName,
     };
     if (patch.score == null && (patch.strategicFit != null || patch.valueScore != null || patch.riskScore != null)) {
       next.score = ideaComposite(next);

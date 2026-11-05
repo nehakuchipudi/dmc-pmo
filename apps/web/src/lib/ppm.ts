@@ -80,3 +80,26 @@ export function objectiveCoverage(objectives: StrategicObjective[], projects: Pr
 export function ideaComposite(idea: { strategicFit: number; valueScore: number; riskScore: number }) {
   return Math.round(((idea.strategicFit + idea.valueScore + (10 - idea.riskScore)) / 30) * 100);
 }
+
+export function resolveIdeaObjective(text: string, objectives: { id: string; code: string; name: string }[]) {
+  const name = text.trim();
+  if (!name) return { objectiveId: undefined, objectiveName: undefined };
+  const key = name.toLowerCase();
+  const match = objectives.find(
+    (row) =>
+      row.name.toLowerCase() === key ||
+      row.code.toLowerCase() === key ||
+      `${row.code} ${row.name}`.toLowerCase() === key,
+  );
+  if (match) return { objectiveId: match.id, objectiveName: undefined as string | undefined };
+  return { objectiveId: undefined, objectiveName: name };
+}
+
+export function ideaObjectiveLabel(
+  idea: { objectiveId?: string; objectiveName?: string },
+  objectives: { id: string; code: string; name: string }[],
+) {
+  const linked = idea.objectiveId ? objectives.find((row) => row.id === idea.objectiveId) : undefined;
+  if (linked) return `${linked.code} ${linked.name}`.trim();
+  return idea.objectiveName?.trim() || "";
+}
