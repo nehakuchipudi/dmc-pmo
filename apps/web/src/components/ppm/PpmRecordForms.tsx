@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/ui";
+import { ideaObjectiveLabel, resolveIdeaObjective } from "@/lib/ppm";
 import type { Idea, IdeaStage, ObjectiveStatus, Portfolio, StrategicObjective } from "@/lib/types";
 
 const IDEA_STAGES: IdeaStage[] = ["Submitted", "Scoring", "Approved", "Deferred", "Converted"];
@@ -63,7 +64,7 @@ export function IdeaEditForm({
   const [name, setName] = useState(idea.name);
   const [summary, setSummary] = useState(idea.summary);
   const [companyId, setCompanyId] = useState(idea.companyId ?? "");
-  const [objectiveId, setObjectiveId] = useState(idea.objectiveId ?? "");
+  const [objectiveText, setObjectiveText] = useState(ideaObjectiveLabel(idea, objectives));
   const [submitter, setSubmitter] = useState(idea.submitter);
   const [stage, setStage] = useState<IdeaStage>(idea.stage);
   const [budget, setBudget] = useState(String(idea.requestedBudget));
@@ -81,7 +82,10 @@ export function IdeaEditForm({
           name: name.trim(),
           summary: summary.trim(),
           companyId: companyId || "",
-          objectiveId: objectiveId || "",
+          ...(() => {
+            const next = resolveIdeaObjective(objectiveText, objectives);
+            return { objectiveId: next.objectiveId ?? "", objectiveName: next.objectiveName ?? "" };
+          })(),
           submitter: submitter.trim() || idea.submitter,
           stage,
           requestedBudget: Number(budget) || 0,
@@ -105,14 +109,11 @@ export function IdeaEditForm({
         </TextSelect>
       </Field>
       <Field label="Objective">
-        <TextSelect value={objectiveId} onChange={(e) => setObjectiveId(e.target.value)}>
-          <option value="">None yet</option>
-          {objectives.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.code} {o.name}
-            </option>
-          ))}
-        </TextSelect>
+        <TextInput
+          value={objectiveText}
+          onChange={(e) => setObjectiveText(e.target.value)}
+          placeholder="What outcome does this idea serve?"
+        />
       </Field>
       <Field label="Submitter">
         <TextInput value={submitter} onChange={(e) => setSubmitter(e.target.value)} />

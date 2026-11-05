@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Field, Modal, PageHeader, TextInput, TextSelect, TextTextarea } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
+import { resolveIdeaObjective } from "@/lib/ppm";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { IfCan } from "@/components/auth/IfCan";
@@ -25,7 +26,7 @@ export default function IdeasPage() {
   const [summary, setSummary] = useState("");
   const [budget, setBudget] = useState("25000");
   const [companyId, setCompanyId] = useState("");
-  const [objectiveId, setObjectiveId] = useState("");
+  const [objectiveText, setObjectiveText] = useState("");
 
   return (
     <div className="fade-in">
@@ -103,14 +104,11 @@ export default function IdeasPage() {
           </TextSelect>
         </Field>
         <Field label="Objective">
-          <TextSelect value={objectiveId} onChange={(e) => setObjectiveId(e.target.value)}>
-            <option value="">None yet</option>
-            {objectives.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.code} {o.name}
-              </option>
-            ))}
-          </TextSelect>
+          <TextInput
+            value={objectiveText}
+            onChange={(e) => setObjectiveText(e.target.value)}
+            placeholder="What outcome does this idea serve?"
+          />
         </Field>
         <Field label="Requested budget">
           <TextInput value={budget} onChange={(e) => setBudget(e.target.value)} />
@@ -129,11 +127,12 @@ export default function IdeasPage() {
               submitter: user?.name ?? "Staff",
               requestedBudget: Number(budget) || 0,
               companyId: companyId || undefined,
-              objectiveId: objectiveId || undefined,
+              ...resolveIdeaObjective(objectiveText, objectives),
             });
             setOpen(false);
             setName("");
             setSummary("");
+            setObjectiveText("");
             router.push(`/app/ideas/view/?id=${id}`);
           }}
         >

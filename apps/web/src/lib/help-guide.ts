@@ -84,7 +84,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Ideas is demand intake before a project exists. Score for strategic fit, value, and risk, then convert the ones that belong in a portfolio.",
     steps: [
-      "Open Ideas and submit an idea with name, summary, requested budget, company, and objective.",
+      "Open Ideas and submit an idea with name, summary, requested budget, company, and a typed objective.",
       "Advance moves Submitted to Scoring, then Approved.",
       "Convert on an Approved idea creates a project and can land it in the delivery portfolio.",
       "Open any idea to edit scores or details.",

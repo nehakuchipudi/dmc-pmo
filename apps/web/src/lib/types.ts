@@ -574,6 +574,7 @@ export interface Idea {
   valueScore: number;
   riskScore: number;
   objectiveId?: string;
+  objectiveName?: string;
   requestedBudget: number;
   summary: string;
   convertedProjectId?: string;
