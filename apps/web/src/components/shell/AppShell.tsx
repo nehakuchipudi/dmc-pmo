@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   ClipboardCheck,
   ClipboardList,
@@ -39,12 +40,14 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Target,
   Ticket,
   Timer,
   UserRound,
   Users,
   UsersRound,
   Workflow,
+  Wrench,
   Zap,
   PanelLeftClose,
   PanelLeftOpen,
@@ -95,6 +98,16 @@ const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/audit": ScrollText,
 };
 
+const GROUP_ICONS: Record<string, typeof Building2> = {
+  project_management: Briefcase,
+  portfolio_strategy: Target,
+  resource_management: Users,
+  service_operations: Wrench,
+  business_management: Building2,
+  intelligence: BarChart3,
+  administration: Shield,
+};
+
 function deniedModuleName(pathname: string) {
   if (pathname.startsWith("/app/settings")) return "Settings";
   if (pathname.startsWith("/app/strategy")) return "Strategy";
@@ -132,9 +145,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>(() => [...NAV_GROUP_ORDER]);
+  const [flyout, setFlyout] = useState<{ id: string; top: number; left: number } | null>(null);
   const [menu, setMenu] = useState<MenuId>(null);
   const hoverTimer = useRef(0);
+  const flyoutTimer = useRef(0);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{
     companyId?: string;
@@ -210,6 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setNavOpen(false);
     setMenu(null);
+    setFlyout(null);
   }, [pathname]);
 
   useEffect(() => {
@@ -412,6 +427,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCreateKind(kind);
   }
 
+  function openFlyout(id: string, el: HTMLElement) {
+    window.clearTimeout(flyoutTimer.current);
+    const rect = el.getBoundingClientRect();
+    const height = 48 + (navGroups.find((group) => group.id === id)?.items.length ?? 0) * 38;
+    const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
+    setFlyout({ id, top, left: Math.round(rect.right + 8) });
+  }
+
+  function closeFlyoutSoon() {
+    window.clearTimeout(flyoutTimer.current);
+    flyoutTimer.current = window.setTimeout(() => setFlyout(null), 160);
+  }
+
+  const flyoutGroup = flyout ? navGroups.find((group) => group.id === flyout.id) : null;
+
   return (
     <div className={clsx("app-shell", collapsed && "collapsed", navOpen && "nav-open")}>
       {navOpen ? <button type="button" className="shell-scrim" aria-label="Close navigation" onClick={() => setNavOpen(false)} /> : null}
@@ -442,37 +472,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ) : null}
           {navGroups.map((group) => {
-            const open = collapsed || openGroups.includes(group.id);
+            const Icon = GROUP_ICONS[group.id] ?? Briefcase;
             const hasActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+            const open = flyout?.id === group.id;
+            const flyoutProps = {
+              onMouseEnter: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+              onMouseLeave: closeFlyoutSoon,
+              onFocus: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+              onBlur: closeFlyoutSoon,
+              onClick: (event: { currentTarget: HTMLElement }) => {
+                if (open) setFlyout(null);
+                else openFlyout(group.id, event.currentTarget);
+              },
+            };
+            if (collapsed) {
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  className={clsx("nav-category is-collapsed", hasActive && "is-active", open && "is-open")}
+                  aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+                  aria-expanded={open}
+                  title={group.label}
+                  {...flyoutProps}
+                >
+                  <Icon size={17} />
+                </button>
+              );
+            }
             return (
-              <div key={group.id} className={clsx("nav-group", !open && !hasActive && "is-closed")}>
-                {!collapsed ? (
-                  <button
-                    type="button"
-                    className="nav-group-label"
-                    aria-expanded={open || hasActive}
-                    onClick={() =>
-                      setOpenGroups((current) =>
-                        current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id],
-                      )
-                    }
-                  >
-                    <span>{group.label}</span>
-                    <ChevronDown size={12} style={{ transform: open || hasActive ? "rotate(0deg)" : "rotate(-90deg)" }} />
-                  </button>
-                ) : (
-                  <div className="nav-group-rule" title={group.label} />
-                )}
-                {group.items.map((item) => {
-                  const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
-                  const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-                  return (
-                    <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                      <Icon size={17} />
-                      {!collapsed ? <span>{item.label}</span> : null}
-                    </Link>
-                  );
-                })}
+              <div key={group.id} className={clsx("nav-category", hasActive && "is-active", open && "is-open")}>
+                <Icon size={17} />
+                <span className="nav-category-copy">{group.label}</span>
+                <button
+                  type="button"
+                  className="nav-category-arrow"
+                  aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+                  aria-expanded={open}
+                  title={`Show ${group.label}`}
+                  {...flyoutProps}
+                >
+                  <ChevronRight size={14} />
+                </button>
               </div>
             );
           })}
@@ -500,6 +541,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </aside>
+      {flyoutGroup && flyout ? (
+        <div
+          className="nav-flyout"
+          style={{ top: flyout.top, left: flyout.left }}
+          onMouseEnter={() => window.clearTimeout(flyoutTimer.current)}
+          onMouseLeave={closeFlyoutSoon}
+        >
+          <div className="nav-flyout-title">{flyoutGroup.label}</div>
+          {flyoutGroup.items.map((item) => {
+            const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
+            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx("nav-link", active && "active")}
+                onClick={() => {
+                  setFlyout(null);
+                  setNavOpen(false);
+                }}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="main-col">
         <header className="topbar">
