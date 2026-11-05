@@ -15,7 +15,6 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Layers3,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -26,7 +25,6 @@ import {
   Search,
   Settings,
   Sparkles,
-  Target,
   Ticket,
   Timer,
   Users,
@@ -60,13 +58,13 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof Building2; exact?: 
   { href: "/app/billing", label: "Billing", icon: Receipt },
   { href: "/app/reports", label: "Reports", icon: FileText },
   { href: "/app/automations", label: "Automations", icon: Zap },
-  { href: "/app/strategy", label: "Strategy", icon: Target },
   { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/app/portfolios", label: "Portfolios", icon: Layers3 },
 ];
 
 function deniedModuleName(pathname: string) {
   if (pathname.startsWith("/app/settings")) return "Settings";
+  if (pathname.startsWith("/app/strategy")) return "Strategy";
+  if (pathname.startsWith("/app/portfolios")) return "Portfolios";
   const match = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   return match?.label;
 }

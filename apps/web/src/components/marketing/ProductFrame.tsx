@@ -7,11 +7,9 @@ import {
   ClipboardList,
   Clock3,
   FileText,
-  Layers3,
   LayoutDashboard,
   Lightbulb,
   Receipt,
-  Target,
   Ticket,
   Users,
   Workflow,
@@ -31,9 +29,7 @@ const SIDE_ITEMS = [
   { label: "Billing", icon: Receipt, key: "billing" },
   { label: "Reports", icon: FileText, key: "reports" },
   { label: "Automations", icon: Zap, key: "automations" },
-  { label: "Strategy", icon: Target, key: "strategy" },
   { label: "Ideas", icon: Lightbulb, key: "ideas" },
-  { label: "Portfolios", icon: Layers3, key: "portfolio" },
 ];
 
 export function ProductFrame({
