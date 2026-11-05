@@ -254,7 +254,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
   {
     id: "users",
     title: "Users and roles",
-    href: "/app/settings",
+    href: "/app/settings/?section=users",
     viewCap: "view_users",
     keywords: ["user", "role", "invite", "permission", "rbac", "admin", "staff"],
     summary: "Users & roles is the firm roster. Admin adds people, sends an invite, and sets role and rates.",

@@ -143,7 +143,7 @@ function roleAnswer(role: Role | undefined | null, query: string): HelpAnswer | 
     .join("\n\n");
   return {
     text,
-    hrefs: mentioned === "client" ? [{ href: "/portal", label: "Open portal" }] : [{ href: "/app/settings", label: "Open Users and roles" }],
+    hrefs: mentioned === "client" ? [{ href: "/portal", label: "Open portal" }] : [{ href: "/app/settings/?section=users", label: "Open Users and roles" }],
     articleId: "users",
     starters: ["What can Staff do?", "What can Finance do?", "How do I add a user?"],
   };

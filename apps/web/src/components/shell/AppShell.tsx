@@ -968,7 +968,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Settings size={15} /> Settings
                   </Link>
                   {can("view_users") ? (
-                  <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
+                  <Link href="/app/settings/?section=users" className="menu-row" onClick={() => setMenu(null)}>
                     <Users size={15} /> Users & roles
                   </Link>
                   ) : null}

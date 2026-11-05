@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Globe, Layers, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Globe, Layers, MoreVertical, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
@@ -16,6 +17,12 @@ import { useAppStore } from "@/lib/store";
 import { inviteLandingHref } from "@/lib/user-invite";
 
 type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "prefs";
+
+const SECTIONS: SettingsSection[] = ["capabilities", "users", "lifecycle", "email", "prefs"];
+
+function isSettingsSection(value: string | null): value is SettingsSection {
+  return !!value && SECTIONS.includes(value as SettingsSection);
+}
 
 const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?: boolean }[] = [
   { id: "capabilities", label: "Capabilities", icon: Layers },
@@ -42,12 +49,29 @@ export function SettingsWorkspace() {
   const projectWorkflow = useAppStore((s) => s.projectWorkflow);
   const setProjectWorkflowTransition = useAppStore((s) => s.setProjectWorkflowTransition);
   const setProjectWorkflowRoles = useAppStore((s) => s.setProjectWorkflowRoles);
-  const [section, setSection] = useState<SettingsSection>("capabilities");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("section");
+  const [section, setSection] = useState<SettingsSection>(isSettingsSection(requested) ? requested : "capabilities");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [query, setQuery] = useState("");
   const editing = team.find((m) => m.id === editId);
+
+  useEffect(() => {
+    if (isSettingsSection(requested)) setSection(requested);
+  }, [requested]);
+
+  function openSection(next: SettingsSection) {
+    setSection(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "capabilities") params.delete("section");
+    else params.set("section", next);
+    const qs = params.toString();
+    router.replace(qs ? `/app/settings/?${qs}` : "/app/settings/", { scroll: false });
+  }
 
   const items = RAIL.filter((item) => !item.needUsers || canViewUsers);
   const rows = useMemo(() => {
@@ -71,21 +95,15 @@ export function SettingsWorkspace() {
           const Icon = item.icon;
           const active = section === item.id;
           return (
-            <div key={item.id}>
-              <button
-                type="button"
-                className={clsx("settings-rail-item", active && "is-active")}
-                onClick={() => setSection(item.id)}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </button>
-              {item.id === "users" && section === "users" ? (
-                <button type="button" className="settings-rail-child is-active" onClick={() => setSection("users")}>
-                  Users
-                </button>
-              ) : null}
-            </div>
+            <button
+              key={item.id}
+              type="button"
+              className={clsx("settings-rail-item", active && "is-active")}
+              onClick={() => openSection(item.id)}
+            >
+              <Icon size={16} />
+              <span>{item.label}</span>
+            </button>
           );
         })}
         {can("view_automations") ? (
@@ -145,7 +163,7 @@ export function SettingsWorkspace() {
         ) : null}
 
         {section === "users" ? (
-          <>
+          <div className="settings-users">
             <header className="page-header">
               <div>
                 <h1 className="page-title">Users & roles</h1>
@@ -177,91 +195,117 @@ export function SettingsWorkspace() {
               />
             </label>
 
-            <div className="panel overflow-hidden mb-4">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Title</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Finance</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((m) => (
-                    <tr key={m.id}>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <Avatar initials={m.initials} name={m.name} size={32} />
-                          <div>
-                            <div className="font-medium">{m.name}</div>
-                            {m.department ? <div className="text-xs text-[var(--color-muted)]">{m.department}</div> : null}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-[var(--color-muted)]">{m.title || "None"}</td>
-                      <td className="text-[var(--color-muted)]">{m.email}</td>
-                      <td>{roleLabel(m.role)}</td>
-                      <td className="text-[var(--color-muted)]">
-                        {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
-                      </td>
-                      <td>
-                        <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
-                        {m.invitedAt ? (
-                          <div className="mt-1 text-xs text-[var(--color-muted)]">Invited {m.invitedAt}</div>
-                        ) : null}
-                      </td>
-                      <td className="text-right space-x-2">
-                        {canManageUsers ? (
-                          <>
-                            <button type="button" className="btn btn-ghost text-sm" onClick={() => setEditId(m.id)}>
-                              Edit
-                            </button>
-                            <button type="button" className="btn btn-ghost text-sm" onClick={() => inviteTeamMember(m.id)}>
-                              {m.invitedAt ? "Resend invite" : "Send invite"}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost text-sm"
-                              onClick={() => {
-                                const href = inviteLandingHref({
-                                  email: m.email,
-                                  firstName: m.firstName,
-                                  lastName: m.lastName,
-                                  role: m.role,
-                                });
-                                void navigator.clipboard.writeText(href);
-                                pushToast("Invite link copied");
-                              }}
-                            >
-                              Copy invite link
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost text-sm"
-                              onClick={() => setTeamMemberActive(m.id, !m.active)}
-                            >
-                              {m.active ? "Deactivate" : "Reactivate"}
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-[var(--color-muted)]">View only</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {!rows.length ? (
+            <div className="panel">
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
                     <tr>
-                      <td colSpan={7} className="empty-row">
-                        No users match that search.
-                      </td>
+                      <th>User</th>
+                      <th>Title</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Finance</th>
+                      <th>Status</th>
+                      <th />
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((m) => (
+                      <tr key={m.id}>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <Avatar initials={m.initials} name={m.name} size={32} />
+                            <div>
+                              <div className="font-medium">{m.name}</div>
+                              {m.department ? <div className="text-xs text-[var(--color-muted)]">{m.department}</div> : null}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-[var(--color-muted)]">{m.title || "None"}</td>
+                        <td className="text-[var(--color-muted)]" title={m.email}>{m.email}</td>
+                        <td>{roleLabel(m.role)}</td>
+                        <td className="text-[var(--color-muted)]">
+                          {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
+                        </td>
+                        <td>
+                          <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
+                          {m.invitedAt ? (
+                            <div className="mt-1 text-xs text-[var(--color-muted)]">Invited {m.invitedAt}</div>
+                          ) : null}
+                        </td>
+                        <td
+                          className="row-actions text-right"
+                          onMouseEnter={() => setMenuId(m.id)}
+                          onMouseLeave={() => setMenuId((id) => (id === m.id ? null : id))}
+                        >
+                          {canManageUsers ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-ghost"
+                                aria-label={`Actions for ${m.name}`}
+                                onClick={() => setMenuId(menuId === m.id ? null : m.id)}
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                              {menuId === m.id ? (
+                                <div className="row-menu">
+                                  <button type="button" onClick={() => { setEditId(m.id); setMenuId(null); }}>
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      inviteTeamMember(m.id);
+                                      setMenuId(null);
+                                    }}
+                                  >
+                                    {m.invitedAt ? "Resend invite" : "Send invite"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const href = inviteLandingHref({
+                                        email: m.email,
+                                        firstName: m.firstName,
+                                        lastName: m.lastName,
+                                        role: m.role,
+                                      });
+                                      void navigator.clipboard.writeText(href);
+                                      pushToast("Invite link copied");
+                                      setMenuId(null);
+                                    }}
+                                  >
+                                    Copy invite link
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTeamMemberActive(m.id, !m.active);
+                                      setMenuId(null);
+                                    }}
+                                  >
+                                    {m.active ? "Deactivate" : "Reactivate"}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </>
+                          ) : (
+                            <span className="text-xs text-[var(--color-muted)]">View only</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {!rows.length ? (
+                      <tr>
+                        <td colSpan={7} className="empty-row">
+                          No users match that search.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -269,7 +313,7 @@ export function SettingsWorkspace() {
                 <RoleCard key={item.role} title={item.title} body={item.body} />
               ))}
             </div>
-          </>
+          </div>
         ) : null}
 
         {section === "lifecycle" ? (

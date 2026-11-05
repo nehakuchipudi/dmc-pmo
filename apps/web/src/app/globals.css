@@ -621,12 +621,15 @@ button, input, select, textarea { font: inherit; }
 .settings-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr);
+  align-items: start;
   gap: 0;
   margin: -24px -24px -48px;
   min-height: calc(100vh - 72px);
   background: #fff;
 }
 .settings-rail {
+  align-self: stretch;
+  min-height: calc(100vh - 72px);
   background: #f3f5f8;
   border-right: 1px solid var(--color-border);
   padding: 14px 0;
@@ -662,7 +665,57 @@ button, input, select, textarea { font: inherit; }
 }
 .settings-main {
   min-width: 0;
+  width: 100%;
+  height: max-content;
+  align-self: start;
   padding: 24px 28px 40px;
+}
+.settings-users {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.settings-users .table-wrap {
+  overflow: visible;
+}
+.settings-users .page-header,
+.settings-users .settings-search {
+  margin-bottom: 0;
+}
+.settings-users .table {
+  height: auto;
+  width: 100%;
+  table-layout: fixed;
+}
+.settings-users .table th,
+.settings-users .table td {
+  height: auto;
+  vertical-align: middle;
+  padding: 12px 10px;
+}
+.settings-users .table th:nth-child(1),
+.settings-users .table td:nth-child(1) { width: 20%; }
+.settings-users .table th:nth-child(2),
+.settings-users .table td:nth-child(2) { width: 14%; }
+.settings-users .table th:nth-child(3),
+.settings-users .table td:nth-child(3) {
+  width: 26%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-users .table th:nth-child(4),
+.settings-users .table td:nth-child(4) { width: 12%; }
+.settings-users .table th:nth-child(5),
+.settings-users .table td:nth-child(5) { width: 14%; }
+.settings-users .table th:nth-child(6),
+.settings-users .table td:nth-child(6) { width: 10%; }
+.settings-users .table th:last-child,
+.settings-users .table td:last-child {
+  width: 48px;
+  padding-right: 8px;
+  overflow: visible;
+  white-space: nowrap;
 }
 .settings-search {
   display: block;
