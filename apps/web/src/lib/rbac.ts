@@ -37,6 +37,8 @@ export type Capability =
   | "view_insights"
   | "view_automations"
   | "view_users"
+  | "view_service_ops"
+  | "manage_service_ops"
   | "manage_users"
   | "configure_lifecycle"
   | "manage_automations"
@@ -115,6 +117,8 @@ const ALL_CAPS = [
   "view_insights",
   "view_automations",
   "view_users",
+  "view_service_ops",
+  "manage_service_ops",
   "manage_users",
   "configure_lifecycle",
   "manage_automations",
@@ -183,6 +187,8 @@ const ROLE_CAPS: Record<Exclude<Role, "admin" | "client">, Capability[]> = {
     "view_reports",
     "view_insights",
     "view_users",
+    "view_service_ops",
+    "manage_service_ops",
     "create_project",
     "create_objective",
     "edit_objective",
@@ -220,6 +226,8 @@ const ROLE_CAPS: Record<Exclude<Role, "admin" | "client">, Capability[]> = {
     "view_reports",
     "view_insights",
     "view_users",
+    "view_service_ops",
+    "manage_service_ops",
     "create_company",
     "edit_company",
     "create_contact",
@@ -264,6 +272,7 @@ const ROLE_CAPS: Record<Exclude<Role, "admin" | "client">, Capability[]> = {
     "view_benefits",
     "view_reports",
     "view_users",
+    "view_service_ops",
     "edit_company",
     "create_contact",
     "edit_contact",
@@ -290,6 +299,7 @@ const ROLE_CAPS: Record<Exclude<Role, "admin" | "client">, Capability[]> = {
     "view_timesheets",
     "view_companies",
     "view_contacts",
+    "view_service_ops",
     "create_ticket",
     "update_ticket",
     "edit_assigned_task",
@@ -333,6 +343,18 @@ export const NAV_CAPABILITY: Record<string, Capability> = {
   "/app/ai": "view_insights",
   "/app/automations": "view_automations",
   "/app/settings": "view_home",
+  "/app/work-journey": "view_service_ops",
+  "/app/work-orders": "view_service_ops",
+  "/app/recurring-services": "view_service_ops",
+  "/app/documents": "view_service_ops",
+  "/app/work-schedule": "view_service_ops",
+  "/app/scheduling": "view_service_ops",
+  "/app/approvals": "view_service_ops",
+  "/app/employee": "view_service_ops",
+  "/app/team": "view_service_ops",
+  "/app/roles": "view_service_ops",
+  "/app/instances": "view_service_ops",
+  "/app/promotional-trial": "view_service_ops",
 };
 
 const CREATE_KIND_CAP: Record<CreateRecordKind, Capability> = {

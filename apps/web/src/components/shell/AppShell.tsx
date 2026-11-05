@@ -4,30 +4,42 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BadgeCheck,
   Bell,
   Briefcase,
   Building2,
+  CalendarClock,
   CalendarDays,
+  CalendarRange,
   ChevronDown,
   CircleHelp,
+  ClipboardCheck,
   ClipboardList,
   Clock3,
   Eye,
   EyeOff,
   FileText,
+  FolderOpen,
+  Gift,
+  Layers,
   LayoutDashboard,
   Lightbulb,
   LogOut,
+  Map,
   Menu,
   MessageSquare,
   Plus,
   Receipt,
+  Repeat,
   Search,
   Settings,
+  Shield,
   Sparkles,
   Ticket,
   Timer,
+  UserRound,
   Users,
+  UsersRound,
   Workflow,
   Zap,
   PanelLeftClose,
@@ -39,6 +51,8 @@ import { Avatar, ConfirmModal, Drawer, Field, Modal, TextSelect, TextTextarea } 
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { AccessDenied } from "@/components/shell/AccessDenied";
 import { canAccessHref, canCreateKind } from "@/lib/rbac";
+import { NAV_GROUP_ORDER, NAV_MODULES, PACKS, hasPack, packForHref } from "@/lib/modules";
+import { canUsePack } from "@/lib/service-ops";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
 import { buildAppBreadcrumbs } from "@/components/shell/breadcrumbs";
@@ -46,27 +60,40 @@ import { CommandSearch } from "@/components/shell/CommandSearch";
 import { HelpSupport, HelpTrigger } from "@/components/help/HelpSupport";
 import { timerClock } from "@/lib/timesheet-work";
 
-const NAV_ITEMS: { href: string; label: string; icon: typeof Building2; exact?: boolean }[] = [
-  { href: "/app/home", label: "Home", icon: LayoutDashboard, exact: true },
-  { href: "/app/projects", label: "Projects", icon: Briefcase },
-  { href: "/app/work", label: "Work", icon: Workflow },
-  { href: "/app/tickets", label: "Tickets", icon: Ticket },
-  { href: "/app/timesheets", label: "Timesheets", icon: Clock3 },
-  { href: "/app/resources", label: "Resources", icon: Users },
-  { href: "/app/companies", label: "Companies", icon: Building2 },
-  { href: "/app/retainers", label: "Retainers", icon: ClipboardList },
-  { href: "/app/billing", label: "Billing", icon: Receipt },
-  { href: "/app/reports", label: "Reports", icon: FileText },
-  { href: "/app/automations", label: "Automations", icon: Zap },
-  { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
-];
+const NAV_ICONS: Record<string, typeof Building2> = {
+  "/app/home": LayoutDashboard,
+  "/app/companies": Building2,
+  "/app/ideas": Lightbulb,
+  "/app/reports": FileText,
+  "/app/automations": Zap,
+  "/app/projects": Briefcase,
+  "/app/work": Workflow,
+  "/app/tickets": Ticket,
+  "/app/timesheets": Clock3,
+  "/app/resources": Users,
+  "/app/retainers": ClipboardList,
+  "/app/billing": Receipt,
+  "/app/work-journey": Map,
+  "/app/work-orders": ClipboardCheck,
+  "/app/recurring-services": Repeat,
+  "/app/documents": FolderOpen,
+  "/app/work-schedule": CalendarRange,
+  "/app/scheduling": CalendarClock,
+  "/app/approvals": BadgeCheck,
+  "/app/employee": UserRound,
+  "/app/team": UsersRound,
+  "/app/roles": Shield,
+  "/app/instances": Layers,
+  "/app/promotional-trial": Gift,
+};
 
 function deniedModuleName(pathname: string) {
   if (pathname.startsWith("/app/settings")) return "Settings";
   if (pathname.startsWith("/app/strategy")) return "Strategy";
   if (pathname.startsWith("/app/portfolios")) return "Portfolios";
-  const match = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-  return match?.label;
+  const pack = packForHref(pathname);
+  const match = NAV_MODULES.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  return match?.label ?? (pack ? PACKS.find((item) => item.id === pack)?.label : undefined);
 }
 
 type MenuId = "create" | "profile" | "company" | "time" | "tasks" | "schedule" | "notifications" | "help" | null;
@@ -148,6 +175,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const startTimeTimer = useAppStore((s) => s.startTimeTimer);
   const stopTimeTimer = useAppStore((s) => s.stopTimeTimer);
   const setShowTimeTimers = useAppStore((s) => s.setShowTimeTimers);
+  const workOrders = useAppStore((s) => s.workOrders);
+  const enabledPacks = useAppStore((s) => s.enabledPacks);
+  const rolePacks = useAppStore((s) => s.rolePacks);
 
   const recordId = searchParams.get("id");
   const focusCompany = companies.find((c) => c.id === focusCompanyId) ?? null;
@@ -231,8 +261,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...objectives.filter((o) => o.name.toLowerCase().includes(q) || o.code.toLowerCase().includes(q)).map((o) => ({ href: `/app/strategy/view/?id=${o.id}`, label: `${o.code} ${o.name}`, type: "Objective" })),
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
-    ].filter((hit) => canAccessHref(user?.role, hit.href)).slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, user]);
+      ...workOrders.filter((row) => row.title.toLowerCase().includes(q)).map((row) => ({ href: "/app/work-orders", label: row.title, type: "Work order" })),
+    ].filter((hit) => canAccessHref(user?.role, hit.href) && canUsePack(packForHref(hit.href), enabledPacks, user?.role, rolePacks)).slice(0, 8);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, workOrders, enabledPacks, rolePacks, user]);
 
   const recentHits = useMemo(
     () =>
@@ -284,8 +315,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
-  const navItems = NAV_ITEMS.filter((item) => canAccessHref(user.role, item.href));
-  const routeAllowed = canAccessHref(user.role, pathname);
+  const navGroups = NAV_GROUP_ORDER.map((pack) => ({
+    pack,
+    label: PACKS.find((item) => item.id === pack)?.label ?? pack,
+    items: NAV_MODULES.filter(
+      (item) =>
+        item.pack === pack &&
+        canAccessHref(user.role, item.href) &&
+        canUsePack(item.pack, enabledPacks, user.role, rolePacks),
+    ),
+  })).filter((group) => group.items.length);
+  const routePack = packForHref(pathname);
+  const workspaceHasPack = !routePack || hasPack(enabledPacks, routePack);
+  const routeAllowed = canAccessHref(user.role, pathname) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
+  const deniedReason = routeAllowed ? undefined : workspaceHasPack ? "role" : "pack";
   const activityCreates = (
     [
       ["time", "Log time"],
@@ -382,16 +425,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-            return (
-              <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                <Icon size={17} />
-                {!collapsed ? <span>{item.label}</span> : null}
-              </Link>
-            );
-          })}
+          {navGroups.map((group) => (
+            <div key={group.pack} className="nav-group">
+              {!collapsed ? <div className="nav-group-label">{group.label}</div> : <div className="nav-group-rule" title={group.label} />}
+              {group.items.map((item) => {
+                const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
+                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                return (
+                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
+                    <Icon size={17} />
+                    {!collapsed ? <span>{item.label}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="nav-footer space-y-1">
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
@@ -829,7 +877,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="content">
-          {routeAllowed ? children : <AccessDenied moduleName={deniedModuleName(pathname)} />}
+          {routeAllowed ? children : <AccessDenied moduleName={deniedModuleName(pathname)} reason={deniedReason} />}
         </main>
       </div>
 

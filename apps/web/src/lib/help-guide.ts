@@ -44,13 +44,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "The shell is the frame around every internal page: left nav, search, company focus, Create (+), timer, notifications, and your profile.",
     steps: [
-      "Use the left nav to move between modules. Items you cannot access stay hidden.",
+      "Use the left nav groups to move between project management, project delivery, and service operations. Items you cannot access stay hidden.",
       "Press Command-K or click Search to jump to companies, projects, ideas, portfolios, tickets, and contacts.",
       "The company selector scopes Home and defaults new records to that company.",
       "Create (+) adds time, tasks, expenses, companies, contacts, projects, tickets, milestones, ideas, portfolios, objectives, and risks, based on your role.",
       "The timer starts a clock. Stop and log writes a timesheet line.",
     ],
-    tips: ["Collapsed nav still shows icons. Hover an icon for the module name."],
+    tips: [
+      "Collapsed nav still shows icons. Hover an icon for the module name.",
+      "Admins turn packs on or off in Settings, Capabilities, so a customer can run only what they bought.",
+    ],
   },
   {
     id: "strategy",
@@ -504,6 +507,135 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tips: ["Only Admin can edit the matrix. Everyone with Users access can view it."],
   },
   {
+    id: "capabilities",
+    title: "Capabilities",
+    group: "Admin",
+    href: "/app/settings",
+    audience: "internal",
+    viewCap: "view_home",
+    keywords: [
+      "capabilities",
+      "packs",
+      "modules",
+      "modular",
+      "enable",
+      "disable",
+      "project management",
+      "project delivery",
+      "service operations",
+      "uhuru",
+    ],
+    summary:
+      "DMC PMO is one modular platform. Settings, Capabilities lets a customer enable only the packs they need: project management, project delivery, or field service operations.",
+    steps: [
+      "Open Settings, then Capabilities.",
+      "Turn on Project management for Home, Companies, Ideas, Reports, and Automations.",
+      "Turn on Project delivery for Projects, Work, Tickets, Timesheets, Resources, Retainers, and Billing.",
+      "Turn on Service operations for field work: Work Journey, Work Orders, Recurring Services, Documents, Work Schedule, Scheduling, Approval Center, Employee Portal, Team Management, Role Management, Instances, and Promotional Trial.",
+      "Save by toggling a pack. The left nav hides modules that are off.",
+    ],
+    tips: ["Role Management can also hide a pack from a role even when the workspace pack is on."],
+  },
+  {
+    id: "service-ops",
+    title: "Service operations",
+    group: "Service",
+    href: "/app/work-orders",
+    audience: "internal",
+    viewCap: "view_service_ops",
+    keywords: [
+      "service operations",
+      "field service",
+      "work journey",
+      "work order",
+      "recurring",
+      "documents",
+      "work schedule",
+      "scheduling",
+      "approval center",
+      "employee portal",
+      "team management",
+      "role management",
+      "instances",
+      "promotional trial",
+    ],
+    summary:
+      "Service operations is the field pack: quote to plan to dispatch to approve. It lives in the same DMC PMO workspace as project work so customers do not need a second tool.",
+    steps: [
+      "Confirm Service operations is on in Settings, Capabilities.",
+      "Create a work order from Work Orders or the Work Journey board.",
+      "Start work, submit for approval, then approve or send back in Approval Center.",
+      "Use Recurring Services to generate the next visit, Documents for packets, and Work Schedule or Scheduling to see the crew.",
+      "Field staff clock in from Employee Portal. Admins manage people, role packs, instances, and trials.",
+    ],
+    tips: ["Finance does not get this pack by default. Staff does, so they can run jobs in the field."],
+  },
+  {
+    id: "work-orders",
+    title: "Work Orders",
+    group: "Service",
+    href: "/app/work-orders",
+    audience: "internal",
+    viewCap: "view_service_ops",
+    keywords: ["work order", "work orders", "field job", "dispatch", "priority"],
+    summary:
+      "Work Orders is the job list. Filter by status or priority, then start, submit, complete, approve, or send back.",
+    steps: [
+      "Open Work Orders and choose New work order.",
+      "Set title, company, assignee, priority, and schedule.",
+      "Use Start work, Submit for approval, or Mark complete on the row.",
+    ],
+    tips: ["The same jobs appear on Work Journey as a board."],
+  },
+  {
+    id: "work-journey",
+    title: "Work Journey",
+    group: "Service",
+    href: "/app/work-journey",
+    audience: "internal",
+    viewCap: "view_service_ops",
+    keywords: ["work journey", "pipeline", "board", "start work", "mark complete"],
+    summary: "Work Journey is the status board for field jobs, from Scheduled through Completed.",
+    steps: [
+      "Open Work Journey.",
+      "Create a work order, then move it with Start work, Submit for approval, Approve, or Send back.",
+    ],
+    tips: ["Approve and Send back need the manage service operations right."],
+  },
+  {
+    id: "employee-portal",
+    title: "Employee Portal",
+    group: "Service",
+    href: "/app/employee",
+    audience: "internal",
+    viewCap: "view_service_ops",
+    keywords: ["employee portal", "clock in", "clock out", "jobs today", "field hours"],
+    summary: "Employee Portal is the crew view: clock in or out, see jobs assigned to you, and read hours for the week.",
+    steps: [
+      "Open Employee Portal.",
+      "Clock in when you start a visit. Clock out when you leave.",
+      "Read Jobs today and Hours this week.",
+    ],
+    tips: ["Scheduling and Team Management show the same clocks to dispatchers."],
+  },
+  {
+    id: "promotional-trial",
+    title: "Promotional Trial",
+    group: "Service",
+    href: "/app/promotional-trial",
+    audience: "internal",
+    viewCap: "view_service_ops",
+    keywords: ["promotional trial", "trial", "slots", "service trial"],
+    summary:
+      "Promotional Trial turns Service operations on for a limited window and counts how many trial slots are used.",
+    steps: [
+      "Open Promotional Trial.",
+      "Set days and slots, then Save trial.",
+      "Start service operations trial to enable the pack and consume a slot.",
+    ],
+    tips: ["Use this when a customer wants to try field service without buying the pack yet."],
+  },
+  {
     id: "signin",
     title: "Sign in and sign up",
     group: "Admin",
@@ -606,7 +738,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
 ];
 
-export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Value", "Align", "Admin", "Portal"];
+export const HELP_GROUPS = ["Overview", "Deliver", "Clients", "Value", "Align", "Service", "Admin", "Portal"];
 
 export function articlesForAudience(audience: HelpAudience) {
   return HELP_ARTICLES.filter((article) => article.audience === audience || article.audience === "both");
@@ -618,7 +750,7 @@ export function findArticle(id: string) {
 
 export const ROLE_HELP: Record<Role, string> = {
   admin:
-    "Admin has every right: every module, user management, lifecycle, invoices, payments, and automations.",
+    "Admin has every right: every module, capability packs, user management, lifecycle, invoices, payments, and automations.",
   leadership:
     "Leadership can see almost the whole workspace, edit strategy, ideas, portfolios, risks, dependencies, and gates, and see financials. Leadership cannot manage users, run automations, or record invoice payment.",
   pm: "Project Managers own delivery: projects, plan, team, files, invoices, time approval, and ideas. They can view Users & roles but cannot add or edit people. They cannot configure lifecycle or automations.",

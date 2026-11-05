@@ -24,6 +24,18 @@ const SEGMENT_LABELS: Record<string, string> = {
   ai: "Insights",
   automations: "Automations",
   settings: "Settings",
+  "work-journey": "Work Journey",
+  "work-orders": "Work Orders",
+  "recurring-services": "Recurring Services",
+  documents: "Documents",
+  "work-schedule": "Work Schedule",
+  scheduling: "Scheduling",
+  approvals: "Approval Center",
+  employee: "Employee Portal",
+  team: "Team Management",
+  roles: "Role Management",
+  instances: "Instances",
+  "promotional-trial": "Promotional Trial",
 };
 
 function titleCase(value: string) {
