@@ -743,6 +743,35 @@ button, input, select, textarea { font: inherit; }
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 16px;
 }
+.split-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.journey-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
+.journey-step {
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-fog);
+  text-align: center;
+}
+.journey-step-value {
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: var(--color-ink);
+}
+.journey-step-label {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  font-weight: 650;
+}
 .section-title {
   margin: 0 0 12px;
   font-size: 0.95rem;
@@ -851,7 +880,7 @@ button, input, select, textarea { font: inherit; }
 }
 @media (max-width: 1200px) {
   .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .split-2 { grid-template-columns: 1fr; }
+  .split-2, .split-3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .metric-grid { grid-template-columns: 1fr 1fr; }

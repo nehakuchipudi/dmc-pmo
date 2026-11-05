@@ -103,8 +103,8 @@ export function SettingsWorkspace() {
               <div>
                 <h1 className="page-title">Capabilities</h1>
                 <p className="page-sub">
-                  DMC PMO is one modular platform. Turn on only the packs this customer needs: project management,
-                  project delivery, or field service operations.
+                  DMC PMO is one modular platform. Turn on only the packs this customer needs. Home and the left nav
+                  update as soon as you change a pack.
                 </p>
               </div>
             </header>

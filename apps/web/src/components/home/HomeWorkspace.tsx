@@ -6,202 +6,385 @@ import { ActivityList } from "@/components/records/ActivityStream";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
 import { Avatar, PageHeader, StatusPill, statusTone } from "@/components/ui";
 import { composeActivityFeed } from "@/lib/activity";
-import { allocationByMember, blockedDependencies, openHighRisks, portfolioMetrics } from "@/lib/ppm";
+import { useAuth } from "@/lib/auth";
+import { homeSectionOn, hasPack } from "@/lib/modules";
+import { allocationByMember, blockedDependencies, openHighRisks } from "@/lib/ppm";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
+
+function firstName(name?: string) {
+  return name?.trim().split(/\s+/)[0] || "there";
+}
+
+function dueIn(date: string) {
+  const days = Math.round((new Date(`${date}T00:00:00`).getTime() - Date.now()) / 86400000);
+  if (Number.isNaN(days) || days <= 0) return "Due now";
+  if (days === 1) return "In 1 day";
+  if (days < 7) return `In ${days} days`;
+  if (days < 14) return "In 1 week";
+  return `In ${Math.round(days / 7)} weeks`;
+}
+
+function homeSubtitle(packs: string[]) {
+  const bits = [];
+  if (packs.includes("project_delivery") || packs.includes("project_management")) bits.push("projects");
+  if (packs.includes("service_operations")) bits.push("operations");
+  if (packs.includes("project_delivery")) bits.push("team");
+  if (!bits.length) return "Turn on capabilities in Settings to populate this view.";
+  return `${bits.join(", ")} performance at a glance.`;
+}
 
 export function HomeWorkspace() {
   const focusCompanyId = useAppStore((s) => s.focusCompanyId);
   if (focusCompanyId) return <CompanyHome key={focusCompanyId} companyId={focusCompanyId} />;
-  return <PortfolioHome />;
+  return <WorkspaceHome />;
 }
 
-function PortfolioHome() {
+function WorkspaceHome() {
+  const { user, canSeeFinancials } = useAuth();
+  const enabledPacks = useAppStore((s) => s.enabledPacks);
   const projects = useAppStore((s) => s.projects);
   const portfolios = useAppStore((s) => s.portfolios);
-  const objectives = useAppStore((s) => s.objectives);
   const risks = useAppStore((s) => s.risks);
-  const gates = useAppStore((s) => s.gates);
+  const issues = useAppStore((s) => s.issues);
   const allocations = useAppStore((s) => s.allocations);
-  const benefits = useAppStore((s) => s.benefits);
-  const dependencies = useAppStore((s) => s.dependencies);
   const invoices = useAppStore((s) => s.invoices);
   const workOrders = useAppStore((s) => s.workOrders);
-  const fieldClocks = useAppStore((s) => s.fieldClocks);
+  const opportunities = useAppStore((s) => s.opportunities);
+  const milestones = useAppStore((s) => s.milestones);
+  const activities = useAppStore((s) => s.activities);
+  const tasks = useAppStore((s) => s.tasks);
+  const timeEntries = useAppStore((s) => s.timeEntries);
   const companies = useAppStore((s) => s.companies);
-  const tickets = useAppStore((s) => s.tickets);
+  const dependencies = useAppStore((s) => s.dependencies);
+  const show = (section: Parameters<typeof homeSectionOn>[0]) => homeSectionOn(section, enabledPacks);
 
   const snapshot = useMemo(() => {
-    const delivery = portfolios.find((p) => p.id === "pf-delivery");
-    const metrics = delivery ? portfolioMetrics(delivery, projects) : null;
-    const mapped = new Set(portfolios.flatMap((p) => p.projectIds));
-    const aligned = projects.filter((p) => mapped.has(p.id)).length;
+    const activeProjects = projects.filter((p) => p.status !== "Completed" && p.status !== "Cancelled");
+    const onTrack = activeProjects.filter((p) => p.status === "Active" || p.status === "Planning" || p.status === "Draft").length;
+    const atRisk = activeProjects.filter((p) => p.status === "At Risk").length;
+    const behind = activeProjects.filter((p) => p.status === "On Hold").length;
     const capacity = allocationByMember(allocations);
     const overloaded = capacity.filter((c) => c.pct > 100);
-    const highRisks = openHighRisks(risks);
-    const benefitAvg = benefits.length
-      ? Math.round(benefits.reduce((sum, b) => sum + b.progress, 0) / benefits.length)
+    const available = capacity.filter((c) => c.pct <= 80);
+    const util = capacity.length ? Math.round(capacity.reduce((sum, row) => sum + row.pct, 0) / capacity.length) : 0;
+    const outstanding = invoices.filter((i) => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
+    const budgeted = activeProjects.reduce((sum, p) => sum + p.budgetAmount, 0);
+    const actual = invoices.filter((i) => i.status !== "Draft").reduce((sum, i) => sum + i.amount, 0);
+    const variance = budgeted - actual;
+    const progress = activeProjects.length
+      ? Math.round(activeProjects.reduce((sum, p) => sum + p.progress, 0) / activeProjects.length)
       : 0;
-    const overdueCash = invoices.filter((i) => i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
+    const types = new Map<string, number>();
+    for (const project of activeProjects) {
+      const key = project.projectType || "General";
+      types.set(key, (types.get(key) ?? 0) + 1);
+    }
+    const upcoming = [...milestones]
+      .filter((row) => row.status !== "Approved")
+      .sort((a, b) => a.due.localeCompare(b.due))
+      .slice(0, 4);
+    const activity = composeActivityFeed({
+      activities,
+      projects,
+      tasks,
+      timeEntries,
+      milestones,
+    }).slice(0, 5);
     return {
-      metrics,
-      alignedPct: projects.length ? Math.round((aligned / projects.length) * 100) : 0,
-      overloaded,
-      highRisks,
-      benefitAvg,
-      overdueCash,
-      blocked: blockedDependencies(dependencies),
-      pendingGates: gates.filter((g) => g.status === "In Review" || g.status === "Upcoming"),
+      activeProjects: activeProjects.length,
+      portfolios: portfolios.length,
       fieldOpen: workOrders.filter((row) => row.status !== "Completed").length,
-      fieldPending: workOrders.filter((row) => row.status === "Pending approval"),
-      crewLive: fieldClocks.filter((row) => !row.stoppedAt).length,
+      util,
+      overloaded,
+      available: available.length,
+      allocated: capacity.length - available.length,
+      outstanding,
+      onTrack,
+      atRisk,
+      behind,
+      quotes: opportunities.filter((row) => row.stage !== "Won" && row.stage !== "Lost").length,
+      scheduled: workOrders.filter((row) => row.status === "Scheduled").length,
+      inProgress: workOrders.filter((row) => row.status === "In progress").length,
+      approval: workOrders.filter((row) => row.status === "Pending approval").length,
+      invoicing: invoices.filter((row) => row.status === "Draft" || row.status === "Sent").length,
+      budgeted,
+      actual,
+      variance,
+      progress,
+      risks: openHighRisks(risks).length,
+      issues: issues.filter((row) => row.status !== "Resolved").length,
+      blocked: blockedDependencies(dependencies).length,
+      types: [...types.entries()].sort((a, b) => b[1] - a[1]),
+      upcoming,
+      activity,
       companies: companies.length,
-      openTickets: tickets.filter((row) => row.status !== "Resolved").length,
     };
-  }, [portfolios, projects, allocations, risks, benefits, invoices, dependencies, gates, workOrders, fieldClocks, companies, tickets]);
+  }, [
+    projects,
+    portfolios,
+    allocations,
+    invoices,
+    workOrders,
+    opportunities,
+    milestones,
+    activities,
+    tasks,
+    timeEntries,
+    risks,
+    issues,
+    companies,
+    dependencies,
+  ]);
+
+  const kpis = [
+    show("projects") ? (
+      <MetricCard
+        key="projects"
+        label="Active projects"
+        value={snapshot.activeProjects}
+        hint={`${snapshot.onTrack} on track · ${snapshot.atRisk} at risk`}
+        tone={snapshot.atRisk ? "warn" : "good"}
+      />
+    ) : null,
+    show("portfolios") ? (
+      <MetricCard key="portfolios" label="Active portfolios" value={snapshot.portfolios} hint={`${snapshot.companies} companies on the book`} />
+    ) : null,
+    show("work_orders") ? (
+      <MetricCard
+        key="work"
+        label="Open work orders"
+        value={snapshot.fieldOpen}
+        hint={`${snapshot.approval} waiting on approval`}
+        tone={snapshot.approval ? "warn" : snapshot.fieldOpen ? "good" : "warn"}
+      />
+    ) : null,
+    show("utilization") || show("work_orders") ? (
+      <MetricCard
+        key="util"
+        label="Team utilization"
+        value={snapshot.util ? `${snapshot.util}%` : "-"}
+        hint={snapshot.overloaded.length ? `${snapshot.overloaded.length} over capacity` : "No one above 100%"}
+        tone={snapshot.overloaded.length ? "bad" : snapshot.util >= 70 ? "good" : "warn"}
+      />
+    ) : null,
+    show("billing") && canSeeFinancials ? (
+      <MetricCard
+        key="bill"
+        label="Outstanding billing"
+        value={money(snapshot.outstanding)}
+        hint="Sent and overdue invoices"
+        tone={snapshot.outstanding ? "warn" : "good"}
+      />
+    ) : null,
+  ].filter(Boolean);
 
   return (
     <div className="fade-in">
-      <PageHeader
-        title="Portfolio home"
-        subtitle="Are we on the right projects, with the right people, at the right cost, with acceptable risk, and are those projects moving the strategy?"
-      />
-      <MetricGrid>
-        <MetricCard
-          label="Right work"
-          value={`${snapshot.alignedPct}%`}
-          hint="Active projects mapped to a portfolio and objective"
-          tone={snapshot.alignedPct >= 80 ? "good" : "warn"}
-        />
-        <MetricCard
-          label="Right resources"
-          value={snapshot.overloaded.length ? `${snapshot.overloaded.length} over` : "In band"}
-          hint={snapshot.overloaded.length ? snapshot.overloaded.map((o) => o.name).join(", ") : "No one above 100% allocation"}
-          tone={snapshot.overloaded.length ? "bad" : "good"}
-        />
-        <MetricCard
-          label="Right cost"
-          value={snapshot.metrics ? `${snapshot.metrics.margin}%` : "-"}
-          hint={snapshot.metrics ? `${money(snapshot.metrics.invested)} invested · ${snapshot.metrics.hoursUsed}/${snapshot.metrics.hoursBudget} hrs` : "No portfolio"}
-          tone={(snapshot.metrics?.margin ?? 0) >= 28 ? "good" : "warn"}
-        />
-        <MetricCard
-          label="Acceptable risk"
-          value={snapshot.highRisks.length}
-          hint={`${snapshot.blocked.length} cross-project holds · ${money(snapshot.overdueCash)} overdue invoices`}
-          tone={snapshot.highRisks.length > 2 ? "bad" : snapshot.highRisks.length ? "warn" : "good"}
-        />
-        <MetricCard
-          label="Strategy moving"
-          value={`${snapshot.benefitAvg}%`}
-          hint="Average benefit realization against target"
-          tone={snapshot.benefitAvg >= 60 ? "good" : "warn"}
-        />
-      </MetricGrid>
+      <PageHeader title={`Welcome back, ${firstName(user?.name)}`} subtitle={homeSubtitle(enabledPacks)} />
+      {kpis.length ? <MetricGrid>{kpis}</MetricGrid> : null}
 
-      <div className="mt-4">
-        <h2 className="section-title">Operations now</h2>
-        <MetricGrid>
-          <MetricCard
-            label="Field jobs"
-            value={snapshot.fieldOpen}
-            hint={`${snapshot.fieldPending.length} waiting on approval`}
-            tone={snapshot.fieldPending.length ? "warn" : snapshot.fieldOpen ? "good" : "warn"}
-          />
-          <MetricCard
-            label="Crew on site"
-            value={snapshot.crewLive}
-            hint={snapshot.crewLive ? "Live clocks from Employee Portal" : "No one clocked in"}
-          />
-          <MetricCard label="Companies" value={snapshot.companies} hint="Client and partner accounts on the book" />
-          <MetricCard
-            label="Open tickets"
-            value={snapshot.openTickets}
-            hint="Support requests still in flight"
-            tone={snapshot.openTickets ? "warn" : "good"}
-          />
-        </MetricGrid>
-      </div>
-
-      <div className="split-2">
-        <div className="panel p-5">
-          <h2 className="section-title">Portfolios in flight</h2>
-          <DataTable
-            columns={["Portfolio", "Owner", "Health", "Progress", "Projects"]}
-            rows={portfolios.map((portfolio) => {
-              const m = portfolioMetrics(portfolio, projects);
-              return [
-                <Link key={portfolio.id} href={`/app/portfolios/view/?id=${portfolio.id}`} className="font-semibold text-[var(--color-navy)]">
-                  {portfolio.name}
-                </Link>,
-                portfolio.owner,
-                <Pill key={`${portfolio.id}-h`} value={m.health} />,
-                <ProgressLine key={`${portfolio.id}-p`} value={m.progress} />,
-                String(m.items.length),
-              ];
-            })}
-          />
+      {(show("health") || show("journey") || show("capacity") || show("work_orders")) && (
+        <div className="split-3">
+          {show("health") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Portfolio health</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">{snapshot.activeProjects} active projects</p>
+              <div className="space-y-3">
+                <div>
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span>On track</span>
+                    <span>{snapshot.onTrack}</span>
+                  </div>
+                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.onTrack / snapshot.activeProjects) * 100) : 0} />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span>At risk</span>
+                    <span>{snapshot.atRisk}</span>
+                  </div>
+                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.atRisk / snapshot.activeProjects) * 100) : 0} />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span>Behind</span>
+                    <span>{snapshot.behind}</span>
+                  </div>
+                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.behind / snapshot.activeProjects) * 100) : 0} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {show("journey") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Work journey</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">Quotes through field work and invoicing</p>
+              <div className="journey-steps">
+                {[
+                  hasPack(enabledPacks, "project_delivery") ? ["Quotes", snapshot.quotes] : null,
+                  ["Scheduled", snapshot.scheduled],
+                  ["In progress", snapshot.inProgress],
+                  ["Approval", snapshot.approval],
+                  hasPack(enabledPacks, "project_delivery") ? ["Invoicing", snapshot.invoicing] : null,
+                ]
+                  .filter((row): row is [string, number] => Boolean(row))
+                  .map(([label, value]) => (
+                    <div key={label} className="journey-step">
+                      <div className="journey-step-value">{value}</div>
+                      <div className="journey-step-label">{label}</div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : null}
+          {show("capacity") || show("work_orders") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Resource capacity</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">{snapshot.util || 0}% overall utilization</p>
+              <ProgressLine value={snapshot.util} />
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Allocated</span>
+                  <span>{snapshot.allocated}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Available</span>
+                  <span>{snapshot.available}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Over capacity</span>
+                  <span>{snapshot.overloaded.length}</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
-        <div className="panel p-5">
-          <h2 className="section-title">Needs a decision</h2>
-          <div className="space-y-3">
-            {snapshot.pendingGates.slice(0, 4).map((gate) => (
-              <Link key={gate.id} href="/app/governance" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{gate.name}</div>
-                  <Pill value={gate.status} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {gate.stage} · due {gate.due} · {gate.owner}
-                </div>
-              </Link>
-            ))}
-            {snapshot.fieldPending.slice(0, 3).map((job) => (
-              <Link key={job.id} href="/app/approvals" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{job.title}</div>
-                  <Pill value={job.priority} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {job.companyName} · {job.assignee || "Unassigned"} · pending approval
-                </div>
-              </Link>
-            ))}
-            {snapshot.highRisks.slice(0, 3).map((risk) => (
-              <Link key={risk.id} href="/app/risks" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{risk.title}</div>
-                  <Pill value={risk.impact} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {risk.owner} · {risk.status}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
 
-      <div className="mt-4 panel p-5">
-        <h2 className="section-title">Strategic objectives</h2>
-        <DataTable
-          columns={["Code", "Objective", "Owner", "Status", "Progress"]}
-          rows={objectives.map((o) => [
-            o.code,
-            <Link key={o.id} href={`/app/strategy/view/?id=${o.id}`} className="font-medium text-[var(--color-navy)]">
-              {o.name}
-            </Link>,
-            o.owner,
-            <Pill key={`${o.id}-s`} value={o.status} />,
-            <ProgressLine key={`${o.id}-p`} value={o.progress} />,
-          ])}
-        />
-      </div>
+      {(show("financials") || show("trend") || show("risks")) && (
+        <div className="mt-4 split-3">
+          {show("financials") && canSeeFinancials ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Financial overview</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Budgeted</span>
+                  <span className="font-semibold">{money(snapshot.budgeted)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Actual</span>
+                  <span className="font-semibold">{money(snapshot.actual)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Variance</span>
+                  <span className="font-semibold">
+                    {money(snapshot.variance)}
+                    {snapshot.budgeted ? ` · ${Math.round((snapshot.variance / snapshot.budgeted) * 100)}%` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {show("trend") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Project trend</h2>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">Average progress across active projects</p>
+              <ProgressLine value={snapshot.progress} />
+              <p className="mt-3 text-sm text-[var(--color-muted)]">{snapshot.progress}% complete</p>
+            </div>
+          ) : null}
+          {show("risks") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Risks and issues</h2>
+              <Link href="/app/risks" className="insight-card block">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold">{snapshot.risks} risks</div>
+                  <Pill value={snapshot.risks ? "Watch" : "Healthy"} />
+                </div>
+                <div className="mt-1 text-sm text-[var(--color-muted)]">Open high-impact items</div>
+              </Link>
+              <Link href="/app/tickets" className="insight-card block">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold">{snapshot.issues} issues</div>
+                  <Pill value={snapshot.issues ? "Open" : "Clear"} />
+                </div>
+                <div className="mt-1 text-sm text-[var(--color-muted)]">{snapshot.blocked} cross-project holds</div>
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {(show("milestones") || show("distribution") || show("activity")) && (
+        <div className="mt-4 split-3">
+          {show("milestones") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Upcoming milestones</h2>
+              {snapshot.upcoming.length ? (
+                <div className="space-y-3">
+                  {snapshot.upcoming.map((row) => {
+                    const project = projects.find((p) => p.id === row.projectId);
+                    return (
+                      <Link key={row.id} href={project ? `/app/projects/view/?id=${project.id}` : "/app/projects"} className="insight-card block">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-semibold">{row.name}</div>
+                          <span className="text-sm text-[var(--color-muted)]">{dueIn(row.due)}</span>
+                        </div>
+                        <div className="mt-1 text-sm text-[var(--color-muted)]">
+                          {project?.name ?? "Project"} · {formatDisplayDate(row.due)}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">No upcoming milestones yet.</p>
+              )}
+            </div>
+          ) : null}
+          {show("distribution") ? (
+            <div className="panel p-5">
+              <h2 className="section-title">Project distribution</h2>
+              {snapshot.types.length ? (
+                <div className="space-y-3">
+                  {snapshot.types.map(([type, count]) => (
+                    <div key={type}>
+                      <div className="mb-1 flex justify-between text-sm">
+                        <span>{type}</span>
+                        <span>
+                          {count} · {snapshot.activeProjects ? Math.round((count / snapshot.activeProjects) * 100) : 0}%
+                        </span>
+                      </div>
+                      <ProgressLine value={snapshot.activeProjects ? Math.round((count / snapshot.activeProjects) * 100) : 0} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">Add projects to see type mix.</p>
+              )}
+            </div>
+          ) : null}
+          {show("activity") ? (
+            <div className="panel p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  Recent activity
+                </h2>
+                <Link href="/app/audit" className="text-sm text-[var(--color-navy)]">
+                  View all
+                </Link>
+              </div>
+              {snapshot.activity.length ? <ActivityList items={snapshot.activity} compact /> : <p className="text-sm text-[var(--color-muted)]">Nothing posted yet.</p>}
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
 
 function CompanyHome({ companyId }: { companyId: string }) {
+  const enabledPacks = useAppStore((s) => s.enabledPacks);
   const companies = useAppStore((s) => s.companies);
   const projects = useAppStore((s) => s.projects);
   const contacts = useAppStore((s) => s.contacts);
@@ -215,6 +398,8 @@ function CompanyHome({ companyId }: { companyId: string }) {
   const risks = useAppStore((s) => s.risks);
   const workOrders = useAppStore((s) => s.workOrders);
   const addActivityNote = useAppStore((s) => s.addActivityNote);
+  const showDelivery = hasPack(enabledPacks, "project_delivery");
+  const showService = hasPack(enabledPacks, "service_operations");
 
   const company = companies.find((c) => c.id === companyId);
   const companyProjects = useMemo(() => projects.filter((p) => p.companyId === companyId), [projects, companyId]);
@@ -269,9 +454,11 @@ function CompanyHome({ companyId }: { companyId: string }) {
             <Link href={`/app/companies/view/?id=${company.id}`} className="btn btn-ghost">
               Open company record
             </Link>
-            <Link href="/app/projects/" className="btn btn-primary">
-              Projects
-            </Link>
+            {showDelivery ? (
+              <Link href="/app/projects/" className="btn btn-primary">
+                Projects
+              </Link>
+            ) : null}
           </>
         }
       />
@@ -284,37 +471,37 @@ function CompanyHome({ companyId }: { companyId: string }) {
         {company.address ? <span className="text-[var(--color-muted)]">{company.address}</span> : null}
       </div>
       <MetricGrid>
-        <MetricCard label="Open projects" value={companyProjects.length} hint={`${company.openProjects} marked open on the record`} />
+        {showDelivery ? <MetricCard label="Open projects" value={companyProjects.length} hint={`${company.openProjects} marked open on the record`} /> : null}
         <MetricCard
           label="Open tickets"
           value={openTickets.length}
           hint={openTickets[0]?.subject ?? "No open tickets"}
           tone={openTickets.some((t) => t.priority === "Urgent") ? "bad" : openTickets.length ? "warn" : "good"}
         />
-        <MetricCard
-          label="Outstanding"
-          value={money(outstanding)}
-          hint={overdue ? `${money(overdue)} overdue` : `${companyInvoices.length} invoices`}
-          tone={overdue ? "bad" : outstanding ? "warn" : "good"}
-        />
-        <MetricCard label="Hours logged" value={`${hours}h`} hint="Time on this company's projects" />
-        <MetricCard
-          label="Retainers"
-          value={companyRetainers.length}
-          hint={companyRetainers[0]?.name ?? "No retainers"}
-        />
-        <MetricCard
-          label="Field jobs"
-          value={companyJobs.length}
-          hint={companyJobs[0]?.title ?? "No open work orders"}
-          tone={companyJobs.some((row) => row.status === "Pending approval") ? "warn" : "good"}
-        />
+        {showDelivery ? (
+          <MetricCard
+            label="Outstanding"
+            value={money(outstanding)}
+            hint={overdue ? `${money(overdue)} overdue` : `${companyInvoices.length} invoices`}
+            tone={overdue ? "bad" : outstanding ? "warn" : "good"}
+          />
+        ) : null}
+        {showDelivery ? <MetricCard label="Hours logged" value={`${hours}h`} hint="Time on this company's projects" /> : null}
+        {showDelivery ? <MetricCard label="Retainers" value={companyRetainers.length} hint={companyRetainers[0]?.name ?? "No retainers"} /> : null}
+        {showService ? (
+          <MetricCard
+            label="Field jobs"
+            value={companyJobs.length}
+            hint={companyJobs[0]?.title ?? "No open work orders"}
+            tone={companyJobs.some((row) => row.status === "Pending approval") ? "warn" : "good"}
+          />
+        ) : null}
       </MetricGrid>
 
       <div className="split-2">
         <div className="panel p-5">
           <h2 className="section-title">Projects</h2>
-          {companyProjects.length ? (
+          {showDelivery && companyProjects.length ? (
             <DataTable
               columns={["Project", "Manager", "Status", "Progress", "Due"]}
               rows={companyProjects.map((project) => [
@@ -330,27 +517,31 @@ function CompanyHome({ companyId }: { companyId: string }) {
               ])}
             />
           ) : (
-            <p className="text-sm text-[var(--color-muted)]">No projects on this company yet.</p>
+            <p className="text-sm text-[var(--color-muted)]">{showDelivery ? "No projects on this company yet." : "Project delivery is off for this workspace."}</p>
           )}
         </div>
         <div className="panel p-5">
           <h2 className="section-title">Needs attention</h2>
           <div className="space-y-3">
-            {companyJobs.slice(0, 3).map((job) => (
-              <Link key={job.id} href="/app/work-orders" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{job.title}</div>
-                  <Pill value={job.status} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {job.assignee || "Unassigned"} · {job.scheduled}
-                </div>
-              </Link>
-            ))}
+            {showService
+              ? companyJobs.slice(0, 3).map((job) => (
+                  <Link key={job.id} href="/app/work-orders" className="insight-card block">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold">{job.title}</div>
+                      <Pill value={job.status} />
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--color-muted)]">
+                      {job.assignee || "Unassigned"} · {job.scheduled}
+                    </div>
+                  </Link>
+                ))
+              : null}
             {openTickets.slice(0, 3).map((ticket) => (
               <Link key={ticket.id} href={`/app/tickets/view/?id=${ticket.id}`} className="insight-card block">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">#{ticket.number} {ticket.subject}</div>
+                  <div className="font-semibold">
+                    #{ticket.number} {ticket.subject}
+                  </div>
                   <Pill value={ticket.priority} />
                 </div>
                 <div className="mt-1 text-sm text-[var(--color-muted)]">
@@ -358,18 +549,20 @@ function CompanyHome({ companyId }: { companyId: string }) {
                 </div>
               </Link>
             ))}
-            {openRisks.slice(0, 3).map((risk) => (
-              <Link key={risk.id} href="/app/risks" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{risk.title}</div>
-                  <Pill value={risk.impact} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {risk.owner} · {risk.status}
-                </div>
-              </Link>
-            ))}
-            {!openTickets.length && !openRisks.length && !companyJobs.length ? (
+            {showDelivery
+              ? openRisks.slice(0, 3).map((risk) => (
+                  <Link key={risk.id} href="/app/risks" className="insight-card block">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold">{risk.title}</div>
+                      <Pill value={risk.impact} />
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--color-muted)]">
+                      {risk.owner} · {risk.status}
+                    </div>
+                  </Link>
+                ))
+              : null}
+            {!openTickets.length && (!showDelivery || !openRisks.length) && (!showService || !companyJobs.length) ? (
               <p className="text-sm text-[var(--color-muted)]">Nothing open on this company.</p>
             ) : null}
           </div>
@@ -385,24 +578,28 @@ function CompanyHome({ companyId }: { companyId: string }) {
                 <Avatar initials={primary.initials} name={primary.name} size={36} />
                 <div>
                   <div className="font-semibold">{primary.name}</div>
-                  <div className="text-sm text-[var(--color-muted)]">{primary.title} · {primary.email}</div>
+                  <div className="text-sm text-[var(--color-muted)]">
+                    {primary.title} · {primary.email}
+                  </div>
                 </div>
               </Link>
             ) : (
               <p className="text-sm text-[var(--color-muted)]">No contacts yet.</p>
             )}
-            {companyInvoices.slice(0, 4).map((invoice) => (
-              <Link key={invoice.id} href={`/app/billing/view/?id=${invoice.id}`} className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{invoice.number}</div>
-                  <StatusPill tone={statusTone(invoice.status)}>{invoice.status}</StatusPill>
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">
-                  {money(invoice.amount)} · due {formatDisplayDate(invoice.due)}
-                </div>
-              </Link>
-            ))}
-            {!companyInvoices.length ? <p className="text-sm text-[var(--color-muted)]">No invoices on this company.</p> : null}
+            {showDelivery
+              ? companyInvoices.slice(0, 4).map((invoice) => (
+                  <Link key={invoice.id} href={`/app/billing/view/?id=${invoice.id}`} className="insight-card block">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold">{invoice.number}</div>
+                      <StatusPill tone={statusTone(invoice.status)}>{invoice.status}</StatusPill>
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--color-muted)]">
+                      {money(invoice.amount)} · due {formatDisplayDate(invoice.due)}
+                    </div>
+                  </Link>
+                ))
+              : null}
+            {showDelivery && !companyInvoices.length ? <p className="text-sm text-[var(--color-muted)]">No invoices on this company.</p> : null}
           </div>
         </div>
         <div className="panel p-5">

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { DEFAULT_PACKS, NAV_GROUPS, NAV_MODULES, PACKS, hasPack, packForHref, packsOf } from "./modules";
+import { DEFAULT_PACKS, NAV_GROUPS, NAV_MODULES, PACKS, hasPack, homeSectionOn, packForHref, packsOf } from "./modules";
 import { canUsePack, DEFAULT_ROLE_PACKS, packsForRole } from "./service-ops";
 
 assert.equal(PACKS.length, 3);
@@ -39,5 +39,11 @@ assert.deepEqual(
     "settings",
   ],
 );
+
+assert.equal(homeSectionOn("work_orders", ["project_delivery"]), false);
+assert.equal(homeSectionOn("work_orders", ["service_operations"]), true);
+assert.equal(homeSectionOn("activity", []), true);
+assert.equal(homeSectionOn("projects", ["project_delivery"]), true);
+assert.equal(homeSectionOn("financials", ["service_operations"]), false);
 
 console.log("modules.verify ok");
