@@ -53,6 +53,14 @@ const PILLARS = [
     image: "/marketing/card-insights.jpg?v=6",
     watch: "watch-ai",
   },
+  {
+    id: "service",
+    title: "Service operations",
+    body: "Dispatch work orders, recurring visits, and the crew without a second PMO tool.",
+    detail: "Work Journey, schedule, approvals, and the employee clock live in the same workspace as the project book.",
+    image: "/marketing/card-overview.jpg?v=6",
+    watch: "watchnow",
+  },
 ] as const;
 
 export function LandingConnected() {
