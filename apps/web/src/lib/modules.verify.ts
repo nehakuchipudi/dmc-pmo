@@ -25,7 +25,7 @@ assert.ok(NAV_MODULES.some((item) => item.href === "/app/contacts"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/quotes"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/analytics"));
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/audit"));
-assert.ok(NAV_MODULES.some((item) => item.href === "/app/ideas" && item.group === "project_management"));
+assert.equal(NAV_MODULES.find((item) => item.group === "project_management")?.href, "/app/ideas");
 assert.ok(NAV_MODULES.some((item) => item.href === "/app/automations" && item.group === "settings"));
 assert.deepEqual(
   NAV_GROUPS.map((group) => group.id),

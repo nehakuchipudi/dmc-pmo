@@ -48,11 +48,11 @@ export type NavModule = {
 };
 
 export const NAV_MODULES: NavModule[] = [
+  { href: "/app/ideas", label: "Ideas", pack: "project_management", group: "project_management" },
   { href: "/app/projects", label: "Projects", pack: "project_delivery", group: "project_management" },
   { href: "/app/work", label: "Work", pack: "project_delivery", group: "project_management" },
   { href: "/app/tickets", label: "Tickets", pack: "project_delivery", group: "project_management" },
   { href: "/app/timesheets", label: "Timesheets", pack: "project_delivery", group: "project_management" },
-  { href: "/app/ideas", label: "Ideas", pack: "project_management", group: "project_management" },
   { href: "/app/resources", label: "Resources", pack: "project_delivery", group: "resource_management" },
   { href: "/app/team", label: "Team Management", pack: "service_operations", group: "resource_management" },
   { href: "/app/employee", label: "Employee Portal", pack: "service_operations", group: "resource_management" },
