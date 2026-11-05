@@ -24,8 +24,8 @@ export function MetricCard({
   );
 }
 
-export function MetricGrid({ children }: { children: ReactNode }) {
-  return <div className="metric-grid">{children}</div>;
+export function MetricGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={clsx("metric-grid", className)}>{children}</div>;
 }
 
 export function ProgressLine({ value, label }: { value: number; label?: string }) {

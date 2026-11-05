@@ -465,7 +465,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     id: "users",
     title: "Users and roles",
     group: "Admin",
-    href: "/app/settings",
+    href: "/app/settings/?section=users",
     audience: "internal",
     viewCap: "view_users",
     keywords: ["users", "roles", "permissions", "add user", "rbac", "access", "rates", "invite", "invitation"],
@@ -476,7 +476,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Admin: Add user, fill Profile, Organization, Rates, and Access.",
       "Keep Send an invitation email checked. Sign in with Microsoft so the invite leaves the outbox and reaches their inbox.",
       "Admin: Edit to change role. That role applies on the next page they open.",
-      "Use Send invite or Resend invite on a row to mail the signup and sign-in links again.",
+      "Open the row menu to send or resend an invite, copy the invite link, or deactivate someone.",
       "PM, Finance, and Leadership can view the roster but cannot edit it.",
     ],
     tips: [

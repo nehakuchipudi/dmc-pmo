@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
+  BarChart3,
   Bell,
   Briefcase,
   Building2,
@@ -12,12 +13,15 @@ import {
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   ClipboardCheck,
   ClipboardList,
   Clock3,
+  Contact,
   Eye,
   EyeOff,
+  FileSpreadsheet,
   FileText,
   FolderOpen,
   Gift,
@@ -31,6 +35,7 @@ import {
   Plus,
   Receipt,
   Repeat,
+  ScrollText,
   Search,
   Settings,
   Shield,
@@ -41,6 +46,7 @@ import {
   Users,
   UsersRound,
   Workflow,
+  Wrench,
   Zap,
   PanelLeftClose,
   PanelLeftOpen,
@@ -51,7 +57,7 @@ import { Avatar, ConfirmModal, Drawer, Field, Modal, TextSelect, TextTextarea } 
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { AccessDenied } from "@/components/shell/AccessDenied";
 import { canAccessHref, canCreateKind } from "@/lib/rbac";
-import { NAV_GROUP_ORDER, NAV_MODULES, PACKS, hasPack, packForHref } from "@/lib/modules";
+import { NAV_GROUP_ORDER, NAV_GROUPS, NAV_MODULES, PACKS, hasPack, packForHref } from "@/lib/modules";
 import { canUsePack } from "@/lib/service-ops";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
@@ -62,17 +68,16 @@ import { timerClock } from "@/lib/timesheet-work";
 
 const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/home": LayoutDashboard,
-  "/app/companies": Building2,
-  "/app/ideas": Lightbulb,
-  "/app/reports": FileText,
-  "/app/automations": Zap,
   "/app/projects": Briefcase,
   "/app/work": Workflow,
   "/app/tickets": Ticket,
   "/app/timesheets": Clock3,
+  "/app/ideas": Lightbulb,
+  "/app/automations": Zap,
   "/app/resources": Users,
-  "/app/retainers": ClipboardList,
-  "/app/billing": Receipt,
+  "/app/team": UsersRound,
+  "/app/employee": UserRound,
+  "/app/roles": Shield,
   "/app/work-journey": Map,
   "/app/work-orders": ClipboardCheck,
   "/app/recurring-services": Repeat,
@@ -80,11 +85,27 @@ const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/work-schedule": CalendarRange,
   "/app/scheduling": CalendarClock,
   "/app/approvals": BadgeCheck,
-  "/app/employee": UserRound,
-  "/app/team": UsersRound,
-  "/app/roles": Shield,
+  "/app/companies": Building2,
+  "/app/contacts": Contact,
+  "/app/retainers": ClipboardList,
+  "/app/billing": Receipt,
+  "/app/quotes": FileSpreadsheet,
+  "/app/reports": FileText,
+  "/app/analytics": BarChart3,
   "/app/instances": Layers,
   "/app/promotional-trial": Gift,
+  "/app/audit": ScrollText,
+  "/app/settings": Settings,
+};
+
+const GROUP_ICONS: Record<string, typeof Building2> = {
+  project_management: Briefcase,
+  resource_management: Users,
+  service_operations: Wrench,
+  business_management: Building2,
+  intelligence: BarChart3,
+  administration: Shield,
+  settings: Settings,
 };
 
 function deniedModuleName(pathname: string) {
@@ -124,8 +145,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [flyout, setFlyout] = useState<{ id: string; top: number; left: number } | null>(null);
   const [menu, setMenu] = useState<MenuId>(null);
   const hoverTimer = useRef(0);
+  const flyoutTimer = useRef(0);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{
     companyId?: string;
@@ -201,6 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setNavOpen(false);
     setMenu(null);
+    setFlyout(null);
   }, [pathname]);
 
   useEffect(() => {
@@ -315,16 +339,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
-  const navGroups = NAV_GROUP_ORDER.map((pack) => ({
-    pack,
-    label: PACKS.find((item) => item.id === pack)?.label ?? pack,
+  const showHome = canAccessHref(user.role, "/app/home");
+  const navGroups = NAV_GROUP_ORDER.map((group) => ({
+    id: group,
+    label: NAV_GROUPS.find((item) => item.id === group)?.label ?? group,
     items: NAV_MODULES.filter(
       (item) =>
-        item.pack === pack &&
+        item.group === group &&
         canAccessHref(user.role, item.href) &&
-        canUsePack(item.pack, enabledPacks, user.role, rolePacks),
+        canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
     ),
   })).filter((group) => group.items.length);
+  const settingsGroup = {
+    id: "settings" as const,
+    label: "Settings",
+    items: NAV_MODULES.filter(
+      (item) =>
+        item.group === "settings" &&
+        canAccessHref(user.role, item.href) &&
+        canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
+    ),
+  };
   const routePack = packForHref(pathname);
   const workspaceHasPack = !routePack || hasPack(enabledPacks, routePack);
   const routeAllowed = canAccessHref(user.role, pathname) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
@@ -402,6 +437,70 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCreateKind(kind);
   }
 
+  const allNavGroups = [...navGroups, settingsGroup];
+
+  function openFlyout(id: string, el: HTMLElement) {
+    window.clearTimeout(flyoutTimer.current);
+    const rect = el.getBoundingClientRect();
+    const height = 48 + (allNavGroups.find((group) => group.id === id)?.items.length ?? 0) * 38;
+    const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
+    setFlyout({ id, top, left: Math.round(rect.right + 8) });
+  }
+
+  function closeFlyoutSoon() {
+    window.clearTimeout(flyoutTimer.current);
+    flyoutTimer.current = window.setTimeout(() => setFlyout(null), 160);
+  }
+
+  function renderCategory(group: (typeof allNavGroups)[number]) {
+    const Icon = GROUP_ICONS[group.id] ?? Briefcase;
+    const hasActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+    const open = flyout?.id === group.id;
+    const flyoutProps = {
+      onMouseEnter: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+      onMouseLeave: closeFlyoutSoon,
+      onFocus: (event: { currentTarget: HTMLElement }) => openFlyout(group.id, event.currentTarget),
+      onBlur: closeFlyoutSoon,
+      onClick: (event: { currentTarget: HTMLElement }) => {
+        if (open) setFlyout(null);
+        else openFlyout(group.id, event.currentTarget);
+      },
+    };
+    if (collapsed) {
+      return (
+        <button
+          key={group.id}
+          type="button"
+          className={clsx("nav-category is-collapsed", hasActive && "is-active", open && "is-open")}
+          aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+          aria-expanded={open}
+          title={group.label}
+          {...flyoutProps}
+        >
+          <Icon size={17} />
+        </button>
+      );
+    }
+    return (
+      <div key={group.id} className={clsx("nav-category", hasActive && "is-active", open && "is-open")}>
+        <Icon size={17} />
+        <span className="nav-category-copy">{group.label}</span>
+        <button
+          type="button"
+          className="nav-category-arrow"
+          aria-label={`${open ? "Hide" : "Show"} ${group.label} modules`}
+          aria-expanded={open}
+          title={`Show ${group.label}`}
+          {...flyoutProps}
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  const flyoutGroup = flyout ? allNavGroups.find((group) => group.id === flyout.id) : null;
+
   return (
     <div className={clsx("app-shell", collapsed && "collapsed", navOpen && "nav-open")}>
       {navOpen ? <button type="button" className="shell-scrim" aria-label="Close navigation" onClick={() => setNavOpen(false)} /> : null}
@@ -425,21 +524,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav>
-          {navGroups.map((group) => (
-            <div key={group.pack} className="nav-group">
-              {!collapsed ? <div className="nav-group-label">{group.label}</div> : <div className="nav-group-rule" title={group.label} />}
-              {group.items.map((item) => {
-                const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
-                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-                return (
-                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                    <Icon size={17} />
-                    {!collapsed ? <span>{item.label}</span> : null}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {showHome ? (
+            <Link href="/app/home" className={clsx("nav-link", pathname === "/app/home" && "active")} title="Home">
+              <LayoutDashboard size={17} />
+              {!collapsed ? <span>Home</span> : null}
+            </Link>
+          ) : null}
+          {navGroups.map((group) => renderCategory(group))}
         </nav>
         <div className="nav-footer space-y-1">
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
@@ -453,17 +544,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <MessageSquare size={18} />
             {!collapsed ? <span>Feedback</span> : null}
           </button>
-          <Link
-            href="/app/settings"
-            className={clsx("nav-link", pathname.startsWith("/app/settings") && "active")}
-            title="Settings"
-            onClick={() => setNavOpen(false)}
-          >
-            <Settings size={17} />
-            {!collapsed ? <span>Settings</span> : null}
-          </Link>
+          {settingsGroup.items.length ? renderCategory(settingsGroup) : null}
         </div>
       </aside>
+      {flyoutGroup && flyout ? (
+        <div
+          className="nav-flyout"
+          style={{ top: flyout.top, left: flyout.left }}
+          onMouseEnter={() => window.clearTimeout(flyoutTimer.current)}
+          onMouseLeave={closeFlyoutSoon}
+        >
+          <div className="nav-flyout-title">{flyoutGroup.label}</div>
+          {flyoutGroup.items.map((item) => {
+            const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
+            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx("nav-link", active && "active")}
+                onClick={() => {
+                  setFlyout(null);
+                  setNavOpen(false);
+                }}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="main-col">
         <header className="topbar">
@@ -489,7 +600,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="search text-left text-[var(--color-muted)]" onClick={() => setSearchOpen(true)}>
             <span className="inline-flex items-center gap-2 min-w-0">
               <Search size={15} />
-              <span className="truncate">Search ideas, portfolios, strategy...</span>
+              <span className="truncate">Search projects, work orders, companies...</span>
             </span>
             <kbd className="search-kbd">⌘K</kbd>
           </button>
@@ -857,7 +968,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Settings size={15} /> Settings
                   </Link>
                   {can("view_users") ? (
-                  <Link href="/app/settings" className="menu-row" onClick={() => setMenu(null)}>
+                  <Link href="/app/settings/?section=users" className="menu-row" onClick={() => setMenu(null)}>
                     <Users size={15} /> Users & roles
                   </Link>
                   ) : null}

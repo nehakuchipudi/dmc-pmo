@@ -1,10 +1,19 @@
 export type PackId = "project_management" | "project_delivery" | "service_operations";
 
+export type NavGroupId =
+  | "project_management"
+  | "resource_management"
+  | "service_operations"
+  | "business_management"
+  | "intelligence"
+  | "administration"
+  | "settings";
+
 export const PACKS: { id: PackId; label: string; summary: string }[] = [
   {
     id: "project_management",
     label: "Project management",
-    summary: "Home, companies, ideas, reports, and automations for the office book of work.",
+    summary: "Ideas, reports, and the office book of work.",
   },
   {
     id: "project_delivery",
@@ -18,43 +27,65 @@ export const PACKS: { id: PackId; label: string; summary: string }[] = [
   },
 ];
 
+export const NAV_GROUPS: { id: NavGroupId; label: string; summary: string }[] = [
+  { id: "project_management", label: "Project Management", summary: "Plan, execute, and track projects." },
+  { id: "resource_management", label: "Resource Management", summary: "Manage people, capacity, and teams." },
+  { id: "service_operations", label: "Service Operations", summary: "End-to-end service and field operations." },
+  { id: "business_management", label: "Business Management", summary: "Contracts, billing, and client relationships." },
+  { id: "intelligence", label: "Intelligence & Analytics", summary: "Track performance and drive insights." },
+  { id: "administration", label: "Administration", summary: "Configure, control, and manage your organization." },
+  { id: "settings", label: "Settings", summary: "Workspace setup and automations." },
+];
+
 export const DEFAULT_PACKS: PackId[] = ["project_management", "project_delivery", "service_operations"];
 
 export type NavModule = {
   href: string;
   label: string;
-  pack: PackId;
+  pack?: PackId;
+  group: NavGroupId;
   exact?: boolean;
 };
 
 export const NAV_MODULES: NavModule[] = [
-  { href: "/app/home", label: "Home", pack: "project_management", exact: true },
-  { href: "/app/companies", label: "Companies", pack: "project_management" },
-  { href: "/app/ideas", label: "Ideas", pack: "project_management" },
-  { href: "/app/reports", label: "Reports", pack: "project_management" },
-  { href: "/app/automations", label: "Automations", pack: "project_management" },
-  { href: "/app/projects", label: "Projects", pack: "project_delivery" },
-  { href: "/app/work", label: "Work", pack: "project_delivery" },
-  { href: "/app/tickets", label: "Tickets", pack: "project_delivery" },
-  { href: "/app/timesheets", label: "Timesheets", pack: "project_delivery" },
-  { href: "/app/resources", label: "Resources", pack: "project_delivery" },
-  { href: "/app/retainers", label: "Retainers", pack: "project_delivery" },
-  { href: "/app/billing", label: "Billing", pack: "project_delivery" },
-  { href: "/app/work-journey", label: "Work Journey", pack: "service_operations" },
-  { href: "/app/work-orders", label: "Work Orders", pack: "service_operations" },
-  { href: "/app/recurring-services", label: "Recurring Services", pack: "service_operations" },
-  { href: "/app/documents", label: "Documents", pack: "service_operations" },
-  { href: "/app/work-schedule", label: "Work Schedule", pack: "service_operations" },
-  { href: "/app/scheduling", label: "Scheduling", pack: "service_operations" },
-  { href: "/app/approvals", label: "Approval Center", pack: "service_operations" },
-  { href: "/app/employee", label: "Employee Portal", pack: "service_operations" },
-  { href: "/app/team", label: "Team Management", pack: "service_operations" },
-  { href: "/app/roles", label: "Role Management", pack: "service_operations" },
-  { href: "/app/instances", label: "Instances", pack: "service_operations" },
-  { href: "/app/promotional-trial", label: "Promotional Trial", pack: "service_operations" },
+  { href: "/app/ideas", label: "Ideas", pack: "project_management", group: "project_management" },
+  { href: "/app/projects", label: "Projects", pack: "project_delivery", group: "project_management" },
+  { href: "/app/work", label: "Work", pack: "project_delivery", group: "project_management" },
+  { href: "/app/tickets", label: "Tickets", pack: "project_delivery", group: "project_management" },
+  { href: "/app/timesheets", label: "Timesheets", pack: "project_delivery", group: "project_management" },
+  { href: "/app/resources", label: "Resources", pack: "project_delivery", group: "resource_management" },
+  { href: "/app/team", label: "Team Management", pack: "service_operations", group: "resource_management" },
+  { href: "/app/employee", label: "Employee Portal", pack: "service_operations", group: "resource_management" },
+  { href: "/app/roles", label: "Role Management", pack: "service_operations", group: "resource_management" },
+  { href: "/app/work-journey", label: "Work Journey", pack: "service_operations", group: "service_operations" },
+  { href: "/app/work-orders", label: "Work Orders", pack: "service_operations", group: "service_operations" },
+  { href: "/app/recurring-services", label: "Recurring Services", pack: "service_operations", group: "service_operations" },
+  { href: "/app/documents", label: "Documents", pack: "service_operations", group: "service_operations" },
+  { href: "/app/work-schedule", label: "Work Schedule", pack: "service_operations", group: "service_operations" },
+  { href: "/app/scheduling", label: "Scheduling", pack: "service_operations", group: "service_operations" },
+  { href: "/app/approvals", label: "Approval Center", pack: "service_operations", group: "service_operations" },
+  { href: "/app/companies", label: "Companies", pack: "project_management", group: "business_management" },
+  { href: "/app/contacts", label: "Contacts", pack: "project_management", group: "business_management" },
+  { href: "/app/retainers", label: "Retainers", pack: "project_delivery", group: "business_management" },
+  { href: "/app/billing", label: "Billing", pack: "project_delivery", group: "business_management" },
+  { href: "/app/quotes", label: "Quotes", pack: "project_delivery", group: "business_management" },
+  { href: "/app/reports", label: "Reports", pack: "project_management", group: "intelligence" },
+  { href: "/app/analytics", label: "Analytics", pack: "project_management", group: "intelligence" },
+  { href: "/app/instances", label: "Instances", pack: "service_operations", group: "administration" },
+  { href: "/app/promotional-trial", label: "Promotional Trial", pack: "service_operations", group: "administration" },
+  { href: "/app/audit", label: "Audit Trail", pack: "project_management", group: "administration" },
+  { href: "/app/settings", label: "Settings", group: "settings" },
+  { href: "/app/automations", label: "Automations", pack: "project_management", group: "settings" },
 ];
 
-export const NAV_GROUP_ORDER: PackId[] = ["project_management", "project_delivery", "service_operations"];
+export const NAV_GROUP_ORDER: NavGroupId[] = [
+  "project_management",
+  "resource_management",
+  "service_operations",
+  "business_management",
+  "intelligence",
+  "administration",
+];
 
 export function packForHref(pathname: string): PackId | null {
   const match = NAV_MODULES.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)).sort(
@@ -70,4 +101,44 @@ export function packsOf(list: PackId[] | undefined | null): PackId[] {
 
 export function hasPack(list: PackId[] | undefined | null, pack: PackId) {
   return packsOf(list).includes(pack);
+}
+
+export type HomeSection =
+  | "projects"
+  | "work_orders"
+  | "utilization"
+  | "billing"
+  | "progress"
+  | "journey"
+  | "capacity"
+  | "financials"
+  | "activity"
+  | "milestones"
+  | "tickets"
+  | "ideas"
+  | "overdue"
+  | "approvals"
+  | "risks";
+
+export const HOME_SECTION_PACK: Record<HomeSection, PackId | null> = {
+  projects: "project_delivery",
+  work_orders: "service_operations",
+  utilization: "project_delivery",
+  billing: "project_delivery",
+  progress: "project_delivery",
+  journey: "service_operations",
+  capacity: "project_delivery",
+  financials: "project_delivery",
+  activity: null,
+  milestones: "project_delivery",
+  tickets: "project_delivery",
+  ideas: "project_management",
+  overdue: "project_delivery",
+  approvals: "service_operations",
+  risks: "project_delivery",
+};
+
+export function homeSectionOn(section: HomeSection, packs: PackId[] | undefined | null) {
+  const pack = HOME_SECTION_PACK[section];
+  return !pack || hasPack(packs, pack);
 }
