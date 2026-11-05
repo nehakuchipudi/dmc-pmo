@@ -822,6 +822,11 @@ button, input, select, textarea { font: inherit; }
   font-weight: 650;
   color: var(--color-ink);
 }
+.employee-week {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
 .journey-step-label {
   margin-top: 4px;
   font-size: 0.72rem;

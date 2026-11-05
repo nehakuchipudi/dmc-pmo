@@ -350,6 +350,21 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     canDo: ["Create a work order", "Approve or send back a job", "Start a service operations trial"],
   },
   {
+    id: "employee-portal",
+    title: "Employee Portal",
+    href: "/app/employee",
+    viewCap: "view_service_ops",
+    keywords: ["employee portal", "clock in", "my schedule", "time off", "timesheet", "my assignments"],
+    summary:
+      "Employee Portal is the crew view: assignments, this week's hours, requests, announcements, and clock in or out.",
+    howTo: [
+      "Open Employee Portal from Resource Management.",
+      "Use My Overview for assignments, the week grid, and quick actions.",
+      "Clock in when you start a visit. Submit time off or an expense from My Requests.",
+    ],
+    canDo: ["Clock in or out", "Request time off", "Open assigned work"],
+  },
+  {
     id: "portal",
     title: "Client portal",
     href: "/portal",

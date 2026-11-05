@@ -2255,6 +2255,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       status: "Pending",
       date: todayIso(),
       note: input.note,
+      userName: currentActor(),
     };
     set((s) => ({ expenses: [expense, ...s.expenses] }));
     get().pushToast("Expense submitted for approval");

@@ -535,6 +535,7 @@ export interface Expense {
   status: "Pending" | "Approved" | "Rejected";
   date: string;
   note: string;
+  userName?: string;
 }
 
 export interface Opportunity {
