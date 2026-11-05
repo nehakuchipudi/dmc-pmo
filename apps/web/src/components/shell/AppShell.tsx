@@ -600,7 +600,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="search text-left text-[var(--color-muted)]" onClick={() => setSearchOpen(true)}>
             <span className="inline-flex items-center gap-2 min-w-0">
               <Search size={15} />
-              <span className="truncate">Search companies, projects, tickets...</span>
+              <span className="truncate">Search projects, work orders, companies...</span>
             </span>
             <kbd className="search-kbd">⌘K</kbd>
           </button>

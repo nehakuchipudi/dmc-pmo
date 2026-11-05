@@ -105,35 +105,37 @@ export function hasPack(list: PackId[] | undefined | null, pack: PackId) {
 
 export type HomeSection =
   | "projects"
-  | "portfolios"
   | "work_orders"
   | "utilization"
   | "billing"
-  | "health"
+  | "progress"
   | "journey"
   | "capacity"
   | "financials"
-  | "trend"
-  | "risks"
+  | "activity"
   | "milestones"
-  | "distribution"
-  | "activity";
+  | "tickets"
+  | "ideas"
+  | "overdue"
+  | "approvals"
+  | "risks";
 
 export const HOME_SECTION_PACK: Record<HomeSection, PackId | null> = {
   projects: "project_delivery",
-  portfolios: "project_management",
   work_orders: "service_operations",
   utilization: "project_delivery",
   billing: "project_delivery",
-  health: "project_delivery",
+  progress: "project_delivery",
   journey: "service_operations",
   capacity: "project_delivery",
   financials: "project_delivery",
-  trend: "project_delivery",
-  risks: "project_delivery",
-  milestones: "project_delivery",
-  distribution: "project_delivery",
   activity: null,
+  milestones: "project_delivery",
+  tickets: "project_delivery",
+  ideas: "project_management",
+  overdue: "project_delivery",
+  approvals: "service_operations",
+  risks: "project_delivery",
 };
 
 export function homeSectionOn(section: HomeSection, packs: PackId[] | undefined | null) {

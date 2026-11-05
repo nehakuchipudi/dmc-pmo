@@ -45,5 +45,8 @@ assert.equal(homeSectionOn("work_orders", ["service_operations"]), true);
 assert.equal(homeSectionOn("activity", []), true);
 assert.equal(homeSectionOn("projects", ["project_delivery"]), true);
 assert.equal(homeSectionOn("financials", ["service_operations"]), false);
+assert.equal(homeSectionOn("ideas", ["project_management"]), true);
+assert.equal(homeSectionOn("tickets", ["service_operations"]), false);
+assert.equal(homeSectionOn("progress", ["project_delivery"]), true);
 
 console.log("modules.verify ok");

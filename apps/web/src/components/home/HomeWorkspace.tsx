@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { ActivityList } from "@/components/records/ActivityStream";
 import { DataTable, MetricCard, MetricGrid, Pill, ProgressLine } from "@/components/ppm/PpmWidgets";
-import { Avatar, PageHeader, StatusPill, statusTone } from "@/components/ui";
+import { Avatar, PageHeader, StatusPill, TextSelect, statusTone } from "@/components/ui";
 import { composeActivityFeed } from "@/lib/activity";
 import { useAuth } from "@/lib/auth";
 import { homeSectionOn, hasPack } from "@/lib/modules";
-import { allocationByMember, blockedDependencies, openHighRisks } from "@/lib/ppm";
+import { allocationByMember, openHighRisks } from "@/lib/ppm";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 
@@ -31,7 +31,16 @@ function homeSubtitle(packs: string[]) {
   if (packs.includes("service_operations")) bits.push("operations");
   if (packs.includes("project_delivery")) bits.push("team");
   if (!bits.length) return "Turn on capabilities in Settings to populate this view.";
-  return `${bits.join(", ")} performance at a glance.`;
+  return `Here is what is happening across your ${bits.join(", ")}.`;
+}
+
+function inPeriod(date: string | undefined, period: "quarter" | "month" | "all") {
+  if (period === "all" || !date) return true;
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return true;
+  const now = new Date();
+  if (period === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  return d.getFullYear() === now.getFullYear() && Math.floor(d.getMonth() / 3) === Math.floor(now.getMonth() / 3);
 }
 
 export function HomeWorkspace() {
@@ -42,9 +51,9 @@ export function HomeWorkspace() {
 
 function WorkspaceHome() {
   const { user, canSeeFinancials } = useAuth();
+  const [period, setPeriod] = useState<"quarter" | "month" | "all">("quarter");
   const enabledPacks = useAppStore((s) => s.enabledPacks);
   const projects = useAppStore((s) => s.projects);
-  const portfolios = useAppStore((s) => s.portfolios);
   const risks = useAppStore((s) => s.risks);
   const issues = useAppStore((s) => s.issues);
   const allocations = useAppStore((s) => s.allocations);
@@ -55,11 +64,13 @@ function WorkspaceHome() {
   const activities = useAppStore((s) => s.activities);
   const tasks = useAppStore((s) => s.tasks);
   const timeEntries = useAppStore((s) => s.timeEntries);
-  const companies = useAppStore((s) => s.companies);
-  const dependencies = useAppStore((s) => s.dependencies);
+  const tickets = useAppStore((s) => s.tickets);
+  const ideas = useAppStore((s) => s.ideas);
+  const team = useAppStore((s) => s.team);
   const show = (section: Parameters<typeof homeSectionOn>[0]) => homeSectionOn(section, enabledPacks);
 
   const snapshot = useMemo(() => {
+    const periodInvoices = invoices.filter((row) => inPeriod(row.due, period));
     const activeProjects = projects.filter((p) => p.status !== "Completed" && p.status !== "Cancelled");
     const onTrack = activeProjects.filter((p) => p.status === "Active" || p.status === "Planning" || p.status === "Draft").length;
     const atRisk = activeProjects.filter((p) => p.status === "At Risk").length;
@@ -68,18 +79,14 @@ function WorkspaceHome() {
     const overloaded = capacity.filter((c) => c.pct > 100);
     const available = capacity.filter((c) => c.pct <= 80);
     const util = capacity.length ? Math.round(capacity.reduce((sum, row) => sum + row.pct, 0) / capacity.length) : 0;
-    const outstanding = invoices.filter((i) => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
+    const outstanding = periodInvoices.filter((i) => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
+    const overdue = periodInvoices.filter((i) => i.status === "Overdue");
     const budgeted = activeProjects.reduce((sum, p) => sum + p.budgetAmount, 0);
-    const actual = invoices.filter((i) => i.status !== "Draft").reduce((sum, i) => sum + i.amount, 0);
+    const actual = periodInvoices.filter((i) => i.status !== "Draft").reduce((sum, i) => sum + i.amount, 0);
     const variance = budgeted - actual;
     const progress = activeProjects.length
       ? Math.round(activeProjects.reduce((sum, p) => sum + p.progress, 0) / activeProjects.length)
       : 0;
-    const types = new Map<string, number>();
-    for (const project of activeProjects) {
-      const key = project.projectType || "General";
-      types.set(key, (types.get(key) ?? 0) + 1);
-    }
     const upcoming = [...milestones]
       .filter((row) => row.status !== "Approved")
       .sort((a, b) => a.due.localeCompare(b.due))
@@ -90,16 +97,17 @@ function WorkspaceHome() {
       tasks,
       timeEntries,
       milestones,
-    }).slice(0, 5);
+    }).slice(0, 4);
     return {
       activeProjects: activeProjects.length,
-      portfolios: portfolios.length,
       fieldOpen: workOrders.filter((row) => row.status !== "Completed").length,
       util,
       overloaded,
       available: available.length,
-      allocated: capacity.length - available.length,
+      allocated: Math.max(0, capacity.length - available.length),
       outstanding,
+      overdueCount: overdue.length,
+      overdueAmount: overdue.reduce((sum, row) => sum + row.amount, 0),
       onTrack,
       atRisk,
       behind,
@@ -114,15 +122,15 @@ function WorkspaceHome() {
       progress,
       risks: openHighRisks(risks).length,
       issues: issues.filter((row) => row.status !== "Resolved").length,
-      blocked: blockedDependencies(dependencies).length,
-      types: [...types.entries()].sort((a, b) => b[1] - a[1]),
+      tickets: tickets.filter((row) => row.status !== "Resolved").length,
+      ideas: ideas.filter((row) => row.stage !== "Converted" && row.stage !== "Deferred").length,
+      crew: team.filter((row) => row.active).length,
       upcoming,
       activity,
-      companies: companies.length,
     };
   }, [
+    period,
     projects,
-    portfolios,
     allocations,
     invoices,
     workOrders,
@@ -133,8 +141,9 @@ function WorkspaceHome() {
     timeEntries,
     risks,
     issues,
-    companies,
-    dependencies,
+    tickets,
+    ideas,
+    team,
   ]);
 
   const kpis = [
@@ -146,9 +155,6 @@ function WorkspaceHome() {
         hint={`${snapshot.onTrack} on track · ${snapshot.atRisk} at risk`}
         tone={snapshot.atRisk ? "warn" : "good"}
       />
-    ) : null,
-    show("portfolios") ? (
-      <MetricCard key="portfolios" label="Active portfolios" value={snapshot.portfolios} hint={`${snapshot.companies} companies on the book`} />
     ) : null,
     show("work_orders") ? (
       <MetricCard
@@ -164,7 +170,7 @@ function WorkspaceHome() {
         key="util"
         label="Team utilization"
         value={snapshot.util ? `${snapshot.util}%` : "-"}
-        hint={snapshot.overloaded.length ? `${snapshot.overloaded.length} over capacity` : "No one above 100%"}
+        hint={snapshot.overloaded.length ? `${snapshot.overloaded.length} over capacity` : `${snapshot.crew} people on the roster`}
         tone={snapshot.overloaded.length ? "bad" : snapshot.util >= 70 ? "good" : "warn"}
       />
     ) : null,
@@ -173,44 +179,80 @@ function WorkspaceHome() {
         key="bill"
         label="Outstanding billing"
         value={money(snapshot.outstanding)}
-        hint="Sent and overdue invoices"
-        tone={snapshot.outstanding ? "warn" : "good"}
+        hint={snapshot.overdueCount ? `${money(snapshot.overdueAmount)} overdue` : "Sent and overdue invoices"}
+        tone={snapshot.overdueCount ? "bad" : snapshot.outstanding ? "warn" : "good"}
+      />
+    ) : null,
+  ].filter(Boolean);
+
+  const extras = [
+    show("tickets") ? (
+      <MetricCard key="tickets" label="Open tickets" value={snapshot.tickets} hint="Support still in flight" tone={snapshot.tickets ? "warn" : "good"} />
+    ) : null,
+    show("ideas") ? (
+      <MetricCard key="ideas" label="Ideas in play" value={snapshot.ideas} hint="Submitted, scoring, or approved" />
+    ) : null,
+    show("approvals") ? (
+      <MetricCard
+        key="approvals"
+        label="Pending approvals"
+        value={snapshot.approval}
+        hint="Field jobs waiting on a reviewer"
+        tone={snapshot.approval ? "warn" : "good"}
+      />
+    ) : null,
+    show("risks") ? (
+      <MetricCard key="risks" label="High risks" value={snapshot.risks} hint={`${snapshot.issues} open issues`} tone={snapshot.risks ? "bad" : "good"} />
+    ) : null,
+    show("overdue") && canSeeFinancials ? (
+      <MetricCard
+        key="overdue"
+        label="Overdue invoices"
+        value={snapshot.overdueCount}
+        hint={snapshot.overdueCount ? money(snapshot.overdueAmount) : "None past due"}
+        tone={snapshot.overdueCount ? "bad" : "good"}
       />
     ) : null,
   ].filter(Boolean);
 
   return (
     <div className="fade-in">
-      <PageHeader title={`Welcome back, ${firstName(user?.name)}`} subtitle={homeSubtitle(enabledPacks)} />
-      {kpis.length ? <MetricGrid>{kpis}</MetricGrid> : null}
+      <PageHeader
+        title={`Welcome back, ${firstName(user?.name)}`}
+        subtitle={homeSubtitle(enabledPacks)}
+        actions={
+          <TextSelect value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} aria-label="Home period">
+            <option value="quarter">This quarter</option>
+            <option value="month">This month</option>
+            <option value="all">All time</option>
+          </TextSelect>
+        }
+      />
+      {kpis.length ? <MetricGrid className="metric-grid-fit">{kpis}</MetricGrid> : null}
+      {extras.length ? <MetricGrid className="metric-grid-fit">{extras}</MetricGrid> : null}
 
-      {(show("health") || show("journey") || show("capacity") || show("work_orders")) && (
+      {(show("progress") || show("journey") || show("capacity") || show("work_orders")) && (
         <div className="split-3">
-          {show("health") ? (
+          {show("progress") ? (
             <div className="panel p-5">
-              <h2 className="section-title">Portfolio health</h2>
-              <p className="mb-3 text-sm text-[var(--color-muted)]">{snapshot.activeProjects} active projects</p>
-              <div className="space-y-3">
-                <div>
-                  <div className="mb-1 flex justify-between text-sm">
+              <h2 className="section-title">Project progress</h2>
+              <div className="flex items-center gap-4">
+                <div className="progress-ring" style={{ "--pct": snapshot.progress } as CSSProperties}>
+                  <span className="progress-ring-value">{snapshot.progress}%</span>
+                </div>
+                <div className="min-w-0 flex-1 space-y-2 text-sm">
+                  <div className="flex justify-between">
                     <span>On track</span>
                     <span>{snapshot.onTrack}</span>
                   </div>
-                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.onTrack / snapshot.activeProjects) * 100) : 0} />
-                </div>
-                <div>
-                  <div className="mb-1 flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span>At risk</span>
                     <span>{snapshot.atRisk}</span>
                   </div>
-                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.atRisk / snapshot.activeProjects) * 100) : 0} />
-                </div>
-                <div>
-                  <div className="mb-1 flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span>Behind</span>
                     <span>{snapshot.behind}</span>
                   </div>
-                  <ProgressLine value={snapshot.activeProjects ? Math.round((snapshot.behind / snapshot.activeProjects) * 100) : 0} />
                 </div>
               </div>
             </div>
@@ -218,7 +260,7 @@ function WorkspaceHome() {
           {show("journey") ? (
             <div className="panel p-5">
               <h2 className="section-title">Work journey</h2>
-              <p className="mb-3 text-sm text-[var(--color-muted)]">Quotes through field work and invoicing</p>
+              <p className="mb-3 text-sm text-[var(--color-muted)]">Service operations from quote to invoice</p>
               <div className="journey-steps">
                 {[
                   hasPack(enabledPacks, "project_delivery") ? ["Quotes", snapshot.quotes] : null,
@@ -261,7 +303,7 @@ function WorkspaceHome() {
         </div>
       )}
 
-      {(show("financials") || show("trend") || show("risks")) && (
+      {(show("financials") || show("activity") || show("milestones")) && (
         <div className="mt-4 split-3">
           {show("financials") && canSeeFinancials ? (
             <div className="panel p-5">
@@ -285,41 +327,29 @@ function WorkspaceHome() {
               </div>
             </div>
           ) : null}
-          {show("trend") ? (
+          {show("activity") ? (
             <div className="panel p-5">
-              <h2 className="section-title">Project trend</h2>
-              <p className="mb-3 text-sm text-[var(--color-muted)]">Average progress across active projects</p>
-              <ProgressLine value={snapshot.progress} />
-              <p className="mt-3 text-sm text-[var(--color-muted)]">{snapshot.progress}% complete</p>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  Recent activity
+                </h2>
+                <Link href="/app/audit" className="text-sm text-[var(--color-navy)]">
+                  View all
+                </Link>
+              </div>
+              {snapshot.activity.length ? <ActivityList items={snapshot.activity} compact /> : <p className="text-sm text-[var(--color-muted)]">Nothing posted yet.</p>}
             </div>
           ) : null}
-          {show("risks") ? (
-            <div className="panel p-5">
-              <h2 className="section-title">Risks and issues</h2>
-              <Link href="/app/risks" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{snapshot.risks} risks</div>
-                  <Pill value={snapshot.risks ? "Watch" : "Healthy"} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">Open high-impact items</div>
-              </Link>
-              <Link href="/app/tickets" className="insight-card block">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{snapshot.issues} issues</div>
-                  <Pill value={snapshot.issues ? "Open" : "Clear"} />
-                </div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">{snapshot.blocked} cross-project holds</div>
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {(show("milestones") || show("distribution") || show("activity")) && (
-        <div className="mt-4 split-3">
           {show("milestones") ? (
             <div className="panel p-5">
-              <h2 className="section-title">Upcoming milestones</h2>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  Upcoming milestones
+                </h2>
+                <Link href="/app/projects" className="text-sm text-[var(--color-navy)]">
+                  View all
+                </Link>
+              </div>
               {snapshot.upcoming.length ? (
                 <div className="space-y-3">
                   {snapshot.upcoming.map((row) => {
@@ -340,41 +370,6 @@ function WorkspaceHome() {
               ) : (
                 <p className="text-sm text-[var(--color-muted)]">No upcoming milestones yet.</p>
               )}
-            </div>
-          ) : null}
-          {show("distribution") ? (
-            <div className="panel p-5">
-              <h2 className="section-title">Project distribution</h2>
-              {snapshot.types.length ? (
-                <div className="space-y-3">
-                  {snapshot.types.map(([type, count]) => (
-                    <div key={type}>
-                      <div className="mb-1 flex justify-between text-sm">
-                        <span>{type}</span>
-                        <span>
-                          {count} · {snapshot.activeProjects ? Math.round((count / snapshot.activeProjects) * 100) : 0}%
-                        </span>
-                      </div>
-                      <ProgressLine value={snapshot.activeProjects ? Math.round((count / snapshot.activeProjects) * 100) : 0} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-[var(--color-muted)]">Add projects to see type mix.</p>
-              )}
-            </div>
-          ) : null}
-          {show("activity") ? (
-            <div className="panel p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="section-title" style={{ margin: 0 }}>
-                  Recent activity
-                </h2>
-                <Link href="/app/audit" className="text-sm text-[var(--color-navy)]">
-                  View all
-                </Link>
-              </div>
-              {snapshot.activity.length ? <ActivityList items={snapshot.activity} compact /> : <p className="text-sm text-[var(--color-muted)]">Nothing posted yet.</p>}
             </div>
           ) : null}
         </div>
