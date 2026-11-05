@@ -7,13 +7,14 @@ import {
   BarChart3,
   Brain,
   Briefcase,
+  Building2,
   Check,
   ChevronDown,
+  ClipboardCheck,
   Layers3,
+  Lightbulb,
   Menu,
   Play,
-  Scale,
-  Settings2,
   ShieldAlert,
   Target,
   TrendingUp,
@@ -72,13 +73,13 @@ const TOURS = [
 ] as const;
 
 const FEATURES = [
-  { title: "Portfolio Management", icon: Layers3, body: "Group funded work by book, owner, health, and spend." },
+  { title: "Modular capabilities", icon: Layers3, body: "Enable project management, project delivery, or field service." },
   { title: "Project Management", icon: Briefcase, body: "Keep the plan, team, status, and files on one project." },
+  { title: "Service operations", icon: ClipboardCheck, body: "Run work orders, recurring visits, schedule, and crew." },
   { title: "Resource Management", icon: Users, body: "See who is overloaded before you staff another job." },
   { title: "Financial Management", icon: Wallet, body: "Hold budget, hours, invoices, and margin together." },
+  { title: "Companies and ideas", icon: Building2, body: "Keep the client and intake on the same book of work." },
   { title: "Risk and Issues", icon: ShieldAlert, body: "Log likelihood, impact, owner, and the next action." },
-  { title: "Governance", icon: Scale, body: "Run stage gates with criteria, owners, and dates." },
-  { title: "Strategy Alignment", icon: Target, body: "Tie each project to an objective you can measure." },
   { title: "PMO Intelligence", icon: Brain, body: "Surface the calls that need a decision this week." },
 ];
 
@@ -101,15 +102,15 @@ const ACTION_SHOTS = [
 ];
 
 const LEADERSHIP = [
-  "Portfolio health and spend in one home",
+  "One platform for office work and field service",
+  "Turn on only the capability packs you need",
   "A weekly brief of risk, capacity, and cash",
-  "Objectives mapped to the work they fund",
 ];
 
 const DELIVERY = [
   "One project record for plan, team, and tasks",
   "Time, expenses, and invoices on that job",
-  "Gates and decisions with owners and dates",
+  "Work orders, schedule, and crew in the same workspace",
 ];
 
 const BENEFITS = [
@@ -133,14 +134,14 @@ const NAV = [
     href: "#platform",
     items: [
       { label: "PMO modules", href: "#platform" },
-      { label: "Portfolio through intelligence", href: "#platform" },
+      { label: "Project, delivery, and field service", href: "#platform" },
     ],
   },
   {
     label: "How it works",
     href: "#journey",
     items: [
-      { label: "Strategy to outcomes", href: "#journey" },
+      { label: "Companies to outcomes", href: "#journey" },
       { label: "Inside the tool", href: "#action" },
     ],
   },
@@ -156,12 +157,12 @@ const NAV = [
 ] as const;
 
 const JOURNEY = [
-  { title: "Strategy", body: "Set direction and key objectives", icon: Target },
-  { title: "Portfolio", body: "Prioritize and allocate funding", icon: Layers3 },
-  { title: "Projects", body: "Track progress and health", icon: Briefcase },
-  { title: "Resources", body: "Manage capacity and teams", icon: Users },
-  { title: "Delivery", body: "Execute and collaborate", icon: Settings2 },
-  { title: "Outcomes", body: "Measure value and business impact", icon: TrendingUp },
+  { title: "Capabilities", body: "Enable project, delivery, or field service", icon: Layers3 },
+  { title: "Companies", body: "Keep the client on every job", icon: Building2 },
+  { title: "Ideas", body: "Capture work before it is a project", icon: Lightbulb },
+  { title: "Projects", body: "Plan, staff, and track delivery", icon: Briefcase },
+  { title: "Field service", body: "Dispatch work orders and the crew", icon: ClipboardCheck },
+  { title: "Outcomes", body: "Time, invoices, and the weekly brief", icon: TrendingUp },
 ];
 
 export function LandingPage() {
@@ -282,8 +283,8 @@ export function LandingPage() {
             <span>Business Outcomes.</span>
           </h1>
           <p className="mkt-lead">
-            DMC PMO gives organizations one intelligent platform to plan, prioritize, govern, and deliver their entire
-            project portfolio.
+            DMC PMO is one modular platform. Enable project management, project delivery, or field service operations
+            and run the whole book in one workspace.
           </p>
           <div className="mkt-hero-actions">
             <Link href={startHref} className="mkt-cta">
@@ -314,8 +315,11 @@ export function LandingPage() {
       <section className="mkt-band mkt-band-journey" id="journey">
         <div className="mkt-band-inner">
           <p className="mkt-kicker">The DMC PMO journey</p>
-          <h2>From strategy to outcomes.</h2>
-          <p className="mkt-lead">Connect your goals, projects and delivery in one place.</p>
+          <h2>From companies to outcomes.</h2>
+          <p className="mkt-lead">
+            Choose the packs you need, then move from the client record through projects and field work to time,
+            invoices, and the weekly brief.
+          </p>
           <ol className="mkt-journey-steps">
             {JOURNEY.map((step) => {
               const Icon = step.icon;
@@ -353,7 +357,7 @@ export function LandingPage() {
         <div className="mkt-band-inner">
           <p>Teams use DMC PMO across</p>
           <div className="mkt-trust-row">
-            {["Operations", "IT", "Product", "Finance", "Delivery", "Strategy"].map((name) => (
+            {["Operations", "IT", "Product", "Finance", "Delivery", "Field service"].map((name) => (
               <span key={name}>{name}</span>
             ))}
           </div>
@@ -363,8 +367,8 @@ export function LandingPage() {
       <section className="mkt-band mkt-band-platform" id="platform">
         <div className="mkt-band-inner mkt-band-inner-wide">
           <p className="mkt-kicker">Capabilities</p>
-          <h2>The modules a PMO actually runs.</h2>
-          <p className="mkt-lead">Portfolio through intelligence, on one project identity.</p>
+          <h2>The capabilities a customer can turn on.</h2>
+          <p className="mkt-lead">Project management, project delivery, and field service operations on one workspace.</p>
           <div className="mkt-features">
             {FEATURES.map((feature) => {
               const Icon = feature.icon;

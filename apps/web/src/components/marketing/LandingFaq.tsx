@@ -3,7 +3,7 @@
 const QUESTIONS = [
   {
     q: "What is DMC PMO?",
-    a: "DMC PMO is one workspace for companies, projects, plans, teams, and outcomes. Leadership sees the book. Delivery runs the job on the same record.",
+    a: "DMC PMO is one modular workspace for companies, projects, field service, and outcomes. Customers enable project management, project delivery, or service operations. Leadership sees the book. Delivery and the crew run the job on the same record.",
   },
   {
     q: "What happens on a product walkthrough?",
