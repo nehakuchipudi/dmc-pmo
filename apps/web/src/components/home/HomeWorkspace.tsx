@@ -26,6 +26,10 @@ function PortfolioHome() {
   const benefits = useAppStore((s) => s.benefits);
   const dependencies = useAppStore((s) => s.dependencies);
   const invoices = useAppStore((s) => s.invoices);
+  const workOrders = useAppStore((s) => s.workOrders);
+  const fieldClocks = useAppStore((s) => s.fieldClocks);
+  const companies = useAppStore((s) => s.companies);
+  const tickets = useAppStore((s) => s.tickets);
 
   const snapshot = useMemo(() => {
     const delivery = portfolios.find((p) => p.id === "pf-delivery");
@@ -48,8 +52,13 @@ function PortfolioHome() {
       overdueCash,
       blocked: blockedDependencies(dependencies),
       pendingGates: gates.filter((g) => g.status === "In Review" || g.status === "Upcoming"),
+      fieldOpen: workOrders.filter((row) => row.status !== "Completed").length,
+      fieldPending: workOrders.filter((row) => row.status === "Pending approval"),
+      crewLive: fieldClocks.filter((row) => !row.stoppedAt).length,
+      companies: companies.length,
+      openTickets: tickets.filter((row) => row.status !== "Resolved").length,
     };
-  }, [portfolios, projects, allocations, risks, benefits, invoices, dependencies, gates]);
+  }, [portfolios, projects, allocations, risks, benefits, invoices, dependencies, gates, workOrders, fieldClocks, companies, tickets]);
 
   return (
     <div className="fade-in">
@@ -90,6 +99,30 @@ function PortfolioHome() {
         />
       </MetricGrid>
 
+      <div className="mt-4">
+        <h2 className="section-title">Operations now</h2>
+        <MetricGrid>
+          <MetricCard
+            label="Field jobs"
+            value={snapshot.fieldOpen}
+            hint={`${snapshot.fieldPending.length} waiting on approval`}
+            tone={snapshot.fieldPending.length ? "warn" : snapshot.fieldOpen ? "good" : "warn"}
+          />
+          <MetricCard
+            label="Crew on site"
+            value={snapshot.crewLive}
+            hint={snapshot.crewLive ? "Live clocks from Employee Portal" : "No one clocked in"}
+          />
+          <MetricCard label="Companies" value={snapshot.companies} hint="Client and partner accounts on the book" />
+          <MetricCard
+            label="Open tickets"
+            value={snapshot.openTickets}
+            hint="Support requests still in flight"
+            tone={snapshot.openTickets ? "warn" : "good"}
+          />
+        </MetricGrid>
+      </div>
+
       <div className="split-2">
         <div className="panel p-5">
           <h2 className="section-title">Portfolios in flight</h2>
@@ -120,6 +153,17 @@ function PortfolioHome() {
                 </div>
                 <div className="mt-1 text-sm text-[var(--color-muted)]">
                   {gate.stage} · due {gate.due} · {gate.owner}
+                </div>
+              </Link>
+            ))}
+            {snapshot.fieldPending.slice(0, 3).map((job) => (
+              <Link key={job.id} href="/app/approvals" className="insight-card block">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold">{job.title}</div>
+                  <Pill value={job.priority} />
+                </div>
+                <div className="mt-1 text-sm text-[var(--color-muted)]">
+                  {job.companyName} · {job.assignee || "Unassigned"} · pending approval
                 </div>
               </Link>
             ))}
@@ -169,6 +213,7 @@ function CompanyHome({ companyId }: { companyId: string }) {
   const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
   const risks = useAppStore((s) => s.risks);
+  const workOrders = useAppStore((s) => s.workOrders);
   const addActivityNote = useAppStore((s) => s.addActivityNote);
 
   const company = companies.find((c) => c.id === companyId);
@@ -188,6 +233,7 @@ function CompanyHome({ companyId }: { companyId: string }) {
   const overdue = companyInvoices.filter((i) => i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
   const openTickets = companyTickets.filter((t) => t.status !== "Resolved");
   const openRisks = risks.filter((r) => r.projectId && projectIds.has(r.projectId) && r.status !== "Closed");
+  const companyJobs = workOrders.filter((row) => row.companyId === companyId && row.status !== "Completed");
   const activity = useMemo(
     () =>
       composeActivityFeed({
@@ -257,6 +303,12 @@ function CompanyHome({ companyId }: { companyId: string }) {
           value={companyRetainers.length}
           hint={companyRetainers[0]?.name ?? "No retainers"}
         />
+        <MetricCard
+          label="Field jobs"
+          value={companyJobs.length}
+          hint={companyJobs[0]?.title ?? "No open work orders"}
+          tone={companyJobs.some((row) => row.status === "Pending approval") ? "warn" : "good"}
+        />
       </MetricGrid>
 
       <div className="split-2">
@@ -284,6 +336,17 @@ function CompanyHome({ companyId }: { companyId: string }) {
         <div className="panel p-5">
           <h2 className="section-title">Needs attention</h2>
           <div className="space-y-3">
+            {companyJobs.slice(0, 3).map((job) => (
+              <Link key={job.id} href="/app/work-orders" className="insight-card block">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold">{job.title}</div>
+                  <Pill value={job.status} />
+                </div>
+                <div className="mt-1 text-sm text-[var(--color-muted)]">
+                  {job.assignee || "Unassigned"} · {job.scheduled}
+                </div>
+              </Link>
+            ))}
             {openTickets.slice(0, 3).map((ticket) => (
               <Link key={ticket.id} href={`/app/tickets/view/?id=${ticket.id}`} className="insight-card block">
                 <div className="flex items-center justify-between gap-3">
@@ -306,7 +369,7 @@ function CompanyHome({ companyId }: { companyId: string }) {
                 </div>
               </Link>
             ))}
-            {!openTickets.length && !openRisks.length ? (
+            {!openTickets.length && !openRisks.length && !companyJobs.length ? (
               <p className="text-sm text-[var(--color-muted)]">Nothing open on this company.</p>
             ) : null}
           </div>

@@ -195,16 +195,27 @@ button, input, select, textarea { font: inherit; }
 }
 .app-shell.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
 
-.nav-group { margin-bottom: 10px; }
+.nav-group { margin-bottom: 6px; }
 .nav-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   padding: 8px 12px 4px;
+  border: 0;
+  background: transparent;
   color: rgba(255, 255, 255, 0.42);
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  cursor: pointer;
 }
+.nav-group-label:hover { color: rgba(255, 255, 255, 0.78); }
+.nav-group-label svg { flex: 0 0 auto; }
+.nav-group.is-closed .nav-link { display: none; }
 .app-shell.collapsed .nav-group-label { display: none; }
+.app-shell.collapsed .nav-group.is-closed .nav-link { display: flex; }
 .nav-group-rule {
   height: 1px;
   margin: 8px 8px 6px;

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
+  BarChart3,
   Bell,
   Briefcase,
   Building2,
@@ -16,8 +17,10 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock3,
+  Contact,
   Eye,
   EyeOff,
+  FileSpreadsheet,
   FileText,
   FolderOpen,
   Gift,
@@ -31,6 +34,7 @@ import {
   Plus,
   Receipt,
   Repeat,
+  ScrollText,
   Search,
   Settings,
   Shield,
@@ -51,7 +55,7 @@ import { Avatar, ConfirmModal, Drawer, Field, Modal, TextSelect, TextTextarea } 
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { AccessDenied } from "@/components/shell/AccessDenied";
 import { canAccessHref, canCreateKind } from "@/lib/rbac";
-import { NAV_GROUP_ORDER, NAV_MODULES, PACKS, hasPack, packForHref } from "@/lib/modules";
+import { NAV_GROUP_ORDER, NAV_GROUPS, NAV_MODULES, PACKS, hasPack, packForHref } from "@/lib/modules";
 import { canUsePack } from "@/lib/service-ops";
 import { useAppStore } from "@/lib/store";
 import { formatDisplayDate } from "@/lib/seed";
@@ -62,17 +66,16 @@ import { timerClock } from "@/lib/timesheet-work";
 
 const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/home": LayoutDashboard,
-  "/app/companies": Building2,
-  "/app/ideas": Lightbulb,
-  "/app/reports": FileText,
-  "/app/automations": Zap,
   "/app/projects": Briefcase,
   "/app/work": Workflow,
   "/app/tickets": Ticket,
   "/app/timesheets": Clock3,
+  "/app/ideas": Lightbulb,
+  "/app/automations": Zap,
   "/app/resources": Users,
-  "/app/retainers": ClipboardList,
-  "/app/billing": Receipt,
+  "/app/team": UsersRound,
+  "/app/employee": UserRound,
+  "/app/roles": Shield,
   "/app/work-journey": Map,
   "/app/work-orders": ClipboardCheck,
   "/app/recurring-services": Repeat,
@@ -80,11 +83,16 @@ const NAV_ICONS: Record<string, typeof Building2> = {
   "/app/work-schedule": CalendarRange,
   "/app/scheduling": CalendarClock,
   "/app/approvals": BadgeCheck,
-  "/app/employee": UserRound,
-  "/app/team": UsersRound,
-  "/app/roles": Shield,
+  "/app/companies": Building2,
+  "/app/contacts": Contact,
+  "/app/retainers": ClipboardList,
+  "/app/billing": Receipt,
+  "/app/quotes": FileSpreadsheet,
+  "/app/reports": FileText,
+  "/app/analytics": BarChart3,
   "/app/instances": Layers,
   "/app/promotional-trial": Gift,
+  "/app/audit": ScrollText,
 };
 
 function deniedModuleName(pathname: string) {
@@ -124,6 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<string[]>(() => [...NAV_GROUP_ORDER]);
   const [menu, setMenu] = useState<MenuId>(null);
   const hoverTimer = useRef(0);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
@@ -315,12 +324,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
-  const navGroups = NAV_GROUP_ORDER.map((pack) => ({
-    pack,
-    label: PACKS.find((item) => item.id === pack)?.label ?? pack,
+  const showHome = canAccessHref(user.role, "/app/home");
+  const navGroups = NAV_GROUP_ORDER.map((group) => ({
+    id: group,
+    label: NAV_GROUPS.find((item) => item.id === group)?.label ?? group,
     items: NAV_MODULES.filter(
       (item) =>
-        item.pack === pack &&
+        item.group === group &&
         canAccessHref(user.role, item.href) &&
         canUsePack(item.pack, enabledPacks, user.role, rolePacks),
     ),
@@ -425,21 +435,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav>
-          {navGroups.map((group) => (
-            <div key={group.pack} className="nav-group">
-              {!collapsed ? <div className="nav-group-label">{group.label}</div> : <div className="nav-group-rule" title={group.label} />}
-              {group.items.map((item) => {
-                const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
-                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-                return (
-                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
-                    <Icon size={17} />
-                    {!collapsed ? <span>{item.label}</span> : null}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {showHome ? (
+            <Link href="/app/home" className={clsx("nav-link", pathname === "/app/home" && "active")} title="Home">
+              <LayoutDashboard size={17} />
+              {!collapsed ? <span>Home</span> : null}
+            </Link>
+          ) : null}
+          {navGroups.map((group) => {
+            const open = collapsed || openGroups.includes(group.id);
+            const hasActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+            return (
+              <div key={group.id} className={clsx("nav-group", !open && !hasActive && "is-closed")}>
+                {!collapsed ? (
+                  <button
+                    type="button"
+                    className="nav-group-label"
+                    aria-expanded={open || hasActive}
+                    onClick={() =>
+                      setOpenGroups((current) =>
+                        current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id],
+                      )
+                    }
+                  >
+                    <span>{group.label}</span>
+                    <ChevronDown size={12} style={{ transform: open || hasActive ? "rotate(0deg)" : "rotate(-90deg)" }} />
+                  </button>
+                ) : (
+                  <div className="nav-group-rule" title={group.label} />
+                )}
+                {group.items.map((item) => {
+                  const Icon = NAV_ICONS[item.href] ?? LayoutDashboard;
+                  const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                  return (
+                    <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")} title={item.label}>
+                      <Icon size={17} />
+                      {!collapsed ? <span>{item.label}</span> : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
         <div className="nav-footer space-y-1">
           <HelpTrigger onClick={() => openHelp("guide")} collapsed={collapsed} />
