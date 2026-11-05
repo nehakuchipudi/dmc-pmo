@@ -225,7 +225,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_companies",
     keywords: ["company", "client", "account", "new company", "overview"],
     summary:
-      "Companies are client accounts. The company workspace has stream, contacts, work, tasks, files, assets, tickets, retainers, and billing.",
+      "Companies are client accounts. The company workspace has stream, contacts, work, tasks, files, assets, and billing.",
     steps: [
       "Open Companies and filter active, prospects, managed by me, or recently created.",
       "Click a company to open the workspace.",

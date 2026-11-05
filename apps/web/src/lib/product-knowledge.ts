@@ -66,7 +66,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     viewCap: "view_companies",
     keywords: ["company", "client", "account", "rowlett", "contacts tab"],
     summary:
-      "Companies are client and partner accounts. Each record has Overview, Stream, Contacts, Work, Tasks, Attachments, Assets, Tickets, Retainers, and Billing.",
+      "Companies are client and partner accounts. Each record has Overview, Stream, Contacts, Work, Tasks, Attachments, Assets, and Billing.",
     howTo: [
       "Open Companies, then a company name.",
       "Contacts lists people. Work lists projects. Billing lists invoices.",
@@ -141,7 +141,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     viewCap: "view_tickets",
     keywords: ["ticket", "request", "support", "issue ticket"],
     summary: "Tickets are client requests on a company, optionally linked to a project.",
-    howTo: ["Open Tickets or a company Tickets tab.", "Create with subject, company, priority, and assignee."],
+    howTo: ["Open Tickets.", "Create with subject, company, priority, and assignee."],
     canDo: ["Create, assign, or update a ticket"],
   },
   {

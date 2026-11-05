@@ -37,8 +37,6 @@ const TABS = [
   "Tasks",
   "Attachments",
   "Assets",
-  "Tickets",
-  "Retainers",
   "Billing",
 ];
 
@@ -77,9 +75,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const companyAssets = useAppStore((s) => s.companyAssets);
   const projects = useAppStore((s) => s.projects);
   const contacts = useAppStore((s) => s.contacts);
-  const tickets = useAppStore((s) => s.tickets);
   const invoices = useAppStore((s) => s.invoices);
-  const retainers = useAppStore((s) => s.retainers);
   const activities = useAppStore((s) => s.activities);
   const timeEntries = useAppStore((s) => s.timeEntries);
   const milestones = useAppStore((s) => s.milestones);
@@ -113,17 +109,9 @@ export function CompanyDetail({ id }: { id: string }) {
     () => contacts.filter((c) => c.companyId === company?.id),
     [contacts, company?.id],
   );
-  const companyTickets = useMemo(
-    () => tickets.filter((t) => t.companyId === company?.id),
-    [tickets, company?.id],
-  );
   const companyInvoices = useMemo(
     () => invoices.filter((i) => i.companyId === company?.id),
     [invoices, company?.id],
-  );
-  const companyRetainers = useMemo(
-    () => retainers.filter((r) => r.companyId === company?.id),
-    [retainers, company?.id],
   );
   const activity = useMemo(
     () =>
@@ -479,7 +467,7 @@ export function CompanyDetail({ id }: { id: string }) {
                 <div>
                   <div className="metric-label">Open work</div>
                   <div className="text-sm font-medium">
-                    {company.openProjects} projects · {openTasks.length} tasks · {company.openTickets} tickets
+                    {company.openProjects} projects · {openTasks.length} tasks
                   </div>
                 </div>
                 <div>
@@ -619,10 +607,6 @@ export function CompanyDetail({ id }: { id: string }) {
                         "None open"
                       )}
                     </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Retainers</dt>
-                    <dd>{companyRetainers.length}</dd>
                   </div>
                 </dl>
               </div>
@@ -965,86 +949,6 @@ export function CompanyDetail({ id }: { id: string }) {
                   <tr>
                     <td colSpan={6} className="text-[var(--color-muted)]">
                       No assets on this company.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {tab === "Tickets" && (
-          <div className="panel overflow-hidden">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Ticket</th>
-                  <th>Priority</th>
-                  <th>Assignee</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companyTickets.map((t) => (
-                  <tr key={t.id}>
-                    <td>
-                      <Link href={`/app/tickets/view/?id=${t.id}`} className="font-medium text-[var(--color-navy)]">
-                        #{t.number} {t.subject}
-                      </Link>
-                    </td>
-                    <td>
-                      <TonePill value={t.priority} />
-                    </td>
-                    <td>{t.assignee}</td>
-                    <td>
-                      <TonePill value={t.status} />
-                    </td>
-                  </tr>
-                ))}
-                {!companyTickets.length ? (
-                  <tr>
-                    <td colSpan={4} className="text-[var(--color-muted)]">
-                      No tickets for this company.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {tab === "Retainers" && (
-          <div className="panel overflow-hidden">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Retainer</th>
-                  <th>Period</th>
-                  <th>Usage</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companyRetainers.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <Link href={`/app/retainers/view/?id=${r.id}`} className="font-medium text-[var(--color-navy)]">
-                        {r.name}
-                      </Link>
-                    </td>
-                    <td>{r.periodLabel}</td>
-                    <td>
-                      {r.usedHours} / {r.budgetHours} hrs
-                    </td>
-                    <td>
-                      <TonePill value={r.status} />
-                    </td>
-                  </tr>
-                ))}
-                {!companyRetainers.length ? (
-                  <tr>
-                    <td colSpan={4} className="text-[var(--color-muted)]">
-                      No retainers for this company.
                     </td>
                   </tr>
                 ) : null}
