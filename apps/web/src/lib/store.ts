@@ -67,7 +67,7 @@ import {
   seedRisks,
 } from "./ppm-seed";
 import { EMPTY_WORKSPACE_GENERATION } from "./workspace-snapshot";
-import { ideaCanConvert, ideaComposite, normalizeIdeaStage } from "./ppm";
+import { ideaCanConvert, ideaComposite, nextProjectNumber, normalizeIdeaStage } from "./ppm";
 import {
   buildDnsRecords,
   domainStatus,
@@ -1227,6 +1227,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const id = uid("p");
     const project: Project = {
       id,
+      number: nextProjectNumber(get().projects),
       name: input.name,
       companyId: company?.id ?? "",
       companyName: company?.name ?? "Internal",
@@ -1509,6 +1510,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const project: Project = {
       ...source,
       id: newId,
+      number: nextProjectNumber(get().projects),
       name: `${source.name} (copy)`,
       progress: 0,
       status: "Draft",

@@ -5,12 +5,20 @@ import { fileURLToPath } from "node:url";
 import {
   IDEA_STATUS_OPTIONS,
   PROJECT_CREATE_TYPES,
+  PROJECT_LIST_FILTERS,
+  filterProjectList,
   ideaCanConvert,
   ideaIsOpen,
   ideaObjectiveLabel,
+  lastProjectContactIso,
+  nextProjectNumber,
   normalizeIdeaStage,
+  projectDisplayId,
+  projectEarnedValue,
+  projectIsOverdue,
   resolveIdeaObjective,
 } from "./ppm";
+import type { Project } from "./types";
 
 const objectives = [
   { id: "so-1", code: "SO-1", name: "Grow municipal work" },
@@ -89,5 +97,88 @@ assert.match(store, /input\.projectType\?\.trim\(\)/);
 
 const projectEdit = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(projectEdit, /"Internal", "Client Work"/);
+
+assert.deepEqual([...PROJECT_LIST_FILTERS], [
+  "All Open Projects",
+  "Recently Created",
+  "Managed By Me",
+  "Projects Overdue",
+]);
+assert.equal(nextProjectNumber([]), 1);
+assert.equal(nextProjectNumber([{ number: 54 }]), 55);
+assert.equal(projectDisplayId({ id: "p-abc", number: 67 }), "67");
+assert.equal(projectEarnedValue({ progress: 50, budgetAmount: 21600 }), 10800);
+assert.equal(projectIsOverdue({ due: "2026-09-30", status: "Draft" }, "2026-11-06"), true);
+assert.equal(projectIsOverdue({ due: "2026-11-06", status: "Active" }, "2026-11-06"), false);
+assert.equal(projectIsOverdue({ due: "2026-09-30", status: "Completed" }, "2026-11-06"), false);
+assert.equal(
+  lastProjectContactIso("p1", {
+    activities: [{ projectId: "p1", at: "2026-10-01T12:00:00Z" }],
+    timeEntries: [{ projectId: "p1", date: "2026-11-01" }],
+  }),
+  "2026-11-01",
+);
+
+const listSample = [
+  {
+    id: "p1",
+    name: "HQ Ops",
+    companyId: "",
+    companyName: "Internal",
+    manager: "Dillon Morgan",
+    progress: 0,
+    status: "Draft",
+    due: "2026-09-30",
+    start: "2026-11-01",
+    budgetHours: 120,
+    loggedHours: 0,
+    marginPct: 35,
+    portalShared: true,
+    portalContacts: 0,
+    projectType: "Internal",
+    description: "",
+    budgetAmount: 21600,
+    materials: [],
+    files: [],
+    notes: [],
+    scope: { objectives: "", inScope: [], outOfScope: [], deliverables: [], assumptions: [] },
+  },
+  {
+    id: "p2",
+    name: "Done Work",
+    companyId: "",
+    companyName: "Internal",
+    manager: "J. Kim",
+    progress: 100,
+    status: "Completed",
+    due: "2026-08-01",
+    start: "2026-07-01",
+    budgetHours: 40,
+    loggedHours: 40,
+    marginPct: 35,
+    portalShared: true,
+    portalContacts: 0,
+    projectType: "Internal",
+    description: "",
+    budgetAmount: 8000,
+    materials: [],
+    files: [],
+    notes: [],
+    scope: { objectives: "", inScope: [], outOfScope: [], deliverables: [], assumptions: [] },
+  },
+] as Project[];
+assert.equal(filterProjectList(listSample, "All Open Projects", { today: "2026-11-06" }).length, 1);
+assert.equal(filterProjectList(listSample, "Managed By Me", { userName: "Dillon Morgan", today: "2026-11-06" })[0]?.id, "p1");
+assert.equal(filterProjectList(listSample, "Projects Overdue", { today: "2026-11-06" })[0]?.id, "p1");
+assert.equal(filterProjectList(listSample, "Recently Created", { today: "2026-11-06" })[0]?.id, "p1");
+
+const projectsPage = readFileSync(join(root, "../app/app/projects/page.tsx"), "utf8");
+assert.match(projectsPage, /PROJECT_LIST_FILTERS/);
+assert.match(projectsPage, />Id</);
+assert.match(projectsPage, />Type</);
+assert.match(projectsPage, />Earned</);
+assert.match(projectsPage, />Last contact</);
+assert.match(projectsPage, /table-wrap/);
+assert.match(store, /nextProjectNumber\(get\(\)\.projects\)/);
 
 console.log("ppm.verify ok");

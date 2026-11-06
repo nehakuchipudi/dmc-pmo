@@ -195,6 +195,7 @@ export interface TaskLink {
 
 export interface Project {
   id: string;
+  number?: number;
   name: string;
   companyId: string;
   companyName: string;

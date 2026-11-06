@@ -120,7 +120,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Projects is the delivery workspace. Each project has overview, team, schedule, insights, tasks, activity, files, expenses, rates, billing, assets, and details.",
     steps: [
-      "Open Projects and filter All open, My projects, At risk, or Recently created.",
+      "Open Projects and filter All Open Projects, Recently Created, Managed By Me, or Projects Overdue.",
       "Click a project name to open the workspace. On Activity, type @ to tag a teammate such as @A.Chen.",
       "Use New project from the list, Create (+), or a company page. Choose Type: Internal or Client Work.",
       "Change lifecycle status from the project header if your role is allowed.",
