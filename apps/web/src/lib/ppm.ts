@@ -87,6 +87,36 @@ export const IDEA_STAGES = ["Submitted", "In Progress", "Approved", "On Hold", "
 export const IDEA_STATUS_OPTIONS = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected"] as const;
 export const PROJECT_CREATE_TYPES = ["Internal", "Client Work"] as const;
 export type ProjectCreateType = (typeof PROJECT_CREATE_TYPES)[number];
+export const PROJECT_CREATE_STATUSES = ["Draft", "Planning", "Active"] as const;
+export const PROJECT_TEMPLATES = [
+  { id: "blank", name: "Blank", budgetHours: 120 },
+  { id: "client-delivery", name: "Client delivery", budgetHours: 200, projectType: "Client Work" as const },
+  { id: "internal-ops", name: "Internal operations", budgetHours: 80, projectType: "Internal" as const },
+] as const;
+
+export function customFieldsForProjectType(type: string) {
+  if (type === "Internal") {
+    return [
+      { id: "department", label: "Department" },
+      { id: "costCenter", label: "Cost center" },
+    ];
+  }
+  if (type === "Client Work") {
+    return [
+      { id: "contractNumber", label: "Contract number" },
+      { id: "purchaseOrder", label: "Purchase order" },
+    ];
+  }
+  return [] as { id: string; label: string }[];
+}
+
+export function projectTemplateById(id: string) {
+  return PROJECT_TEMPLATES.find((row) => row.id === id);
+}
+
+export function templatesForProjectType(type: string) {
+  return PROJECT_TEMPLATES.filter((row) => !("projectType" in row) || row.projectType === type);
+}
 export const PROJECT_LIST_FILTERS = [
   "All Open Projects",
   "Recently Created",

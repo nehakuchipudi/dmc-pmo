@@ -122,7 +122,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     steps: [
       "Open Projects and filter All Open Projects, Recently Created, Managed By Me, or Projects Overdue.",
       "Click a project name to open the workspace. On Activity, type @ to tag a teammate such as @A.Chen.",
-      "Use New project from the list, Create (+), or a company page. Choose Type: Internal or Client Work.",
+      "Use New project from the list, Create (+), or a company page. Fill company, contact, type, status, project manager, planned dates, template, and custom fields.",
       "Change lifecycle status from the project header if your role is allowed.",
       "Row actions can edit, duplicate, generate an invoice, email an update, or delete, based on role.",
     ],

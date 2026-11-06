@@ -223,6 +223,13 @@ export interface Project {
   deliveryMethod?: string;
   fundingSource?: string;
   sponsor?: string;
+  contactId?: string;
+  contactName?: string;
+  templateId?: string;
+  templateName?: string;
+  customFields?: CompanyCustomField[];
+  actualStart?: string;
+  actualDue?: string;
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */

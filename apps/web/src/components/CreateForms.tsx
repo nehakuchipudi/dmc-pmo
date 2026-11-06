@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
+import { ProjectCreateForm } from "@/components/ProjectCreateForm";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
-import { PROJECT_CREATE_TYPES, resolveIdeaObjective } from "@/lib/ppm";
+import { resolveIdeaObjective } from "@/lib/ppm";
 import { canCreateKind } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -108,7 +109,7 @@ export function CreateForms({
   }
 
   return (
-    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"} wide={kind === "portfolio"}>
+    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"} wide={kind === "portfolio" || kind === "project"}>
       {kind === "company" && (
         <CompanyCreateForm
           onCancel={onClose}
@@ -140,7 +141,7 @@ export function CreateForms({
         />
       )}
       {kind === "project" && (
-        <ProjectForm
+        <ProjectCreateForm
           companies={companies}
           defaultCompanyId={defaults?.companyId}
           onSubmit={(v) => {
@@ -444,115 +445,6 @@ function ContactForm({
       </label>
       <button type="submit" className="btn btn-primary">
         Create contact
-      </button>
-    </form>
-  );
-}
-
-function ProjectForm({
-  companies,
-  defaultCompanyId,
-  onSubmit,
-}: {
-  companies: { id: string; name: string }[];
-  defaultCompanyId?: string;
-  onSubmit: (v: {
-    name: string;
-    companyId?: string;
-    manager: string;
-    ownerEmail?: string;
-    due: string;
-    budgetHours: number;
-    projectType: string;
-  }) => void;
-}) {
-  const { user } = useAuth();
-  const team = useAppStore((s) => s.team).filter((member) => member.active);
-  const preferred =
-    team.find((member) => member.email.toLowerCase() === user?.email?.toLowerCase()) ??
-    team.find((member) => member.name === user?.name) ??
-    team[0];
-  const [name, setName] = useState("");
-  const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
-  const [projectType, setProjectType] = useState(
-    defaultCompanyId || companies.length ? "Client Work" : "Internal",
-  );
-  const [ownerId, setOwnerId] = useState(preferred?.id ?? "");
-  const [due, setDue] = useState("2026-09-30");
-  const owner = team.find((member) => member.id === ownerId) ?? preferred;
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        if (projectType === "Client Work" && !companyId) return;
-        onSubmit({
-          name: name.trim(),
-          companyId: companyId || undefined,
-          manager: owner?.name ?? user?.name ?? "Unassigned",
-          ownerEmail: owner?.email,
-          due,
-          budgetHours: 120,
-          projectType,
-        });
-      }}
-    >
-      <Field label="Project name">
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
-      </Field>
-      <Field label="Company" required={projectType === "Client Work"}>
-        <TextSelect
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-          required={projectType === "Client Work"}
-        >
-          {projectType === "Internal" ? <option value="">Internal / unassigned</option> : null}
-          {projectType === "Client Work" && !companies.length ? <option value="">Select a company</option> : null}
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </TextSelect>
-      </Field>
-      {projectType === "Client Work" && !companies.length ? (
-        <p className="mb-3 text-xs text-[var(--color-muted)]">
-          Client Work needs a company. Create a company first, or choose Internal.
-        </p>
-      ) : null}
-      <Field label="Type">
-        <TextSelect
-          value={projectType}
-          onChange={(e) => {
-            const next = e.target.value;
-            setProjectType(next);
-            if (next === "Client Work" && !companyId && companies[0]) setCompanyId(companies[0].id);
-          }}
-        >
-          {PROJECT_CREATE_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </TextSelect>
-      </Field>
-      <Field label="Owner">
-        <TextSelect value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-          {team.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.name} ({member.email})
-            </option>
-          ))}
-        </TextSelect>
-      </Field>
-      <p className="mb-3 text-xs text-[var(--color-muted)]">
-        We email the owner at {owner?.email || "their address"} as soon as the project is created.
-      </p>
-      <Field label="Due date">
-        <TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-      </Field>
-      <button type="submit" className="btn btn-primary">
-        Create project
       </button>
     </form>
   );
