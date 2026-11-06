@@ -489,7 +489,7 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-muted);
 }
 .notify-menu-row.is-unread { background: var(--color-info-bg); }
-.create-popover { width: 380px; }
+.create-popover { width: 220px; }
 .context-popover { width: 320px; display: grid; gap: 6px; }
 .profile-popover { width: 280px; }
 .menu-heading {

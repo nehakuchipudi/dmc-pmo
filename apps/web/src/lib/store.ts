@@ -9,6 +9,7 @@ import {
   seedCompanyAssets,
   seedContacts,
   seedEmailOutbox,
+  seedBillMaterials,
   seedExpenses,
   seedInvoices,
   seedInvoiceTemplates,
@@ -16,6 +17,7 @@ import {
   seedNotifications,
   seedOpportunities,
   seedProjects,
+  seedPurchases,
   seedRetainers,
   seedRetainerPeriods,
   seedTasks,
@@ -89,6 +91,7 @@ import type {
   ContactNote,
   CrossDependency,
   EmailDomain,
+  BillMaterial,
   EmailOutboxItem,
   Expense,
   GateStatus,
@@ -105,6 +108,7 @@ import type {
   Portfolio,
   Project,
   ProjectFile,
+  Purchase,
   ProjectNote,
   ProjectScope,
   ProjectStatus,
@@ -275,6 +279,8 @@ type AppState = {
   emailOutbox: EmailOutboxItem[];
   emailDomains: EmailDomain[];
   expenses: Expense[];
+  purchases: Purchase[];
+  billMaterials: BillMaterial[];
   opportunities: Opportunity[];
   objectives: StrategicObjective[];
   ideas: Idea[];
@@ -397,7 +403,41 @@ type AppState = {
   startTimeTimer: (input: Omit<TimeTimer, "id" | "startedAt">) => string;
   stopTimeTimer: (id: string) => TimeTimer | undefined;
   setShowTimeTimers: (show: boolean) => void;
-  createExpense: (input: { vendor: string; projectId: string; amount: number; note: string }) => string;
+  createExpense: (input: {
+    vendor: string;
+    projectId?: string;
+    amount: number;
+    note: string;
+    title?: string;
+    type?: Expense["type"];
+    companyId?: string;
+    retainerId?: string;
+    belongLabel?: string;
+    date?: string;
+    owner?: string;
+    attachmentName?: string;
+    miles?: number;
+    mileRate?: number;
+  }) => string;
+  createPurchase: (input: {
+    title: string;
+    vendor: string;
+    amount: number;
+    date: string;
+    owner: string;
+    note?: string;
+    companyId?: string;
+    projectId?: string;
+  }) => string;
+  createBillMaterial: (input: {
+    title: string;
+    qty: number;
+    purchasePrice: number;
+    salePrice: number;
+    sku?: string;
+    companyId?: string;
+    projectId?: string;
+  }) => string;
   createOpportunity: (input: { name: string; companyId: string; amount: number; close: string }) => string;
   advanceOpportunity: (id: string) => void;
   approveExpense: (id: string) => void;
@@ -837,6 +877,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   emailOutbox: [...readAccountExtras().mail, ...seedEmailOutbox],
   emailDomains: loadEmailDomains(),
   expenses: seedExpenses,
+  purchases: seedPurchases,
+  billMaterials: seedBillMaterials,
   opportunities: seedOpportunities,
   objectives: seedObjectives,
   ideas: seedIdeas,
@@ -2311,22 +2353,87 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createExpense: (input) => {
     if (!requireCap(get, "create_expense")) return "";
-    const project = get().projects.find((p) => p.id === input.projectId);
-    if (!project) return "";
+    const project = input.projectId ? get().projects.find((p) => p.id === input.projectId) : undefined;
+    const company = input.companyId
+      ? get().companies.find((c) => c.id === input.companyId)
+      : project
+        ? get().companies.find((c) => c.id === project.companyId)
+        : undefined;
+    const retainer = input.retainerId ? get().retainers.find((r) => r.id === input.retainerId) : undefined;
+    const belongLabel =
+      input.belongLabel || project?.name || company?.name || retainer?.name || "Unassigned";
+    if (!project && !company && !retainer) return "";
     const id = uid("ex");
     const expense: Expense = {
       id,
       vendor: input.vendor,
-      projectId: project.id,
-      projectName: project.name,
+      projectId: project?.id ?? "",
+      projectName: project?.name || belongLabel,
       amount: input.amount,
       status: "Pending",
-      date: todayIso(),
+      date: input.date || todayIso(),
       note: input.note,
-      userName: currentActor(),
+      userName: input.owner || currentActor(),
+      title: input.title || input.vendor,
+      type: input.type,
+      companyId: company?.id ?? retainer?.companyId,
+      companyName: company?.name ?? retainer?.companyName,
+      retainerId: retainer?.id,
+      belongLabel,
+      owner: input.owner || currentActor(),
+      attachmentName: input.attachmentName,
+      miles: input.miles,
+      mileRate: input.mileRate,
     };
     set((s) => ({ expenses: [expense, ...s.expenses] }));
     get().pushToast("Expense submitted for approval");
+    return id;
+  },
+
+  createPurchase: (input) => {
+    if (!requireCap(get, "create_expense")) return "";
+    const company = input.companyId ? get().companies.find((c) => c.id === input.companyId) : undefined;
+    const project = input.projectId ? get().projects.find((p) => p.id === input.projectId) : undefined;
+    const id = uid("po");
+    const purchase: Purchase = {
+      id,
+      title: input.title,
+      vendor: input.vendor,
+      amount: input.amount,
+      date: input.date,
+      status: "Open",
+      owner: input.owner,
+      note: input.note,
+      companyId: company?.id ?? project?.companyId,
+      companyName: company?.name ?? project?.companyName,
+      projectId: project?.id,
+      projectName: project?.name,
+    };
+    set((s) => ({ purchases: [purchase, ...s.purchases] }));
+    get().pushToast("Purchase added");
+    return id;
+  },
+
+  createBillMaterial: (input) => {
+    if (!requireAny(get, "create_invoice", "edit_project")) return "";
+    const company = input.companyId ? get().companies.find((c) => c.id === input.companyId) : undefined;
+    const project = input.projectId ? get().projects.find((p) => p.id === input.projectId) : undefined;
+    const id = uid("bmat");
+    const material: BillMaterial = {
+      id,
+      title: input.title,
+      qty: input.qty,
+      purchasePrice: input.purchasePrice,
+      salePrice: input.salePrice,
+      date: todayIso(),
+      sku: input.sku,
+      companyId: company?.id ?? project?.companyId,
+      companyName: company?.name ?? project?.companyName,
+      projectId: project?.id,
+      projectName: project?.name,
+    };
+    set((s) => ({ billMaterials: [material, ...s.billMaterials] }));
+    get().pushToast("Material added");
     return id;
   },
 

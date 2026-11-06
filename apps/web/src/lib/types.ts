@@ -329,7 +329,7 @@ export interface ProjectRate {
   hourlyRate: number;
 }
 
-export type InvoiceLineKind = "service" | "material" | "expense";
+export type InvoiceLineKind = "service" | "material" | "expense" | "purchase";
 
 export interface InvoiceLineItem {
   id: string;
@@ -341,6 +341,7 @@ export interface InvoiceLineItem {
   amount: number;
   taxPct?: number;
   includeInPdf?: boolean;
+  sourceId?: string;
 }
 
 export type InvoiceTemplateKind = "time_materials" | "progress" | "retainer" | "fixed_fee" | "expense";
@@ -552,6 +553,8 @@ export interface EmailDomain {
   lastChecked?: string;
 }
 
+export type ExpenseType = "Travel" | "Mileage" | "Meals" | "Lodging" | "Materials" | "Other";
+
 export interface Expense {
   id: string;
   vendor: string;
@@ -562,6 +565,45 @@ export interface Expense {
   date: string;
   note: string;
   userName?: string;
+  title?: string;
+  type?: ExpenseType;
+  companyId?: string;
+  companyName?: string;
+  retainerId?: string;
+  belongLabel?: string;
+  owner?: string;
+  attachmentName?: string;
+  miles?: number;
+  mileRate?: number;
+}
+
+export interface Purchase {
+  id: string;
+  title: string;
+  vendor: string;
+  amount: number;
+  date: string;
+  status: "Open" | "Received" | "Billed";
+  owner: string;
+  note?: string;
+  companyId?: string;
+  companyName?: string;
+  projectId?: string;
+  projectName?: string;
+}
+
+export interface BillMaterial {
+  id: string;
+  title: string;
+  qty: number;
+  purchasePrice: number;
+  salePrice: number;
+  date: string;
+  sku?: string;
+  companyId?: string;
+  companyName?: string;
+  projectId?: string;
+  projectName?: string;
 }
 
 export interface Opportunity {

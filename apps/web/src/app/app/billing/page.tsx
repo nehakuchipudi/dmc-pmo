@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
+import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
+import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
+import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -18,10 +21,18 @@ export default function BillingPage() {
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
   const expenses = useAppStore((s) => s.expenses);
+  const purchases = useAppStore((s) => s.purchases);
+  const billMaterials = useAppStore((s) => s.billMaterials);
   const approveExpense = useAppStore((s) => s.approveExpense);
+  const createExpense = useAppStore((s) => s.createExpense);
+  const createPurchase = useAppStore((s) => s.createPurchase);
+  const createBillMaterial = useAppStore((s) => s.createBillMaterial);
   const [filter, setFilter] = useState(FILTERS[0]);
   const [tab, setTab] = useState("Invoices");
   const [newOpen, setNewOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [materialOpen, setMaterialOpen] = useState(false);
 
   const rows = useMemo(() => {
     if (filter === "Overdue") return invoices.filter((i) => i.status === "Overdue");
@@ -64,11 +75,34 @@ export default function BillingPage() {
             >
               Export CSV
             </button>
-            <IfCan cap="create_invoice">
-              <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
-                <Plus size={16} /> New Invoice
-              </button>
-            </IfCan>
+            {tab === "Invoices" ? (
+              <IfCan cap="create_invoice">
+                <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
+                  <Plus size={16} /> New Invoice
+                </button>
+              </IfCan>
+            ) : null}
+            {tab === "Expenses" ? (
+              <IfCan cap="create_expense">
+                <button type="button" className="btn btn-primary" onClick={() => setExpenseOpen(true)}>
+                  <Plus size={16} /> New Expense
+                </button>
+              </IfCan>
+            ) : null}
+            {tab === "Purchases" ? (
+              <IfCan cap="create_expense">
+                <button type="button" className="btn btn-primary" onClick={() => setPurchaseOpen(true)}>
+                  <Plus size={16} /> New Purchase
+                </button>
+              </IfCan>
+            ) : null}
+            {tab === "Materials" ? (
+              <IfCan cap="create_invoice">
+                <button type="button" className="btn btn-primary" onClick={() => setMaterialOpen(true)}>
+                  <Plus size={16} /> New Material
+                </button>
+              </IfCan>
+            ) : null}
           </>
         }
       />
@@ -153,8 +187,8 @@ export default function BillingPage() {
             <tbody>
               {expenses.map((e) => (
                 <tr key={e.id}>
-                  <td className="font-medium">{e.vendor}</td>
-                  <td>{e.projectName}</td>
+                  <td className="font-medium">{e.title || e.vendor}</td>
+                  <td>{e.belongLabel || e.projectName}</td>
                   <td>{formatDisplayDate(e.date)}</td>
                   <td className="tabular-nums">{money(e.amount)}</td>
                   <td>
@@ -173,19 +207,73 @@ export default function BillingPage() {
               ))}
             </tbody>
           </table>
-          <p className="p-4 text-xs text-[var(--color-muted)]">
-            Create expenses from the Create (+) menu. They land here as Pending for approval.
-          </p>
+          {!expenses.length ? (
+            <p className="p-4 text-xs text-[var(--color-muted)]">
+              Add an expense from New Expense, or from Create. They land here as Pending for approval.
+            </p>
+          ) : null}
         </div>
       ) : null}
       {tab === "Purchases" ? (
-        <div className="panel p-6 text-sm text-[var(--color-muted)]">
-          Purchase orders for client bill-through land with finance integrations later. Track vendor spend under Expenses for now.
+        <div className="panel overflow-hidden">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Vendor</th>
+                <th>Project</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {purchases.map((row) => (
+                <tr key={row.id}>
+                  <td className="font-medium">{row.title}</td>
+                  <td>{row.vendor}</td>
+                  <td>{row.projectName || row.companyName || "Unassigned"}</td>
+                  <td>{formatDisplayDate(row.date)}</td>
+                  <td className="tabular-nums">{money(row.amount)}</td>
+                  <td>
+                    <StatusPill tone={statusTone(row.status)}>{row.status}</StatusPill>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!purchases.length ? (
+            <p className="p-4 text-xs text-[var(--color-muted)]">Add a purchase to bill vendor spend on an invoice.</p>
+          ) : null}
         </div>
       ) : null}
       {tab === "Materials" ? (
-        <div className="panel p-6 text-sm text-[var(--color-muted)]">
-          Materials can be added as invoice line items. Sample materials appear on INV-2291.
+        <div className="panel overflow-hidden">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Qty</th>
+                <th>Purchase</th>
+                <th>Sale</th>
+                <th>Project</th>
+              </tr>
+            </thead>
+            <tbody>
+              {billMaterials.map((row) => (
+                <tr key={row.id}>
+                  <td className="font-medium">{row.title}</td>
+                  <td className="tabular-nums">{row.qty}</td>
+                  <td className="tabular-nums">{money(row.purchasePrice)}</td>
+                  <td className="tabular-nums">{money(row.salePrice)}</td>
+                  <td>{row.projectName || row.companyName || "Unassigned"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!billMaterials.length ? (
+            <p className="p-4 text-xs text-[var(--color-muted)]">Add a material here, then select it when you create an invoice.</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -196,6 +284,33 @@ export default function BillingPage() {
           onCreated={(id) => {
             setNewOpen(false);
             router.push(`/app/billing/view/?id=${id}`);
+          }}
+        />
+      </Modal>
+      <Modal open={expenseOpen} title="New expense" onClose={() => setExpenseOpen(false)} xl>
+        <ExpenseCreateForm
+          onSubmit={(values, addAnother) => {
+            const id = createExpense(values);
+            if (!id) return false;
+            if (!addAnother) setExpenseOpen(false);
+          }}
+        />
+      </Modal>
+      <Modal open={purchaseOpen} title="New purchase" onClose={() => setPurchaseOpen(false)}>
+        <PurchaseCreateForm
+          defaultCompanyId={companies[0]?.id}
+          onSubmit={(values) => {
+            const id = createPurchase(values);
+            if (id) setPurchaseOpen(false);
+          }}
+        />
+      </Modal>
+      <Modal open={materialOpen} title="New material" onClose={() => setMaterialOpen(false)}>
+        <MaterialCreateForm
+          defaultCompanyId={companies[0]?.id}
+          onSubmit={(values) => {
+            const id = createBillMaterial(values);
+            if (id) setMaterialOpen(false);
           }}
         />
       </Modal>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { ProjectCreateForm } from "@/components/ProjectCreateForm";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
@@ -109,7 +110,7 @@ export function CreateForms({
   }
 
   return (
-    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company"} wide={kind === "portfolio" || kind === "project"}>
+    <Modal open={!!kind} title={title} onClose={onClose} xl={kind === "company" || kind === "expense"} wide={kind === "portfolio" || kind === "project"}>
       {kind === "company" && (
         <CompanyCreateForm
           onCancel={onClose}
@@ -200,12 +201,13 @@ export function CreateForms({
         />
       )}
       {kind === "expense" && (
-        <ExpenseForm
-          projects={projects}
+        <ExpenseCreateForm
           defaultProjectId={defaults?.projectId}
-          onSubmit={(v) => {
-            createExpense(v);
-            onClose();
+          defaultCompanyId={defaults?.companyId}
+          onSubmit={(v, addAnother) => {
+            const id = createExpense(v);
+            if (!id) return false;
+            if (!addAnother) onClose();
           }}
         />
       )}
@@ -570,56 +572,6 @@ function MilestoneForm({
       </Field>
       <button type="submit" className="btn btn-primary">
         Add milestone
-      </button>
-    </form>
-  );
-}
-
-function ExpenseForm({
-  projects,
-  defaultProjectId,
-  onSubmit,
-}: {
-  projects: { id: string; name: string }[];
-  defaultProjectId?: string;
-  onSubmit: (v: { vendor: string; projectId: string; amount: number; note: string }) => void;
-}) {
-  const [vendor, setVendor] = useState("Vendor");
-  const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
-  const [amount, setAmount] = useState("120");
-  const [note, setNote] = useState("Client travel");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit({
-          vendor: vendor.trim() || "Vendor",
-          projectId,
-          amount: Number(amount) || 0,
-          note,
-        });
-      }}
-    >
-      <Field label="Vendor">
-        <TextInput value={vendor} onChange={(e) => setVendor(e.target.value)} required />
-      </Field>
-      <Field label="Amount">
-        <TextInput type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      </Field>
-      <Field label="Project">
-        <TextSelect value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </TextSelect>
-      </Field>
-      <Field label="Note">
-        <TextTextarea value={note} onChange={(e) => setNote(e.target.value)} />
-      </Field>
-      <button type="submit" className="btn btn-primary">
-        Submit expense
       </button>
     </form>
   );

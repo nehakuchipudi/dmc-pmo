@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Plus, Trash2 } from "lucide-react";
+import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
+import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
+import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
   computeLineAmount,
@@ -49,6 +52,11 @@ export function InvoiceCreateForm({
   const retainers = useAppStore((s) => s.retainers);
   const timeEntries = useAppStore((s) => s.timeEntries);
   const expenses = useAppStore((s) => s.expenses);
+  const purchases = useAppStore((s) => s.purchases);
+  const billMaterials = useAppStore((s) => s.billMaterials);
+  const createExpense = useAppStore((s) => s.createExpense);
+  const createPurchase = useAppStore((s) => s.createPurchase);
+  const createBillMaterial = useAppStore((s) => s.createBillMaterial);
   const team = useAppStore((s) => s.team);
   const invoices = useAppStore((s) => s.invoices);
   const templates = useAppStore((s) => s.invoiceTemplates);
@@ -78,6 +86,10 @@ export function InvoiceCreateForm({
   const [tplName, setTplName] = useState("");
   const [tplSummary, setTplSummary] = useState("");
   const [tplTax, setTplTax] = useState("0");
+  const [pickedExpenses, setPickedExpenses] = useState<string[]>([]);
+  const [pickedPurchases, setPickedPurchases] = useState<string[]>([]);
+  const [pickedMaterials, setPickedMaterials] = useState<string[]>([]);
+  const [addKind, setAddKind] = useState<"expense" | "purchase" | "material" | null>(null);
 
   const company = companies.find((c) => c.id === companyId);
   const project = projects.find((p) => p.id === projectId);
@@ -139,7 +151,14 @@ export function InvoiceCreateForm({
     setLines((current) => [
       ...current,
       emptyInvoiceLine(kind, {
-        description: kind === "service" ? "Professional services" : kind === "material" ? "Material" : "Expense",
+        description:
+          kind === "service"
+            ? "Professional services"
+            : kind === "material"
+              ? "Material"
+              : kind === "purchase"
+                ? "Purchase"
+                : "Expense",
         hours: kind === "service" ? 1 : undefined,
         rate: kind === "service" ? 180 : kind === "material" ? 0 : undefined,
         quantity: kind === "material" ? 1 : undefined,
@@ -173,43 +192,94 @@ export function InvoiceCreateForm({
     pushToast("Pulled approved time onto service lines");
   }
 
-  function pullMaterials() {
-    if (!project?.materials.length) {
-      pushToast("This project has no materials", "info");
-      return;
-    }
-    setLines((current) => [
-      ...current.filter((l) => l.kind !== "material"),
-      ...project.materials.map((m) =>
-        emptyInvoiceLine("material", {
-          description: m.title,
-          quantity: m.qty,
-          rate: m.salePrice,
-          amount: m.qty * m.salePrice,
-          taxPct: Number(tplTax) || 0,
-        }),
-      ),
-    ]);
-    pushToast("Pulled project materials");
+  const visibleExpenses = expenses.filter(
+    (row) => (!companyId || row.companyId === companyId || !row.companyId) && (!projectId || !row.projectId || row.projectId === projectId),
+  );
+  const visiblePurchases = purchases.filter(
+    (row) => (!companyId || row.companyId === companyId || !row.companyId) && (!projectId || !row.projectId || row.projectId === projectId),
+  );
+  const visibleMaterials = [
+    ...billMaterials.filter(
+      (row) => (!companyId || row.companyId === companyId || !row.companyId) && (!projectId || !row.projectId || row.projectId === projectId),
+    ),
+    ...(project?.materials ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      qty: row.qty,
+      salePrice: row.salePrice,
+    })),
+  ];
+
+  function toggleId(list: string[], id: string) {
+    return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
   }
 
-  function pullExpenses() {
-    const rows = expenses.filter((e) => e.status === "Approved" && (!project || e.projectId === project.id));
+  function addSelectedExpenses() {
+    const rows = visibleExpenses.filter((row) => pickedExpenses.includes(row.id));
     if (!rows.length) {
-      pushToast("No approved expenses to bill", "info");
+      pushToast("Select at least one expense", "info");
       return;
     }
     setLines((current) => [
-      ...current.filter((l) => l.kind !== "expense"),
-      ...rows.map((e) =>
-        emptyInvoiceLine("expense", {
-          description: `${e.vendor}: ${e.note || e.projectName}`,
-          amount: e.amount,
-          taxPct: Number(tplTax) || 0,
-        }),
-      ),
+      ...current,
+      ...rows
+        .filter((row) => !current.some((line) => line.sourceId === row.id))
+        .map((row) =>
+          emptyInvoiceLine("expense", {
+            description: `${row.title || row.vendor}: ${row.note || row.belongLabel || row.projectName}`,
+            amount: row.amount,
+            taxPct: Number(tplTax) || 0,
+            sourceId: row.id,
+          }),
+        ),
     ]);
-    pushToast("Pulled approved expenses");
+    pushToast("Added selected expenses");
+  }
+
+  function addSelectedPurchases() {
+    const rows = visiblePurchases.filter((row) => pickedPurchases.includes(row.id));
+    if (!rows.length) {
+      pushToast("Select at least one purchase", "info");
+      return;
+    }
+    setLines((current) => [
+      ...current,
+      ...rows
+        .filter((row) => !current.some((line) => line.sourceId === row.id))
+        .map((row) =>
+          emptyInvoiceLine("purchase", {
+            description: `${row.title} (${row.vendor})`,
+            amount: row.amount,
+            taxPct: Number(tplTax) || 0,
+            sourceId: row.id,
+          }),
+        ),
+    ]);
+    pushToast("Added selected purchases");
+  }
+
+  function addSelectedMaterials() {
+    const rows = visibleMaterials.filter((row) => pickedMaterials.includes(row.id));
+    if (!rows.length) {
+      pushToast("Select at least one material", "info");
+      return;
+    }
+    setLines((current) => [
+      ...current,
+      ...rows
+        .filter((row) => !current.some((line) => line.sourceId === row.id))
+        .map((row) =>
+          emptyInvoiceLine("material", {
+            description: row.title,
+            quantity: row.qty,
+            rate: row.salePrice,
+            amount: row.qty * row.salePrice,
+            taxPct: Number(tplTax) || 0,
+            sourceId: row.id,
+          }),
+        ),
+    ]);
+    pushToast("Added selected materials");
   }
 
   function buildInvoice(): Invoice | null {
@@ -284,6 +354,7 @@ export function InvoiceCreateForm({
   const serviceLines = lines.filter((l) => l.kind === "service");
   const materialLines = lines.filter((l) => l.kind === "material");
   const expenseLines = lines.filter((l) => l.kind === "expense");
+  const purchaseLines = lines.filter((l) => l.kind === "purchase");
 
   return (
     <form
@@ -432,11 +503,122 @@ export function InvoiceCreateForm({
               <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
             ))}
           </LineSection>
+          <RecordPicker
+            title="Expenses"
+            empty="No expenses yet. Add one, then select it."
+            items={visibleExpenses.map((row) => ({
+              id: row.id,
+              label: `${row.title || row.vendor} · ${money(row.amount)}`,
+            }))}
+            selected={pickedExpenses}
+            onToggle={(id) => setPickedExpenses((current) => toggleId(current, id))}
+            onAddSelected={addSelectedExpenses}
+            onCreate={() => setAddKind((current) => (current === "expense" ? null : "expense"))}
+            createLabel="Add expense"
+          />
+          {addKind === "expense" ? (
+            <div className="mb-4 rounded-[12px] border border-[var(--color-border)] p-3">
+              <ExpenseCreateForm
+                defaultCompanyId={companyId}
+                defaultProjectId={projectId}
+                onSubmit={(values, addAnother) => {
+                  const id = createExpense(values);
+                  if (!id) return false;
+                  setPickedExpenses((current) => [...current, id]);
+                  setLines((current) => [
+                    ...current,
+                    emptyInvoiceLine("expense", {
+                      description: `${values.title}: ${values.note || values.belongLabel}`,
+                      amount: values.amount,
+                      taxPct: Number(tplTax) || 0,
+                      sourceId: id,
+                    }),
+                  ]);
+                  if (!addAnother) setAddKind(null);
+                }}
+              />
+            </div>
+          ) : null}
+          <RecordPicker
+            title="Purchases"
+            empty="No purchases yet. Add one, then select it."
+            items={visiblePurchases.map((row) => ({
+              id: row.id,
+              label: `${row.title} · ${money(row.amount)}`,
+            }))}
+            selected={pickedPurchases}
+            onToggle={(id) => setPickedPurchases((current) => toggleId(current, id))}
+            onAddSelected={addSelectedPurchases}
+            onCreate={() => setAddKind((current) => (current === "purchase" ? null : "purchase"))}
+            createLabel="Add purchase"
+          />
+          {addKind === "purchase" ? (
+            <div className="mb-4 rounded-[12px] border border-[var(--color-border)] p-3">
+              <PurchaseCreateForm
+                defaultCompanyId={companyId}
+                defaultProjectId={projectId}
+                onSubmit={(values) => {
+                  const id = createPurchase(values);
+                  if (!id) return;
+                  setPickedPurchases((current) => [...current, id]);
+                  setLines((current) => [
+                    ...current,
+                    emptyInvoiceLine("purchase", {
+                      description: `${values.title} (${values.vendor})`,
+                      amount: values.amount,
+                      taxPct: Number(tplTax) || 0,
+                      sourceId: id,
+                    }),
+                  ]);
+                  setAddKind(null);
+                }}
+              />
+            </div>
+          ) : null}
+          <RecordPicker
+            title="Materials"
+            empty="No materials yet. Add one, then select it."
+            items={visibleMaterials.map((row) => ({
+              id: row.id,
+              label: `${row.title} · ${row.qty} × ${money(row.salePrice)}`,
+            }))}
+            selected={pickedMaterials}
+            onToggle={(id) => setPickedMaterials((current) => toggleId(current, id))}
+            onAddSelected={addSelectedMaterials}
+            onCreate={() => setAddKind((current) => (current === "material" ? null : "material"))}
+            createLabel="Add material"
+          />
+          {addKind === "material" ? (
+            <div className="mb-4 rounded-[12px] border border-[var(--color-border)] p-3">
+              <MaterialCreateForm
+                defaultCompanyId={companyId}
+                defaultProjectId={projectId}
+                onSubmit={(values) => {
+                  const id = createBillMaterial(values);
+                  if (!id) return;
+                  setPickedMaterials((current) => [...current, id]);
+                  setLines((current) => [
+                    ...current,
+                    emptyInvoiceLine("material", {
+                      description: values.title,
+                      quantity: values.qty,
+                      rate: values.salePrice,
+                      amount: values.qty * values.salePrice,
+                      taxPct: Number(tplTax) || 0,
+                      sourceId: id,
+                    }),
+                  ]);
+                  setAddKind(null);
+                }}
+              />
+            </div>
+          ) : null}
+
           <LineSection
             title="Materials"
-            hint="Billable kits, hardware, or pass-through items."
-            actionLabel="Pull project materials"
-            onAction={pullMaterials}
+            hint="Selected kits, hardware, or pass-through items."
+            actionLabel="Add material line"
+            onAction={() => addLine("material")}
             onAdd={() => addLine("material")}
             addLabel="Add material line"
           >
@@ -446,13 +628,25 @@ export function InvoiceCreateForm({
           </LineSection>
           <LineSection
             title="Expenses"
-            hint="Approved travel or vendor spend to recover."
-            actionLabel="Pull approved expenses"
-            onAction={pullExpenses}
+            hint="Selected travel or vendor spend to recover."
+            actionLabel="Add expense line"
+            onAction={() => addLine("expense")}
             onAdd={() => addLine("expense")}
             addLabel="Add expense line"
           >
             {expenseLines.map((line) => (
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+            ))}
+          </LineSection>
+          <LineSection
+            title="Purchases"
+            hint="Selected vendor purchases to bill through."
+            actionLabel="Add purchase line"
+            onAction={() => addLine("purchase")}
+            onAdd={() => addLine("purchase")}
+            addLabel="Add purchase line"
+          >
+            {purchaseLines.map((line) => (
               <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
             ))}
           </LineSection>
@@ -473,6 +667,10 @@ export function InvoiceCreateForm({
               <div>
                 <dt>Expenses</dt>
                 <dd>{money(totals.expense)}</dd>
+              </div>
+              <div>
+                <dt>Purchases</dt>
+                <dd>{money(totals.purchase)}</dd>
               </div>
               <div>
                 <dt>Tax</dt>
@@ -654,7 +852,7 @@ function LineRow({
           placeholder="Amount"
         />
       )}
-      {line.kind !== "expense" ? (
+      {line.kind !== "expense" && line.kind !== "purchase" ? (
         <div className="invoice-line-amt">{money(computeLineAmount(line))}</div>
       ) : (
         <div className="invoice-line-amt">{money(lineTotal(line))}</div>
@@ -680,5 +878,54 @@ function LineRow({
         <Trash2 size={14} />
       </button>
     </div>
+  );
+}
+
+function RecordPicker({
+  title,
+  empty,
+  items,
+  selected,
+  onToggle,
+  onAddSelected,
+  onCreate,
+  createLabel,
+}: {
+  title: string;
+  empty: string;
+  items: { id: string; label: string }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  onAddSelected: () => void;
+  onCreate: () => void;
+  createLabel: string;
+}) {
+  return (
+    <section className="invoice-lines mb-4">
+      <header>
+        <div>
+          <h3>{title}</h3>
+          <p>Select created records or add a new one.</p>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={onCreate}>
+          {createLabel}
+        </button>
+      </header>
+      <div className="invoice-lines-body">
+        {items.length ? (
+          items.map((item) => (
+            <label key={item.id} className="mb-2 flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={selected.includes(item.id)} onChange={() => onToggle(item.id)} />
+              {item.label}
+            </label>
+          ))
+        ) : (
+          <p className="text-sm text-[var(--color-muted)]">{empty}</p>
+        )}
+      </div>
+      <button type="button" className="invoice-lines-add" onClick={onAddSelected}>
+        <Plus size={14} /> Add selected {title.toLowerCase()}
+      </button>
+    </section>
   );
 }
