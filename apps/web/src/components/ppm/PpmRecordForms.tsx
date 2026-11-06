@@ -2,15 +2,10 @@
 
 import { useState } from "react";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/ui";
-import { ideaObjectiveLabel, resolveIdeaObjective } from "@/lib/ppm";
+import { IDEA_STATUS_OPTIONS, ideaObjectiveLabel, normalizeIdeaStage, resolveIdeaObjective } from "@/lib/ppm";
 import type { Idea, IdeaStage, ObjectiveStatus, Portfolio, StrategicObjective } from "@/lib/types";
 
-const IDEA_STAGES: IdeaStage[] = ["Submitted", "Scoring", "Approved", "Deferred", "Converted"];
 const OBJECTIVE_STATUSES: ObjectiveStatus[] = ["On Track", "At Risk", "Lagging", "Achieved"];
-
-function clampScore(value: string) {
-  return Math.max(1, Math.min(10, Number(value) || 1));
-}
 
 function CheckList({
   label,
@@ -66,11 +61,8 @@ export function IdeaEditForm({
   const [companyId, setCompanyId] = useState(idea.companyId ?? "");
   const [objectiveText, setObjectiveText] = useState(ideaObjectiveLabel(idea, objectives));
   const [submitter, setSubmitter] = useState(idea.submitter);
-  const [stage, setStage] = useState<IdeaStage>(idea.stage);
+  const [stage, setStage] = useState<IdeaStage>(normalizeIdeaStage(idea.stage));
   const [budget, setBudget] = useState(String(idea.requestedBudget));
-  const [strategicFit, setStrategicFit] = useState(String(idea.strategicFit));
-  const [valueScore, setValueScore] = useState(String(idea.valueScore));
-  const [riskScore, setRiskScore] = useState(String(idea.riskScore));
 
   return (
     <form
@@ -89,9 +81,6 @@ export function IdeaEditForm({
           submitter: submitter.trim() || idea.submitter,
           stage,
           requestedBudget: Number(budget) || 0,
-          strategicFit: clampScore(strategicFit),
-          valueScore: clampScore(valueScore),
-          riskScore: clampScore(riskScore),
         });
       }}
     >
@@ -118,9 +107,13 @@ export function IdeaEditForm({
       <Field label="Submitter">
         <TextInput value={submitter} onChange={(e) => setSubmitter(e.target.value)} />
       </Field>
-      <Field label="Stage">
-        <TextSelect value={stage} onChange={(e) => setStage(e.target.value as IdeaStage)}>
-          {IDEA_STAGES.map((s) => (
+      <Field label="Status">
+        <TextSelect
+          value={stage}
+          onChange={(e) => setStage(e.target.value as IdeaStage)}
+          disabled={stage === "Converted"}
+        >
+          {(stage === "Converted" ? (["Converted"] as const) : IDEA_STATUS_OPTIONS).map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
@@ -130,17 +123,6 @@ export function IdeaEditForm({
       <Field label="Requested budget">
         <TextInput type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} />
       </Field>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Strategic fit (1-10)">
-          <TextInput type="number" min={1} max={10} value={strategicFit} onChange={(e) => setStrategicFit(e.target.value)} />
-        </Field>
-        <Field label="Value (1-10)">
-          <TextInput type="number" min={1} max={10} value={valueScore} onChange={(e) => setValueScore(e.target.value)} />
-        </Field>
-        <Field label="Risk (1-10)">
-          <TextInput type="number" min={1} max={10} value={riskScore} onChange={(e) => setRiskScore(e.target.value)} />
-        </Field>
-      </div>
       <Field label="Summary">
         <TextTextarea value={summary} onChange={(e) => setSummary(e.target.value)} />
       </Field>

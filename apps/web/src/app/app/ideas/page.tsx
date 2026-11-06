@@ -6,20 +6,21 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Field, Modal, PageHeader, TextInput, TextSelect, TextTextarea } from "@/components/ui";
 import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
-import { resolveIdeaObjective } from "@/lib/ppm";
+import { IDEA_STATUS_OPTIONS, ideaCanConvert, normalizeIdeaStage, resolveIdeaObjective } from "@/lib/ppm";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
+import type { IdeaStage } from "@/lib/types";
 
 export default function IdeasPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const router = useRouter();
   const ideas = useAppStore((s) => s.ideas);
   const companies = useAppStore((s) => s.companies);
   const objectives = useAppStore((s) => s.objectives);
   const createIdea = useAppStore((s) => s.createIdea);
-  const advanceIdea = useAppStore((s) => s.advanceIdea);
+  const updateIdea = useAppStore((s) => s.updateIdea);
   const convertIdea = useAppStore((s) => s.convertIdea);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -28,11 +29,16 @@ export default function IdeasPage() {
   const [companyId, setCompanyId] = useState("");
   const [objectiveText, setObjectiveText] = useState("");
 
+  const convert = (id: string) => {
+    const projectId = convertIdea(id);
+    if (projectId) router.push(`/app/projects/view/?id=${projectId}`);
+  };
+
   return (
     <div className="fade-in">
       <PageHeader
         title="Ideas"
-        subtitle="Demand intake before a project exists. Score for strategic fit, value, and risk, then convert the ones that belong in a portfolio."
+        subtitle="Demand intake before a project exists. Set a status, then convert the ones that should become projects."
         actions={
           <IfCan cap="create_idea">
             <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
@@ -42,51 +48,60 @@ export default function IdeasPage() {
         }
       />
       <MetricGrid>
-        <MetricCard label="In funnel" value={ideas.filter((i) => i.stage !== "Converted" && i.stage !== "Deferred").length} />
-        <MetricCard label="Approved" value={ideas.filter((i) => i.stage === "Approved").length} tone="good" />
-        <MetricCard label="Converted" value={ideas.filter((i) => i.stage === "Converted").length} />
-        <MetricCard
-          label="Asked"
-          value={money(ideas.reduce((s, i) => s + i.requestedBudget, 0))}
-          hint="Requested budget still in the funnel"
-        />
-        <MetricCard label="Avg score" value={ideas.length ? Math.round(ideas.reduce((s, i) => s + i.score, 0) / ideas.length) : 0} />
+        <MetricCard label="In funnel" value={ideas.filter((i) => ideaCanConvert(i)).length} />
+        <MetricCard label="In progress" value={ideas.filter((i) => normalizeIdeaStage(i.stage) === "In Progress").length} />
+        <MetricCard label="Approved" value={ideas.filter((i) => normalizeIdeaStage(i.stage) === "Approved").length} tone="good" />
+        <MetricCard label="On hold" value={ideas.filter((i) => normalizeIdeaStage(i.stage) === "On Hold").length} />
+        <MetricCard label="Converted" value={ideas.filter((i) => normalizeIdeaStage(i.stage) === "Converted").length} />
       </MetricGrid>
       <div className="panel p-5">
         <DataTable
-          columns={["Idea", "Company", "Score", "Fit / Value / Risk", "Stage", "Ask", "Action"]}
-          rows={ideas.map((idea) => [
-            <div key={idea.id}>
-              <Link href={`/app/ideas/view/?id=${idea.id}`} className="font-semibold text-[var(--color-navy)]">
-                {idea.name}
-              </Link>
-              <div className="text-xs text-[var(--color-muted)]">{idea.summary}</div>
-            </div>,
-            idea.companyName ?? "Internal",
-            String(idea.score),
-            `${idea.strategicFit} / ${idea.valueScore} / ${idea.riskScore}`,
-            <Pill key={`${idea.id}-s`} value={idea.stage} />,
-            money(idea.requestedBudget),
-            <div key={`${idea.id}-a`} className="flex gap-2">
-              <Link href={`/app/ideas/view/?id=${idea.id}`} className="btn btn-ghost text-sm">
-                Open
-              </Link>
-              {idea.stage !== "Converted" && idea.stage !== "Deferred" ? (
-                <IfCan cap="edit_idea">
-                  <button type="button" className="btn btn-ghost text-sm" onClick={() => advanceIdea(idea.id)}>
-                    Advance
-                  </button>
-                </IfCan>
-              ) : null}
-              {idea.stage === "Approved" ? (
-                <IfCan cap="convert_idea">
-                  <button type="button" className="btn btn-primary text-sm" onClick={() => convertIdea(idea.id)}>
-                    Convert
-                  </button>
-                </IfCan>
-              ) : null}
-            </div>,
-          ])}
+          columns={["Idea", "Company", "Status", "Ask", "Action"]}
+          rows={ideas.map((idea) => {
+            const stage = normalizeIdeaStage(idea.stage);
+            return [
+              <div key={idea.id}>
+                <Link href={`/app/ideas/view/?id=${idea.id}`} className="font-semibold text-[var(--color-navy)]">
+                  {idea.name}
+                </Link>
+                <div className="text-xs text-[var(--color-muted)]">{idea.summary}</div>
+              </div>,
+              idea.companyName ?? "Internal",
+              stage === "Converted" || !can("edit_idea") ? (
+                <Pill key={`${idea.id}-s`} value={stage} />
+              ) : (
+                <TextSelect
+                  key={`${idea.id}-s`}
+                  aria-label={`Status for ${idea.name}`}
+                  value={stage}
+                  onChange={(e) => updateIdea(idea.id, { stage: e.target.value as IdeaStage })}
+                >
+                  {IDEA_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </TextSelect>
+              ),
+              money(idea.requestedBudget),
+              <div key={`${idea.id}-a`} className="flex gap-2">
+                <Link href={`/app/ideas/view/?id=${idea.id}`} className="btn btn-ghost text-sm">
+                  Open
+                </Link>
+                {ideaCanConvert(idea) ? (
+                  <IfCan cap="convert_idea">
+                    <button type="button" className="btn btn-primary text-sm" onClick={() => convert(idea.id)}>
+                      Convert
+                    </button>
+                  </IfCan>
+                ) : idea.convertedProjectId ? (
+                  <Link href={`/app/projects/view/?id=${idea.convertedProjectId}`} className="btn btn-ghost text-sm">
+                    Project
+                  </Link>
+                ) : null}
+              </div>,
+            ];
+          })}
         />
       </div>
       <Modal open={open} title="Submit an idea" onClose={() => setOpen(false)}>

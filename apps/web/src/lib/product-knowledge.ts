@@ -34,8 +34,8 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
       "Alignment flows one way: Strategy sets the objective, Ideas capture demand against that objective, Portfolios fund the approved work, and Projects deliver it.",
     howTo: [
       "Create or open a Strategy objective. That is the why.",
-      "Submit an Idea and type the objective it serves. Score and advance it to Approved.",
-      "Convert an approved idea to create a Project. Optionally land it in a Portfolio book.",
+      "Submit an Idea and type the objective it serves. Set status such as In Progress, Approved, or On Hold.",
+      "Convert the idea to create a Project. Optionally land it in a Portfolio book.",
       "Open the Project workspace to plan, staff, log time, and invoice. Home reads this same chain.",
     ],
     canDo: [
@@ -207,9 +207,9 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     href: "/app/ideas",
     viewCap: "view_ideas",
     keywords: ["idea", "intake", "convert idea", "demand"],
-    summary: "Ideas is demand intake. Score, advance, then convert an approved idea into a project.",
-    howTo: ["Open Ideas and submit name, summary, budget, company, and a typed objective.", "Advance to Approved, then Convert."],
-    canDo: ["Create, advance, convert, or rename an idea"],
+    summary: "Ideas is demand intake. Set a status, then convert an idea into a project.",
+    howTo: ["Open Ideas and submit name, summary, budget, company, and a typed objective.", "Set status, then Convert to create a project."],
+    canDo: ["Create, update status, convert, or rename an idea"],
   },
   {
     id: "portfolios",

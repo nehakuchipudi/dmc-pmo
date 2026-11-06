@@ -1,5 +1,6 @@
 import type {
   CrossDependency,
+  IdeaStage,
   Portfolio,
   Project,
   ResourceAllocation,
@@ -79,6 +80,25 @@ export function objectiveCoverage(objectives: StrategicObjective[], projects: Pr
 
 export function ideaComposite(idea: { strategicFit: number; valueScore: number; riskScore: number }) {
   return Math.round(((idea.strategicFit + idea.valueScore + (10 - idea.riskScore)) / 30) * 100);
+}
+
+export const IDEA_STAGES = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected", "Converted"] as const;
+export const IDEA_STATUS_OPTIONS = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected"] as const;
+
+export function normalizeIdeaStage(stage: string | undefined): IdeaStage {
+  if (stage === "Scoring") return "In Progress";
+  if (stage === "Deferred") return "On Hold";
+  if ((IDEA_STAGES as readonly string[]).includes(stage ?? "")) return stage as IdeaStage;
+  return "Submitted";
+}
+
+export function ideaIsOpen(stage: string | undefined) {
+  const next = normalizeIdeaStage(stage);
+  return next !== "Converted" && next !== "Rejected";
+}
+
+export function ideaCanConvert(idea: { stage?: string; convertedProjectId?: string }) {
+  return ideaIsOpen(idea.stage) && !idea.convertedProjectId;
 }
 
 export function resolveIdeaObjective(text: string, objectives: { id: string; code: string; name: string }[]) {
