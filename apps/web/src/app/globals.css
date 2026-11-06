@@ -699,7 +699,7 @@ button, input, select, textarea { font: inherit; }
 .settings-users .table td:nth-child(2) { width: 14%; }
 .settings-users .table th:nth-child(3),
 .settings-users .table td:nth-child(3) {
-  width: 26%;
+  width: 22%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -707,9 +707,9 @@ button, input, select, textarea { font: inherit; }
 .settings-users .table th:nth-child(4),
 .settings-users .table td:nth-child(4) { width: 12%; }
 .settings-users .table th:nth-child(5),
-.settings-users .table td:nth-child(5) { width: 14%; }
+.settings-users .table td:nth-child(5) { width: 12%; }
 .settings-users .table th:nth-child(6),
-.settings-users .table td:nth-child(6) { width: 10%; }
+.settings-users .table td:nth-child(6) { width: 16%; }
 .settings-users .table th:last-child,
 .settings-users .table td:last-child {
   width: 48px;

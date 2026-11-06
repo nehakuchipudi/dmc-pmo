@@ -117,7 +117,7 @@ function deniedModuleName(pathname: string) {
   return match?.label ?? (pack ? PACKS.find((item) => item.id === pack)?.label : undefined);
 }
 
-type MenuId = "create" | "profile" | "company" | "time" | "tasks" | "schedule" | "notifications" | "help" | null;
+type MenuId = "create" | "profile" | "company" | "time" | "tasks" | "help" | null;
 
 function hoverMenuProps(
   id: Exclude<MenuId, null>,
@@ -761,39 +761,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
-            <div className="relative" data-shell-menu {...hoverMenuProps("schedule", setMenu, hoverTimer)}>
-              <button
-                type="button"
-                className="icon-btn topbar-secondary"
-                title="Schedule"
-                aria-label="Schedule"
-                aria-expanded={menu === "schedule"}
-                onClick={() => setMenu((v) => (v === "schedule" ? null : "schedule"))}
-              >
-                <CalendarDays size={18} />
-              </button>
-              {menu === "schedule" ? (
-                <div className="menu-popover icon-popover fade-in">
-                  <div className="menu-heading">My schedule</div>
-                  {tasks
-                    .filter((t) => t.status !== "Done")
-                    .slice(0, 8)
-                    .map((t) => (
-                      <div key={t.id} className="icon-popover-item">
-                        <div>
-                          <div className="font-medium">{t.name}</div>
-                          <div className="text-xs text-[var(--color-muted)]">{t.projectName}</div>
-                        </div>
-                        <div className="text-xs text-[var(--color-navy)]">{formatDisplayDate(t.due)}</div>
-                      </div>
-                    ))}
-                  {!tasks.some((t) => t.status !== "Done") ? <p className="menu-empty">Nothing scheduled.</p> : null}
-                  <Link href="/app/timesheets" className="menu-row" onClick={() => setMenu(null)}>
-                    Open timesheets
-                  </Link>
-                </div>
-              ) : null}
-            </div>
             {can("log_time") ? (
             <div className="relative" data-shell-menu {...hoverMenuProps("time", setMenu, hoverTimer)}>
               <button
@@ -837,54 +804,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             ) : null}
-            <div className="relative" data-shell-menu {...hoverMenuProps("notifications", setMenu, hoverTimer)}>
-              <button
-                type="button"
-                className="icon-btn relative"
-                title="Notifications"
-                aria-label="Notifications"
-                aria-expanded={menu === "notifications"}
-                onClick={() => setMenu((v) => (v === "notifications" ? null : "notifications"))}
-              >
-                <Bell size={18} />
-                {unread ? (
-                  <span className="notify-dot">
-                    {unread}
-                  </span>
-                ) : null}
-              </button>
-              {menu === "notifications" ? (
-                <div className="menu-popover icon-popover fade-in">
-                  <div className="menu-heading">Notifications</div>
-                  <div className="icon-popover-toolbar">
-                    <span className="text-xs text-[var(--color-muted)]">{notifications.length ? `${notifications.length} updates` : "You are caught up"}</span>
-                    {notifications.length ? (
-                      <button type="button" className="text-xs font-semibold text-[var(--color-navy)]" onClick={markAll}>
-                        Mark all read
-                      </button>
-                    ) : null}
-                  </div>
-                  {notifications.slice(0, 8).map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      className={clsx("menu-row notify-menu-row", !n.read && "is-unread")}
-                      onClick={() => {
-                        markRead(n.id);
-                        if (n.href) router.push(n.href);
-                        setMenu(null);
-                      }}
-                    >
-                      <span>
-                        <span className="block font-medium">{n.title}</span>
-                        <span className="block text-xs text-[var(--color-muted)]">{n.body}</span>
-                      </span>
-                    </button>
-                  ))}
-                  {!notifications.length ? <p className="menu-empty">No notifications yet.</p> : null}
-                </div>
+            <button
+              type="button"
+              className="icon-btn relative"
+              title="Notifications"
+              aria-label="Notifications"
+              aria-expanded={notesOpen}
+              onClick={() => {
+                setMenu(null);
+                setNotesOpen((open) => !open);
+              }}
+            >
+              <Bell size={18} />
+              {unread ? (
+                <span className="notify-dot">
+                  {unread}
+                </span>
               ) : null}
-            </div>
+            </button>
             <div className="relative" data-shell-menu {...hoverMenuProps("help", setMenu, hoverTimer)}>
               <button
                 type="button"
@@ -1100,11 +1037,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Drawer>
 
       <Drawer open={notesOpen} title="Notifications" subtitle={unread ? `${unread} unread` : "You are caught up"} wide onClose={() => setNotesOpen(false)}>
-        <div className="mb-3 flex justify-between">
-          <span className="text-sm text-[var(--color-muted)]">{notifications.length} updates</span>
-          <button type="button" className="text-sm font-semibold text-[var(--color-navy)]" onClick={markAll}>
-            Mark all read
-          </button>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-sm text-[var(--color-muted)]">
+            {notifications.length ? `${notifications.length} updates` : "No notifications yet"}
+          </span>
+          {unread ? (
+            <button
+              type="button"
+              className="text-sm font-semibold text-[var(--color-navy)]"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                markAll();
+              }}
+            >
+              Mark all read
+            </button>
+          ) : null}
         </div>
         <div className="space-y-2">
           {notifications.map((n) => (
@@ -1123,6 +1072,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mt-1 text-xs text-[var(--color-muted)]">{n.createdAt}</div>
             </button>
           ))}
+          {!notifications.length ? <p className="text-sm text-[var(--color-muted)]">No notifications yet.</p> : null}
         </div>
       </Drawer>
 

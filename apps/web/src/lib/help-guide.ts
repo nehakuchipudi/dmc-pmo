@@ -49,6 +49,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "The company selector scopes Home and defaults new records to that company.",
       "Create (+) adds time, tasks, expenses, companies, contacts, projects, tickets, milestones, ideas, portfolios, objectives, and risks, based on your role.",
       "The timer starts a clock. Stop and log writes a timesheet line.",
+      "Click the bell to open every notification. Mark all read clears the unread badge.",
     ],
     tips: [
       "Collapsed nav still shows icons. Hover an icon for the module name.",
