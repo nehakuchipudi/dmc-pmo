@@ -84,6 +84,8 @@ export function ideaComposite(idea: { strategicFit: number; valueScore: number; 
 
 export const IDEA_STAGES = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected", "Converted"] as const;
 export const IDEA_STATUS_OPTIONS = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected"] as const;
+export const PROJECT_CREATE_TYPES = ["Internal", "Client Work"] as const;
+export type ProjectCreateType = (typeof PROJECT_CREATE_TYPES)[number];
 
 export function normalizeIdeaStage(stage: string | undefined): IdeaStage {
   if (stage === "Scoring") return "In Progress";

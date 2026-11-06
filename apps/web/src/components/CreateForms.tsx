@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CompanyCreateForm } from "@/components/CompanyCreateForm";
 import { PortfolioEditForm } from "@/components/ppm/PpmRecordForms";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
-import { resolveIdeaObjective } from "@/lib/ppm";
+import { PROJECT_CREATE_TYPES, resolveIdeaObjective } from "@/lib/ppm";
 import { canCreateKind } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -456,7 +456,15 @@ function ProjectForm({
 }: {
   companies: { id: string; name: string }[];
   defaultCompanyId?: string;
-  onSubmit: (v: { name: string; companyId: string; manager: string; ownerEmail?: string; due: string; budgetHours: number }) => void;
+  onSubmit: (v: {
+    name: string;
+    companyId?: string;
+    manager: string;
+    ownerEmail?: string;
+    due: string;
+    budgetHours: number;
+    projectType: string;
+  }) => void;
 }) {
   const { user } = useAuth();
   const team = useAppStore((s) => s.team).filter((member) => member.active);
@@ -466,6 +474,9 @@ function ProjectForm({
     team[0];
   const [name, setName] = useState("");
   const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
+  const [projectType, setProjectType] = useState(
+    defaultCompanyId || companies.length ? "Client Work" : "Internal",
+  );
   const [ownerId, setOwnerId] = useState(preferred?.id ?? "");
   const [due, setDue] = useState("2026-09-30");
   const owner = team.find((member) => member.id === ownerId) ?? preferred;
@@ -474,24 +485,53 @@ function ProjectForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
+        if (projectType === "Client Work" && !companyId) return;
         onSubmit({
           name: name.trim(),
-          companyId,
+          companyId: companyId || undefined,
           manager: owner?.name ?? user?.name ?? "Unassigned",
           ownerEmail: owner?.email,
           due,
           budgetHours: 120,
+          projectType,
         });
       }}
     >
       <Field label="Project name">
         <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label="Company">
-        <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+      <Field label="Company" required={projectType === "Client Work"}>
+        <TextSelect
+          value={companyId}
+          onChange={(e) => setCompanyId(e.target.value)}
+          required={projectType === "Client Work"}
+        >
+          {projectType === "Internal" ? <option value="">Internal / unassigned</option> : null}
+          {projectType === "Client Work" && !companies.length ? <option value="">Select a company</option> : null}
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
+            </option>
+          ))}
+        </TextSelect>
+      </Field>
+      {projectType === "Client Work" && !companies.length ? (
+        <p className="mb-3 text-xs text-[var(--color-muted)]">
+          Client Work needs a company. Create a company first, or choose Internal.
+        </p>
+      ) : null}
+      <Field label="Type">
+        <TextSelect
+          value={projectType}
+          onChange={(e) => {
+            const next = e.target.value;
+            setProjectType(next);
+            if (next === "Client Work" && !companyId && companies[0]) setCompanyId(companies[0].id);
+          }}
+        >
+          {PROJECT_CREATE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
             </option>
           ))}
         </TextSelect>

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   IDEA_STATUS_OPTIONS,
+  PROJECT_CREATE_TYPES,
   ideaCanConvert,
   ideaIsOpen,
   ideaObjectiveLabel,
@@ -74,5 +75,19 @@ assert.doesNotMatch(ideaView, /Fit \/ Value \/ Risk/);
 assert.match(ideaView, /Convert to project/);
 assert.doesNotMatch(editForm, /Strategic fit/);
 assert.match(editForm, /Field label="Status"/);
+
+assert.deepEqual([...PROJECT_CREATE_TYPES], ["Internal", "Client Work"]);
+assert.match(createForm, /Field label="Type"/);
+assert.match(createForm, /PROJECT_CREATE_TYPES/);
+assert.match(createForm, /projectType/);
+assert.match(createForm, /Internal \/ unassigned/);
+assert.match(createForm, /Client Work needs a company/);
+
+const store = readFileSync(join(root, "./store.ts"), "utf8");
+assert.match(store, /projectType\?: string;/);
+assert.match(store, /input\.projectType\?\.trim\(\)/);
+
+const projectEdit = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
+assert.match(projectEdit, /"Internal", "Client Work"/);
 
 console.log("ppm.verify ok");
