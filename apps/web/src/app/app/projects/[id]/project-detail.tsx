@@ -177,10 +177,11 @@ export function ProjectDetail({ id }: { id: string }) {
   const companyContact = useMemo(() => {
     const company = companies.find((c) => c.id === project?.companyId);
     return (
+      contacts.find((c) => c.id === project?.contactId) ??
       contacts.find((c) => c.id === company?.primaryContactId) ??
       contacts.find((c) => c.companyId === project?.companyId)
     );
-  }, [companies, contacts, project?.companyId]);
+  }, [companies, contacts, project?.companyId, project?.contactId]);
   const projectTime = useMemo(
     () => timeEntries.filter((t) => t.projectId === project?.id),
     [timeEntries, project?.id],

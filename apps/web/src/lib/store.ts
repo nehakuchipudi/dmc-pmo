@@ -67,7 +67,7 @@ import {
   seedRisks,
 } from "./ppm-seed";
 import { EMPTY_WORKSPACE_GENERATION } from "./workspace-snapshot";
-import { ideaCanConvert, ideaComposite, nextProjectNumber, normalizeIdeaStage } from "./ppm";
+import { ideaCanConvert, ideaComposite, nextProjectNumber, normalizeIdeaStage, projectTemplateById } from "./ppm";
 import {
   buildDnsRecords,
   domainStatus,
@@ -174,9 +174,18 @@ type CreateProjectInput = {
   manager: string;
   ownerEmail?: string;
   due: string;
+  start?: string;
   budgetHours: number;
   description?: string;
   projectType?: string;
+  status?: Project["status"];
+  contactId?: string;
+  templateId?: string;
+  customFields?: Project["customFields"];
+  location?: string;
+  fundingSource?: string;
+  actualStart?: string;
+  actualDue?: string;
 };
 
 type CreateTicketInput = {
@@ -1225,6 +1234,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const company = input.companyId ? get().companies.find((c) => c.id === input.companyId) : undefined;
     if (input.companyId && !company) return "";
     const id = uid("p");
+    const contact = input.contactId ? get().contacts.find((row) => row.id === input.contactId) : undefined;
+    const template = input.templateId ? projectTemplateById(input.templateId) : undefined;
+    const budgetHours = input.budgetHours || template?.budgetHours || 120;
     const project: Project = {
       id,
       number: nextProjectNumber(get().projects),
@@ -1233,10 +1245,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyName: company?.name ?? "Internal",
       manager: input.manager,
       progress: 0,
-      status: "Draft",
+      status: normalizeProjectStatus(input.status || "Draft"),
       due: input.due,
-      start: todayIso(),
-      budgetHours: input.budgetHours,
+      start: input.start || todayIso(),
+      budgetHours,
       loggedHours: 0,
       marginPct: 35,
       portalShared: true,
@@ -1245,7 +1257,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         input.projectType?.trim() ||
         (company?.companyKind === "Agency" ? "Capital / PMO" : company ? "Client Work" : "Internal"),
       description: input.description ?? "",
-      budgetAmount: input.budgetHours * 180,
+      budgetAmount: budgetHours * 180,
       materials: [],
       files: [],
       notes: [],
@@ -1258,9 +1270,29 @@ export const useAppStore = create<AppState>((set, get) => ({
         deliverables: [],
         assumptions: [],
       },
+      contactId: contact?.id,
+      contactName: contact?.name,
+      templateId: template?.id,
+      templateName: template?.name,
+      customFields: input.customFields ?? [],
+      location: input.location,
+      fundingSource: input.fundingSource,
+      actualStart: input.actualStart,
+      actualDue: input.actualDue,
     };
+    const linkedIds = contact
+      ? (contact.projectIds?.length
+          ? contact.projectIds
+          : get().projects.filter((row) => row.companyId === contact.companyId).map((row) => row.id))
+      : [];
+    const nextContactIds = contact && !linkedIds.includes(id) ? [...linkedIds, id] : linkedIds;
     set((s) => ({
       projects: [project, ...s.projects],
+      contacts: contact
+        ? s.contacts.map((row) =>
+            row.id === contact.id ? { ...row, projectIds: nextContactIds, lastInteraction: formatDisplayDate(todayIso()) } : row,
+          )
+        : s.contacts,
       companies: company
         ? s.companies.map((c) =>
             c.id === company.id ? { ...c, openProjects: c.openProjects + 1, lastActivity: formatDisplayDate(todayIso()) } : c,

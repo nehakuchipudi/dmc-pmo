@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import {
   IDEA_STATUS_OPTIONS,
   PROJECT_CREATE_TYPES,
+  PROJECT_CREATE_STATUSES,
   PROJECT_LIST_FILTERS,
+  customFieldsForProjectType,
   filterProjectList,
   ideaCanConvert,
   ideaIsOpen,
@@ -85,15 +87,34 @@ assert.doesNotMatch(editForm, /Strategic fit/);
 assert.match(editForm, /Field label="Status"/);
 
 assert.deepEqual([...PROJECT_CREATE_TYPES], ["Internal", "Client Work"]);
-assert.match(createForm, /Field label="Type"/);
-assert.match(createForm, /PROJECT_CREATE_TYPES/);
-assert.match(createForm, /projectType/);
-assert.match(createForm, /Internal \/ unassigned/);
-assert.match(createForm, /Client Work needs a company/);
+assert.deepEqual([...PROJECT_CREATE_STATUSES], ["Draft", "Planning", "Active"]);
+assert.equal(customFieldsForProjectType("Internal")[0]?.label, "Department");
+assert.equal(customFieldsForProjectType("Client Work")[0]?.label, "Contract number");
+
+const projectCreate = readFileSync(join(root, "../components/ProjectCreateForm.tsx"), "utf8");
+assert.match(createForm, /ProjectCreateForm/);
+assert.match(projectCreate, /Field label="Type"/);
+assert.match(projectCreate, /PROJECT_CREATE_TYPES/);
+assert.match(projectCreate, /projectType/);
+assert.match(projectCreate, /Internal \/ unassigned/);
+assert.match(projectCreate, /Client Work needs a company/);
+assert.match(projectCreate, /Field label="Company contact"/);
+assert.match(projectCreate, /Field label="Status"/);
+assert.match(projectCreate, /Field label="Project manager"/);
+assert.match(projectCreate, /Field label="Planned start"/);
+assert.match(projectCreate, /Field label="Planned due"/);
+assert.match(projectCreate, /Field label="Project template"/);
+assert.match(projectCreate, /Custom fields/);
+assert.match(projectCreate, /More advanced date settings/);
+assert.match(projectCreate, /Create a company/);
+assert.match(projectCreate, /Add a contact/);
 
 const store = readFileSync(join(root, "./store.ts"), "utf8");
 assert.match(store, /projectType\?: string;/);
+assert.match(store, /contactId\?: string;/);
+assert.match(store, /templateId\?: string;/);
 assert.match(store, /input\.projectType\?\.trim\(\)/);
+assert.match(store, /normalizeProjectStatus\(input\.status \|\| "Draft"\)/);
 
 const projectEdit = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(projectEdit, /"Internal", "Client Work"/);
