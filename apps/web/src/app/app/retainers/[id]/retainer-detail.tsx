@@ -120,8 +120,9 @@ export function RetainerDetail({ id }: { id: string }) {
   const rate = retainerRate(retainer.rate);
   const budgetHours = currentPeriod?.budgetHours ?? retainer.budgetHours;
   const usedHours = currentPeriod?.usedHours ?? retainer.usedHours;
-  const pct = Math.round((usedHours / Math.max(budgetHours, 1)) * 100);
-  const remaining = Math.max(0, budgetHours - usedHours);
+  const unlimited = retainer.periodAllowance === "Unlimited hours" || budgetHours <= 0;
+  const pct = unlimited ? 0 : Math.round((usedHours / Math.max(budgetHours, 1)) * 100);
+  const remaining = unlimited ? null : Math.max(0, budgetHours - usedHours);
   const renewIn = daysUntil(retainer.nextRenew ?? retainer.expires);
   const projectId = companyProjectId(projects, retainer.companyId);
 
@@ -278,12 +279,52 @@ export function RetainerDetail({ id }: { id: string }) {
                 <dd>{retainer.type}</dd>
               </div>
               <div>
+                <dt className="text-[var(--color-muted)]">Period billing</dt>
+                <dd>{retainer.periodBilling ?? "Not set"}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--color-muted)]">Period allowance</dt>
+                <dd>{retainer.periodAllowance ?? (retainer.budgetHours > 0 ? "Fixed hours" : "Unlimited hours")}</dd>
+              </div>
+              {retainer.billableContactName ? (
+                <div>
+                  <dt className="text-[var(--color-muted)]">Billable contact</dt>
+                  <dd>{retainer.billableContactName}</dd>
+                </div>
+              ) : null}
+              {retainer.serviceItem ? (
+                <div>
+                  <dt className="text-[var(--color-muted)]">Service item</dt>
+                  <dd>{retainer.serviceItem}</dd>
+                </div>
+              ) : null}
+              {retainer.tags?.length ? (
+                <div>
+                  <dt className="text-[var(--color-muted)]">Tags</dt>
+                  <dd>{retainer.tags.join(", ")}</dd>
+                </div>
+              ) : null}
+              {retainer.customFields?.filter((field) => field.value).map((field) => (
+                <div key={field.id}>
+                  <dt className="text-[var(--color-muted)]">{field.label}</dt>
+                  <dd>{field.value}</dd>
+                </div>
+              ))}
+              <div>
                 <dt className="text-[var(--color-muted)]">Auto renew</dt>
-                <dd>{retainer.autoRenew ? "On" : "Off"}</dd>
+                <dd>
+                  {retainer.autoRenew
+                    ? retainer.renewDaysBefore
+                      ? `${retainer.renewDaysBefore} days before expiry`
+                      : "On"
+                    : "Off"}
+                </dd>
               </div>
               <div>
                 <dt className="text-[var(--color-muted)]">Rate</dt>
-                <dd>{money(rate)}/hr</dd>
+                <dd>
+                  {retainer.rateMode === "Use staff rates" ? "Use staff rates" : `${money(rate)}/hr`}
+                </dd>
               </div>
             </dl>
             <h3 className="mt-6 text-sm font-semibold text-[var(--color-navy)]">Key dates</h3>
@@ -317,9 +358,9 @@ export function RetainerDetail({ id }: { id: string }) {
                 ) : null}
               </div>
               <div className="grid gap-3 sm:grid-cols-4">
-                <Metric label="Budget" value={`${budgetHours}h`} />
+                <Metric label="Budget" value={unlimited ? "Unlimited" : `${budgetHours}h`} />
                 <Metric label="Used" value={`${usedHours}h`} />
-                <Metric label="Remaining" value={`${remaining}h`} accent />
+                <Metric label="Remaining" value={remaining === null ? "Unlimited" : `${remaining}h`} accent />
                 <Metric label="Renewal" value={renewIn === null ? "Not set" : renewIn >= 0 ? `${renewIn} days` : `${Math.abs(renewIn)} days ago`} />
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

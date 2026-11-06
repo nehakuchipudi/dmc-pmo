@@ -267,7 +267,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Retainers are recurring contracts with periods, used hours, invoices, files, and notes.",
     steps: [
-      "Open Retainers. Use the row menu to log time, add a note, edit, or add a period.",
+      "Open Retainers. New retainer covers company, contact, type, status, dates, period, rates, and invoice fields.",
       "On a retainer, Log time and Edit stay visible. Extra actions sit in the three-dot menu.",
       "Add a period with start, end, and budget hours. Invoice or close a period from its row menu.",
       "Export the open list from the header three-dot menu.",
