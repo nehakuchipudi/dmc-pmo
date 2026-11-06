@@ -166,11 +166,11 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     keywords: ["invoice", "billing", "payment", "draft invoice", "generate invoice"],
     summary: "Billing is invoices: Draft, Sent, Paid, Overdue. PM and Admin can generate a project invoice. Finance records payment.",
     howTo: [
-      "Open Billing, or a company or project Billing tab.",
-      "Create invoice, or generate from a project.",
+      "Open Billing. Use New Expense, New Purchase, or New Material on those tabs.",
+      "Create invoice, then select created expenses, purchases, and materials, or add them there.",
       "Send puts it on the client portal. Pay records collection.",
     ],
-    canDo: ["Create, send, pay, rename, or generate an invoice"],
+    canDo: ["Create, send, pay, rename, or generate an invoice", "Add expenses, purchases, and materials"],
   },
   {
     id: "retainers",

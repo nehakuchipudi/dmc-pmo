@@ -364,14 +364,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const workspaceHasPack = !routePack || hasPack(enabledPacks, routePack);
   const routeAllowed = canAccessHref(user.role, pathname) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
   const deniedReason = routeAllowed ? undefined : workspaceHasPack ? "role" : "pack";
-  const activityCreates = (
-    [
-      ["time", "Log time"],
-      ["task", "Task"],
-      ["expense", "Expense"],
-    ] as const
-  ).filter(([kind]) => canCreateKind(user.role, kind));
-  const operationCreates = (
+  const createItems = (
     [
       ["company", "Company"],
       ["contact", "Contact"],
@@ -379,12 +372,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ["ticket", "Ticket"],
       ["milestone", "Milestone"],
       ["idea", "Idea"],
-      ["portfolio", "Portfolio"],
-      ["objective", "Objective"],
-      ["risk", "Risk"],
+      ["expense", "Expense"],
     ] as const
   ).filter(([kind]) => canCreateKind(user.role, kind));
-  const canCreateAnything = activityCreates.length + operationCreates.length > 0 || can("add_note");
+  const canCreateAnything = createItems.length > 0;
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -690,37 +681,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
               {menu === "create" ? (
                 <div className="menu-popover create-popover fade-in">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="menu-heading">Activities</div>
-                      {activityCreates.map(([k, label]) => (
-                        <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
-                          {label}
-                        </button>
-                      ))}
-                      {can("add_note") ? (
-                      <button
-                        type="button"
-                        className="menu-row"
-                        onClick={() => {
-                          setMenu(null);
-                          setNoteCompanyId(focusCompanyId ?? companies[0]?.id ?? "");
-                          setNoteText("");
-                          setNoteOpen(true);
-                        }}
-                      >
-                        Note
+                  <div className="text-sm">
+                    {createItems.map(([k, label]) => (
+                      <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
+                        {label}
                       </button>
-                      ) : null}
-                    </div>
-                    <div>
-                      <div className="menu-heading">Operations</div>
-                      {operationCreates.map(([k, label]) => (
-                        <button key={k} type="button" className="menu-row" onClick={() => openCreate(k as CreateKind)}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                    ))}
                   </div>
                   {focusCompany ? <p className="create-hint">New records default to {focusCompany.name}.</p> : null}
                 </div>

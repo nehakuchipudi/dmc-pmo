@@ -145,6 +145,10 @@ export function InvoiceDetail({ id }: { id: string }) {
               <td className="tabular-nums">{money(totals.expense)}</td>
             </tr>
             <tr>
+              <td colSpan={4}>Purchases</td>
+              <td className="tabular-nums">{money(totals.purchase)}</td>
+            </tr>
+            <tr>
               <td colSpan={4}>Tax</td>
               <td className="tabular-nums">{money(totals.tax || invoice.taxAmount || 0)}</td>
             </tr>

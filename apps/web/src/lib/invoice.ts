@@ -28,6 +28,7 @@ export function emptyInvoiceLine(kind: InvoiceLineKind, extras?: Partial<Invoice
     amount: extras?.amount ?? 0,
     taxPct: extras?.taxPct ?? 0,
     includeInPdf: extras?.includeInPdf ?? true,
+    sourceId: extras?.sourceId,
   };
 }
 
@@ -42,18 +43,19 @@ export function computeLineAmount(line: Pick<InvoiceLineItem, "kind" | "hours" |
 }
 
 export function invoiceTotals(lines: InvoiceLineItem[]) {
-  const groups = { service: 0, material: 0, expense: 0 };
+  const groups = { service: 0, material: 0, expense: 0, purchase: 0 };
   let tax = 0;
   for (const line of lines) {
     const amount = computeLineAmount(line);
     groups[line.kind] += amount;
     tax += amount * ((line.taxPct ?? 0) / 100);
   }
-  const subtotal = groups.service + groups.material + groups.expense;
+  const subtotal = groups.service + groups.material + groups.expense + groups.purchase;
   return {
     service: roundMoney(groups.service),
     material: roundMoney(groups.material),
     expense: roundMoney(groups.expense),
+    purchase: roundMoney(groups.purchase),
     tax: roundMoney(tax),
     subtotal: roundMoney(subtotal),
     total: roundMoney(subtotal + tax),

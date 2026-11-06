@@ -5,8 +5,10 @@ import type {
   CompanyAsset,
   Contact,
   EmailOutboxItem,
+  BillMaterial,
   Expense,
   Invoice,
+  Purchase,
   InvoiceTemplate,
   Milestone,
   NotificationItem,
@@ -188,6 +190,8 @@ export const seedRetainerPeriods: RetainerPeriod[] = [];
 export const seedAutomations: AutomationRule[] = [];
 export const seedEmailOutbox: EmailOutboxItem[] = [];
 export const seedExpenses: Expense[] = [];
+export const seedPurchases: Purchase[] = [];
+export const seedBillMaterials: BillMaterial[] = [];
 export const seedOpportunities: Opportunity[] = [];
 
 export function staticRecordIds<T extends { id: string }>(records: T[]) {

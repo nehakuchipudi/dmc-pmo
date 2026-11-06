@@ -353,9 +353,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Billing holds invoices, expenses, purchases, and materials. Create an invoice from a template, a project, a retainer period, or New Invoice.",
     steps: [
-      "Open Billing.",
-      "New Invoice opens the create form: template, company, project, lines, tax, and send.",
-      "Open an invoice to export PDF, send, remind, or record payment.",
+      "Open Billing. Each tab has New Invoice, New Expense, New Purchase, or New Material.",
+      "New expense asks for title, type, where it belongs, date, owner, and an attachment.",
+      "New Invoice can select created expenses, purchases, and materials, or add them on the form.",
       "Approve pending expenses on the Expenses tab if you are Finance or Admin.",
     ],
     tips: ["Staff cannot open Billing. PM can create invoices. Only Finance and Admin can record payment."],
