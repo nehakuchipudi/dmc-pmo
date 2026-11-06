@@ -487,6 +487,24 @@ export interface Retainer {
   openPeriods: number;
   files: ProjectFile[];
   notes: ProjectNote[];
+  tags?: string[];
+  periodDurationKind?: "Fixed" | "Rolling";
+  periodLength?: number;
+  periodUnit?: "Day" | "Week" | "Month" | "Year";
+  periodBilling?: "Pre-paid" | "In arrears" | "Time and materials";
+  prepaidPrice?: number;
+  periodAllowance?: "Unlimited hours" | "Fixed hours";
+  renewDaysBefore?: number;
+  rateMode?: "Use staff rates" | "Retainer rate";
+  applyRateToLinkedWork?: boolean;
+  billableContactId?: string;
+  billableContactName?: string;
+  invoiceTemplateId?: string;
+  serviceItem?: string;
+  invoiceLineDescription?: string;
+  customFields?: CompanyCustomField[];
+  taskTemplate?: string;
+  materialTemplate?: string;
 }
 
 export interface AutomationRule {

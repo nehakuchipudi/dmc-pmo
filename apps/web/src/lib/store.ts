@@ -130,6 +130,12 @@ import type {
   TimeTimer,
 } from "./types";
 import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
+import {
+  DEFAULT_RETAINER_INVOICE_LINE,
+  DEFAULT_RETAINER_RATE,
+  formatRetainerInvoiceLine,
+} from "./retainers";
+import { addDays } from "./timesheet";
 import { DEFAULT_PACKS, type PackId } from "./modules";
 import {
   DEFAULT_INSTANCES,
@@ -411,6 +417,27 @@ type AppState = {
     contactId?: string;
     budgetHours: number;
     expires: string;
+    status?: Retainer["status"];
+    started?: string;
+    autoRenew?: boolean;
+    rate?: number;
+    tags?: string[];
+    periodDurationKind?: Retainer["periodDurationKind"];
+    periodLength?: number;
+    periodUnit?: Retainer["periodUnit"];
+    periodBilling?: Retainer["periodBilling"];
+    prepaidPrice?: number;
+    periodAllowance?: Retainer["periodAllowance"];
+    renewDaysBefore?: number;
+    rateMode?: Retainer["rateMode"];
+    applyRateToLinkedWork?: boolean;
+    billableContactId?: string;
+    invoiceTemplateId?: string;
+    serviceItem?: string;
+    invoiceLineDescription?: string;
+    customFields?: Retainer["customFields"];
+    taskTemplate?: string;
+    materialTemplate?: string;
   }) => string;
   updateRetainer: (id: string, patch: Partial<Retainer>) => void;
   deleteRetainer: (id: string) => void;
@@ -2638,19 +2665,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     const period = get().retainerPeriods.find((p) => p.id === periodId);
     const retainer = period ? get().retainers.find((r) => r.id === period.retainerId) : undefined;
     if (!period || !retainer) return "";
-    const hours = period.usedHours;
-    const rate = retainer.rate && retainer.rate > 0 ? retainer.rate : 175;
+    const prepaid = retainer.periodBilling === "Pre-paid" && (retainer.prepaidPrice ?? 0) > 0;
+    const hours = prepaid ? undefined : period.usedHours;
+    const rate = prepaid ? undefined : retainer.rate && retainer.rate > 0 ? retainer.rate : DEFAULT_RETAINER_RATE;
+    const amount = prepaid
+      ? Math.round(retainer.prepaidPrice ?? 0)
+      : Math.round((period.usedHours) * (rate ?? DEFAULT_RETAINER_RATE));
+    const description = formatRetainerInvoiceLine(
+      retainer.invoiceLineDescription || DEFAULT_RETAINER_INVOICE_LINE,
+      period.start,
+      period.end,
+    );
     const serviceLine = emptyInvoiceLine("service", {
-      description: `${retainer.name} (${period.start} to ${period.end})`,
+      description,
       hours,
       rate,
-      amount: Math.round(hours * rate),
+      amount,
     });
     const invId = get().createInvoiceDraft(retainer.companyId, {
       retainerId: retainer.id,
       title: `${retainer.name} period invoice`,
-      description: `${retainer.name} (${period.start} to ${period.end})`,
-      templateId: "tpl-retainer",
+      description,
+      templateId: retainer.invoiceTemplateId || "tpl-retainer",
+      billToContactId: retainer.billableContactId,
+      billToName: retainer.billableContactName,
       lineItems: [serviceLine],
     });
     set((s) => ({
@@ -2672,6 +2710,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const company = get().companies.find((c) => c.id === input.companyId);
     if (!company) return "";
     const contact = input.contactId ? get().contacts.find((c) => c.id === input.contactId) : undefined;
+    const billable = input.billableContactId
+      ? get().contacts.find((c) => c.id === input.billableContactId)
+      : contact;
+    const started = input.started || todayIso();
+    const autoRenew = input.autoRenew ?? true;
+    const renewDaysBefore = Math.max(0, input.renewDaysBefore ?? 0);
+    const nextRenew = autoRenew && renewDaysBefore > 0 ? addDays(input.expires, -renewDaysBefore) : input.expires;
+    const rateMode = input.rateMode ?? "Use staff rates";
+    const rate =
+      rateMode === "Retainer rate" && input.rate && input.rate > 0 ? input.rate : DEFAULT_RETAINER_RATE;
     const id = uid("r");
     const retainer: Retainer = {
       id,
@@ -2685,20 +2733,38 @@ export const useAppStore = create<AppState>((set, get) => ({
       periodLabel: `Current period to ${input.expires}`,
       usedHours: 0,
       budgetHours: input.budgetHours,
-      status: "Active",
-      autoRenew: true,
-      started: todayIso(),
-      nextRenew: input.expires,
-      rate: 175,
+      status: input.status ?? "Active",
+      autoRenew,
+      started,
+      nextRenew,
+      rate,
       expires: input.expires,
       openPeriods: 1,
       files: [],
       notes: [],
+      tags: input.tags?.filter(Boolean),
+      periodDurationKind: input.periodDurationKind,
+      periodLength: input.periodLength,
+      periodUnit: input.periodUnit,
+      periodBilling: input.periodBilling,
+      prepaidPrice: input.prepaidPrice,
+      periodAllowance: input.periodAllowance,
+      renewDaysBefore,
+      rateMode,
+      applyRateToLinkedWork: Boolean(input.applyRateToLinkedWork),
+      billableContactId: billable?.id,
+      billableContactName: billable?.name,
+      invoiceTemplateId: input.invoiceTemplateId,
+      serviceItem: input.serviceItem,
+      invoiceLineDescription: input.invoiceLineDescription,
+      customFields: input.customFields,
+      taskTemplate: input.taskTemplate,
+      materialTemplate: input.materialTemplate,
     };
     const period: RetainerPeriod = {
       id: uid("rp"),
       retainerId: id,
-      start: todayIso(),
+      start: started,
       end: input.expires,
       status: "Opened",
       usedHours: 0,

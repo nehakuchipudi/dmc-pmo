@@ -5,16 +5,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MoreHorizontal, MoreVertical, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { RetainerCreateForm } from "@/components/retainers/RetainerCreateForm";
 import { AddActivityModal, AddPeriodModal } from "@/components/retainers/RetainerModals";
 import {
-  Field,
   FilterChips,
   Modal,
   PageHeader,
   ProgressBar,
   StatusPill,
-  TextInput,
-  TextSelect,
   statusTone,
 } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
@@ -24,7 +22,7 @@ import { companyProjectId, earnedValue, nextPeriodRange } from "@/lib/retainers"
 import { hiddenMoney } from "@/lib/rbac";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
-import type { Retainer, RetainerType } from "@/lib/types";
+import type { Retainer } from "@/lib/types";
 
 const FILTERS = ["All open retainers", "My retainers", "Over budget"];
 
@@ -46,7 +44,6 @@ export default function RetainersPage() {
   const [open, setOpen] = useState(false);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [headerMore, setHeaderMore] = useState(false);
-  const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [logRetainer, setLogRetainer] = useState<Retainer | null>(null);
   const [periodRetainer, setPeriodRetainer] = useState<Retainer | null>(null);
@@ -54,11 +51,12 @@ export default function RetainersPage() {
 
   const rows = useMemo(() => {
     if (filter === "My retainers") return retainers.filter((r) => r.manager === "M. Doyle");
-    if (filter === "Over budget") return retainers.filter((r) => r.usedHours > r.budgetHours);
+    if (filter === "Over budget") {
+      return retainers.filter((r) => r.budgetHours > 0 && r.usedHours > r.budgetHours);
+    }
     return retainers.filter((r) => r.status === "Active");
   }, [filter, retainers]);
 
-  const companyContacts = contacts.filter((c) => c.companyId === companyId);
   const periodDraft = periodRetainer
     ? nextPeriodRange(periods.filter((item) => item.retainerId === periodRetainer.id))
     : { start: "", end: "" };
@@ -274,70 +272,16 @@ export default function RetainersPage() {
         </table>
       </div>
 
-      <Modal open={open} title="New retainer" onClose={() => setOpen(false)}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const id = createRetainer({
-              name: String(fd.get("name") || "New retainer"),
-              companyId: String(fd.get("companyId") || companyId),
-              type: String(fd.get("type") || "Monthly T&M") as RetainerType,
-              manager: String(fd.get("manager") || "M. Doyle"),
-              contactId: String(fd.get("contactId") || "") || undefined,
-              budgetHours: Number(fd.get("budgetHours") || 20),
-              expires: String(fd.get("expires") || "2026-09-30"),
-            });
+      <Modal open={open} title="New retainer" onClose={() => setOpen(false)} xl>
+        <RetainerCreateForm
+          companies={companies}
+          defaultCompanyId={companies[0]?.id}
+          onSubmit={(values) => {
+            const id = createRetainer(values);
             setOpen(false);
             if (id) router.push(`/app/retainers/view/?id=${id}`);
           }}
-        >
-          <Field label="Title">
-            <TextInput name="name" defaultValue="Monthly Managed Support" required />
-          </Field>
-          <Field label="Company">
-            <TextSelect
-              name="companyId"
-              value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
-            >
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Primary contact">
-            <TextSelect name="contactId" defaultValue={companyContacts[0]?.id ?? ""}>
-              <option value="">No contact linked</option>
-              {companyContacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Type">
-            <TextSelect name="type" defaultValue="Monthly T&M">
-              <option>Monthly T&M</option>
-              <option>Pre-paid</option>
-              <option>Fixed</option>
-            </TextSelect>
-          </Field>
-          <Field label="Manager">
-            <TextInput name="manager" defaultValue="M. Doyle" />
-          </Field>
-          <Field label="Period hours">
-            <TextInput name="budgetHours" type="number" defaultValue={20} />
-          </Field>
-          <Field label="Expires">
-            <TextInput name="expires" type="date" defaultValue="2026-09-30" />
-          </Field>
-          <button type="submit" className="btn btn-primary">
-            Create retainer
-          </button>
-        </form>
+        />
       </Modal>
 
       <AddPeriodModal

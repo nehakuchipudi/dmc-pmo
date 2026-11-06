@@ -180,7 +180,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     keywords: ["retainer", "pre-paid", "monthly t&m"],
     summary: "Retainers are recurring commercial agreements on a company: Monthly T&M, Pre-paid, or Fixed.",
     howTo: [
-      "Open Retainers. Use the row menu to log time, add a note, edit, or add a period.",
+      "Open Retainers and create a retainer with company, contact, type, status, dates, period, rates, and invoice fields.",
       "On a retainer, log time or edit from the header. Extra actions sit in the three-dot menu.",
       "Add a period with start, end, and hours, then invoice or close it from the period row.",
     ],
