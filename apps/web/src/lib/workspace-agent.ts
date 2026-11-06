@@ -219,7 +219,7 @@ export interface WorkspaceRunner {
     email: string;
     portal: "Enabled" | "Not Invited";
   }) => string;
-  createProject: (input: { name: string; companyId: string; manager: string; ownerEmail?: string; due: string; budgetHours: number }) => string;
+  createProject: (input: { name: string; companyId?: string; manager: string; ownerEmail?: string; due: string; budgetHours: number; description?: string }) => string;
   deleteProject: (id: string) => void;
   addProjectMember: (input: {
     projectId: string;
@@ -1388,7 +1388,7 @@ export function answerWorkspaceLookup(raw: string, rawCtx: AgentContext): AgentA
   }
 
   if (idea) {
-    lines.push(`${idea.name} is an idea in demand intake. Advance it, then convert it to a project when approved.`);
+    lines.push(`${idea.name} is an idea in demand intake. Set a status, then convert it to a project.`);
     hrefs.push({ href: hrefForLookup("idea", idea.id), label: `Open ${idea.name}` });
   }
   if (invoice) {

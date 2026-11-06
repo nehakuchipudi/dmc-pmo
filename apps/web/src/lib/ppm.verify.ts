@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ideaObjectiveLabel, resolveIdeaObjective } from "./ppm";
+import {
+  IDEA_STATUS_OPTIONS,
+  ideaCanConvert,
+  ideaIsOpen,
+  ideaObjectiveLabel,
+  normalizeIdeaStage,
+  resolveIdeaObjective,
+} from "./ppm";
 
 const objectives = [
   { id: "so-1", code: "SO-1", name: "Grow municipal work" },
@@ -41,5 +48,31 @@ for (const src of [ideaForm, createForm, editForm]) {
 
 assert.match(ideaForm, /value=\{objectiveText\}/);
 assert.match(createForm, /name="objective"/);
+
+assert.equal(normalizeIdeaStage("Scoring"), "In Progress");
+assert.equal(normalizeIdeaStage("Deferred"), "On Hold");
+assert.equal(normalizeIdeaStage("Approved"), "Approved");
+assert.equal(ideaIsOpen("On Hold"), true);
+assert.equal(ideaIsOpen("Rejected"), false);
+assert.equal(ideaCanConvert({ stage: "Submitted" }), true);
+assert.equal(ideaCanConvert({ stage: "Approved" }), true);
+assert.equal(ideaCanConvert({ stage: "Rejected" }), false);
+assert.equal(ideaCanConvert({ stage: "Converted", convertedProjectId: "p1" }), false);
+assert.ok(IDEA_STATUS_OPTIONS.includes("In Progress"));
+assert.ok(IDEA_STATUS_OPTIONS.includes("On Hold"));
+assert.equal((IDEA_STATUS_OPTIONS as readonly string[]).includes("Converted"), false);
+
+assert.doesNotMatch(ideaForm, /Fit \/ Value \/ Risk/);
+assert.doesNotMatch(ideaForm, /Avg score/);
+assert.doesNotMatch(ideaForm, />Advance</);
+assert.match(ideaForm, /Convert/);
+assert.match(ideaForm, /IDEA_STATUS_OPTIONS/);
+
+const ideaView = readFileSync(join(root, "../app/app/ideas/view/page.tsx"), "utf8");
+assert.doesNotMatch(ideaView, /Scoring/);
+assert.doesNotMatch(ideaView, /Fit \/ Value \/ Risk/);
+assert.match(ideaView, /Convert to project/);
+assert.doesNotMatch(editForm, /Strategic fit/);
+assert.match(editForm, /Field label="Status"/);
 
 console.log("ppm.verify ok");

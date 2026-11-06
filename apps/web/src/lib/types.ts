@@ -561,7 +561,7 @@ export interface StrategicObjective {
   description: string;
 }
 
-export type IdeaStage = "Submitted" | "Scoring" | "Approved" | "Deferred" | "Converted";
+export type IdeaStage = "Submitted" | "In Progress" | "Approved" | "On Hold" | "Rejected" | "Converted";
 export interface Idea {
   id: string;
   name: string;

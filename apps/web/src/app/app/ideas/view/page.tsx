@@ -1,24 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { IdeaEditForm } from "@/components/ppm/PpmRecordForms";
-import { DataTable, MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
+import { MetricCard, MetricGrid, Pill } from "@/components/ppm/PpmWidgets";
 import { RecordFact } from "@/components/records/RecordChrome";
 import { IfCan } from "@/components/auth/IfCan";
-import { Modal, PageHeader } from "@/components/ui";
-import { ideaObjectiveLabel } from "@/lib/ppm";
+import { Modal, PageHeader, TextSelect } from "@/components/ui";
+import { IDEA_STATUS_OPTIONS, ideaCanConvert, ideaObjectiveLabel, normalizeIdeaStage } from "@/lib/ppm";
 import { money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import type { IdeaStage } from "@/lib/types";
 
 function IdeaView() {
   const id = useSearchParams().get("id");
+  const router = useRouter();
+  const { can } = useAuth();
   const idea = useAppStore((s) => s.ideas.find((i) => i.id === id));
   const companies = useAppStore((s) => s.companies);
   const objectives = useAppStore((s) => s.objectives);
   const projects = useAppStore((s) => s.projects);
-  const advanceIdea = useAppStore((s) => s.advanceIdea);
   const convertIdea = useAppStore((s) => s.convertIdea);
   const updateIdea = useAppStore((s) => s.updateIdea);
   const trackView = useAppStore((s) => s.trackView);
@@ -40,12 +43,18 @@ function IdeaView() {
     );
   }
 
+  const stage = normalizeIdeaStage(idea.stage);
   const objective = objectives.find((o) => o.id === idea.objectiveId);
   const company = companies.find((c) => c.id === idea.companyId);
   const converted = idea.convertedProjectId
     ? projects.find((p) => p.id === idea.convertedProjectId)
     : undefined;
-  const canAdvance = idea.stage !== "Converted" && idea.stage !== "Deferred";
+  const canConvert = ideaCanConvert(idea);
+
+  const convert = () => {
+    const projectId = convertIdea(idea.id);
+    if (projectId) router.push(`/app/projects/view/?id=${projectId}`);
+  };
 
   return (
     <div className="fade-in">
@@ -54,22 +63,19 @@ function IdeaView() {
         subtitle={idea.summary || "Demand intake before a project exists."}
         actions={
           <>
-            {canAdvance ? (
-              <IfCan cap="edit_idea">
-                <button type="button" className="btn btn-ghost" onClick={() => advanceIdea(idea.id)}>
-                  Advance
-                </button>
-              </IfCan>
-            ) : null}
-            {idea.stage === "Approved" ? (
+            {canConvert ? (
               <IfCan cap="convert_idea">
-                <button type="button" className="btn btn-ghost" onClick={() => convertIdea(idea.id)}>
-                  Convert
+                <button type="button" className="btn btn-primary" onClick={convert}>
+                  Convert to project
                 </button>
               </IfCan>
+            ) : converted ? (
+              <Link href={`/app/projects/view/?id=${converted.id}`} className="btn btn-primary">
+                Open project
+              </Link>
             ) : null}
             <IfCan cap="edit_idea">
-              <button type="button" className="btn btn-primary" onClick={() => setEditOpen(true)}>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
                 Edit details
               </button>
             </IfCan>
@@ -80,11 +86,10 @@ function IdeaView() {
         }
       />
       <MetricGrid>
-        <MetricCard label="Stage" value={idea.stage} />
-        <MetricCard label="Score" value={idea.score} hint="Composite of fit, value, and risk" />
-        <MetricCard label="Fit / Value / Risk" value={`${idea.strategicFit} / ${idea.valueScore} / ${idea.riskScore}`} />
+        <MetricCard label="Status" value={stage} />
         <MetricCard label="Ask" value={money(idea.requestedBudget)} />
         <MetricCard label="Submitter" value={idea.submitter} />
+        <MetricCard label="Company" value={company?.name ?? idea.companyName ?? "Internal"} />
       </MetricGrid>
       <div className="split-2">
         <div className="panel p-5">
@@ -108,8 +113,22 @@ function IdeaView() {
                 ideaObjectiveLabel(idea, objectives) || "None yet"
               )}
             </RecordFact>
-            <RecordFact label="Stage">
-              <Pill value={idea.stage} />
+            <RecordFact label="Status">
+              {stage === "Converted" || !can("edit_idea") ? (
+                <Pill value={stage} />
+              ) : (
+                <TextSelect
+                  aria-label="Idea status"
+                  value={stage}
+                  onChange={(e) => updateIdea(idea.id, { stage: e.target.value as IdeaStage })}
+                >
+                  {IDEA_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </TextSelect>
+              )}
             </RecordFact>
             <RecordFact label="Converted project">
               {converted ? (
@@ -125,19 +144,23 @@ function IdeaView() {
           </dl>
         </div>
         <div className="panel p-5">
-          <h2 className="section-title">Scoring</h2>
-          <DataTable
-            columns={["Dimension", "Score"]}
-            rows={[
-              ["Strategic fit", String(idea.strategicFit)],
-              ["Value", String(idea.valueScore)],
-              ["Risk", String(idea.riskScore)],
-              ["Composite", String(idea.score)],
-            ]}
-          />
-          <p className="mt-3 text-sm text-[var(--color-muted)]">
-            Composite score recalculates when you edit fit, value, or risk.
+          <h2 className="section-title">Project conversion</h2>
+          <p className="text-sm text-[var(--color-muted)]">
+            Convert turns this idea into a project. Internal ideas stay unassigned to a company.
           </p>
+          {canConvert ? (
+            <IfCan cap="convert_idea">
+              <button type="button" className="btn btn-primary mt-4" onClick={convert}>
+                Convert to project
+              </button>
+            </IfCan>
+          ) : converted ? (
+            <Link href={`/app/projects/view/?id=${converted.id}`} className="btn btn-primary mt-4">
+              Open {converted.name}
+            </Link>
+          ) : (
+            <p className="mt-4 text-sm text-[var(--color-muted)]">Rejected ideas stay in the log and do not convert.</p>
+          )}
         </div>
       </div>
       <Modal open={editOpen} title="Edit idea" onClose={() => setEditOpen(false)} wide>

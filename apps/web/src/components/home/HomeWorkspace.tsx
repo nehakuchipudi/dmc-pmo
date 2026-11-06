@@ -123,7 +123,7 @@ function WorkspaceHome() {
       risks: openHighRisks(risks).length,
       issues: issues.filter((row) => row.status !== "Resolved").length,
       tickets: tickets.filter((row) => row.status !== "Resolved").length,
-      ideas: ideas.filter((row) => row.stage !== "Converted" && row.stage !== "Deferred").length,
+      ideas: ideas.filter((row) => row.stage !== "Converted" && row.stage !== "Rejected" && row.stage !== "On Hold").length,
       crew: team.filter((row) => row.active).length,
       upcoming,
       activity,
@@ -190,7 +190,7 @@ function WorkspaceHome() {
       <MetricCard key="tickets" label="Open tickets" value={snapshot.tickets} hint="Support still in flight" tone={snapshot.tickets ? "warn" : "good"} />
     ) : null,
     show("ideas") ? (
-      <MetricCard key="ideas" label="Ideas in play" value={snapshot.ideas} hint="Submitted, scoring, or approved" />
+      <MetricCard key="ideas" label="Ideas in play" value={snapshot.ideas} hint="Submitted, in progress, or approved" />
     ) : null,
     show("approvals") ? (
       <MetricCard

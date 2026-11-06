@@ -67,7 +67,7 @@ import {
   seedRisks,
 } from "./ppm-seed";
 import { EMPTY_WORKSPACE_GENERATION } from "./workspace-snapshot";
-import { ideaComposite } from "./ppm";
+import { ideaCanConvert, ideaComposite, normalizeIdeaStage } from "./ppm";
 import {
   buildDnsRecords,
   domainStatus,
@@ -170,11 +170,12 @@ type CreateCompanyInput = {
 
 type CreateProjectInput = {
   name: string;
-  companyId: string;
+  companyId?: string;
   manager: string;
   ownerEmail?: string;
   due: string;
   budgetHours: number;
+  description?: string;
 };
 
 type CreateTicketInput = {
@@ -1216,14 +1217,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createProject: (input) => {
     if (!requireCap(get, "create_project")) return "";
-    const company = get().companies.find((c) => c.id === input.companyId);
-    if (!company) return "";
+    const company = input.companyId ? get().companies.find((c) => c.id === input.companyId) : undefined;
+    if (input.companyId && !company) return "";
     const id = uid("p");
     const project: Project = {
       id,
       name: input.name,
-      companyId: company.id,
-      companyName: company.name,
+      companyId: company?.id ?? "",
+      companyName: company?.name ?? "Internal",
       manager: input.manager,
       progress: 0,
       status: "Draft",
@@ -1233,9 +1234,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       loggedHours: 0,
       marginPct: 35,
       portalShared: true,
-      portalContacts: company.portalContacts,
-      projectType: company.companyKind === "Agency" ? "Capital / PMO" : "Client Work",
-      description: "",
+      portalContacts: company?.portalContacts ?? 0,
+      projectType: company?.companyKind === "Agency" ? "Capital / PMO" : company ? "Client Work" : "Internal",
+      description: input.description ?? "",
       budgetAmount: input.budgetHours * 180,
       materials: [],
       files: [],
@@ -1252,15 +1253,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     set((s) => ({
       projects: [project, ...s.projects],
-      companies: s.companies.map((c) =>
-        c.id === company.id ? { ...c, openProjects: c.openProjects + 1, lastActivity: formatDisplayDate(todayIso()) } : c,
-      ),
+      companies: company
+        ? s.companies.map((c) =>
+            c.id === company.id ? { ...c, openProjects: c.openProjects + 1, lastActivity: formatDisplayDate(todayIso()) } : c,
+          )
+        : s.companies,
     }));
     get().logActivity({
       type: "project",
       actor: input.manager,
       action: "created the project",
-      companyId: company.id,
+      companyId: company?.id,
       projectId: id,
       entityType: "project",
       entityId: id,
@@ -1301,7 +1304,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         body: projectAssignmentBody({
           ownerName: owner.name,
           projectName: project.name,
-          companyName: company.name,
+          companyName: company?.name ?? "Internal",
           href,
           created: true,
         }),
@@ -3236,6 +3239,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...patch,
       companyId,
       companyName: companyId ? (company?.name ?? patch.companyName ?? prev.companyName) : undefined,
+      stage: normalizeIdeaStage(patch.stage ?? prev.stage),
       objectiveId: patch.objectiveId === "" ? undefined : (patch.objectiveId ?? prev.objectiveId),
       objectiveName:
         patch.objectiveId && patch.objectiveId !== ""
@@ -3253,31 +3257,41 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   advanceIdea: (id) => {
     if (!requireCap(get, "edit_idea")) return;
-    const order: IdeaStage[] = ["Submitted", "Scoring", "Approved", "Converted"];
     const idea = get().ideas.find((i) => i.id === id);
-    if (!idea || idea.stage === "Deferred" || idea.stage === "Converted") return;
-    const next = order[Math.min(order.indexOf(idea.stage) + 1, order.length - 1)];
-    if (next === "Converted") {
-      get().convertIdea(id);
-      return;
-    }
-    set((s) => ({ ideas: s.ideas.map((i) => (i.id === id ? { ...i, stage: next, score: Math.min(99, i.score + 8) } : i)) }));
+    if (!idea) return;
+    const current = normalizeIdeaStage(idea.stage);
+    if (current === "Converted" || current === "Rejected") return;
+    const order: IdeaStage[] = ["Submitted", "In Progress", "Approved"];
+    const from = current === "On Hold" ? "Submitted" : current;
+    const idx = Math.max(0, order.indexOf(from));
+    const next = order[Math.min(idx + 1, order.length - 1)];
+    if (next === current) return;
+    set((s) => ({ ideas: s.ideas.map((i) => (i.id === id ? { ...i, stage: next } : i)) }));
     get().pushToast(`Idea moved to ${next}`);
   },
 
   convertIdea: (id) => {
     if (!requireCap(get, "convert_idea")) return;
     const idea = get().ideas.find((i) => i.id === id);
-    if (!idea || idea.convertedProjectId) return;
-    const companyId = idea.companyId ?? get().companies[0]?.id;
-    if (!companyId) return;
+    if (!idea) return;
+    if (idea.convertedProjectId) return idea.convertedProjectId;
+    if (!ideaCanConvert(idea)) {
+      get().pushToast("This idea cannot convert to a project");
+      return;
+    }
+    const company = idea.companyId ? get().companies.find((c) => c.id === idea.companyId) : undefined;
     const projectId = get().createProject({
       name: idea.name,
-      companyId,
+      companyId: company?.id,
       manager: idea.submitter,
       due: todayIso(),
-      budgetHours: Math.max(40, Math.round(idea.requestedBudget / 250)),
+      budgetHours: Math.max(40, Math.round(idea.requestedBudget / 250) || 40),
+      description: idea.summary,
     });
+    if (!projectId) {
+      get().pushToast("Could not create a project from this idea");
+      return;
+    }
     set((s) => ({
       ideas: s.ideas.map((i) => (i.id === id ? { ...i, stage: "Converted", convertedProjectId: projectId } : i)),
       portfolios: s.portfolios.map((p) =>
