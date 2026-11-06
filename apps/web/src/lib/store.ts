@@ -176,6 +176,7 @@ type CreateProjectInput = {
   due: string;
   budgetHours: number;
   description?: string;
+  projectType?: string;
 };
 
 type CreateTicketInput = {
@@ -1239,7 +1240,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       marginPct: 35,
       portalShared: true,
       portalContacts: company?.portalContacts ?? 0,
-      projectType: company?.companyKind === "Agency" ? "Capital / PMO" : company ? "Client Work" : "Internal",
+      projectType:
+        input.projectType?.trim() ||
+        (company?.companyKind === "Agency" ? "Capital / PMO" : company ? "Client Work" : "Internal"),
       description: input.description ?? "",
       budgetAmount: input.budgetHours * 180,
       materials: [],
@@ -3287,6 +3290,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       due: todayIso(),
       budgetHours: Math.max(40, Math.round(idea.requestedBudget / 250) || 40),
       description: idea.summary,
+      projectType: company ? "Client Work" : "Internal",
     });
     if (!projectId) {
       get().pushToast("Could not create a project from this idea");

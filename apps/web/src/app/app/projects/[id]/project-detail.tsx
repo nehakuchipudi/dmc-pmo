@@ -49,7 +49,7 @@ const TABS = [
   "Assets",
   "Details",
 ];
-const PROJECT_TYPES = ["Client Work", "Internal", "Retainer", "Fixed Fee", "Capital / PMO"];
+const PROJECT_TYPES = ["Internal", "Client Work", "Retainer", "Fixed Fee", "Capital / PMO"];
 
 function activityDate(when: string) {
   if (/today|yesterday/i.test(when)) return "2026-08-05";
