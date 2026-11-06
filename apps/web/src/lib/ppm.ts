@@ -1,3 +1,4 @@
+import { isOpenProjectStatus } from "./project-lifecycle";
 import type {
   CrossDependency,
   IdeaStage,
@@ -86,6 +87,13 @@ export const IDEA_STAGES = ["Submitted", "In Progress", "Approved", "On Hold", "
 export const IDEA_STATUS_OPTIONS = ["Submitted", "In Progress", "Approved", "On Hold", "Rejected"] as const;
 export const PROJECT_CREATE_TYPES = ["Internal", "Client Work"] as const;
 export type ProjectCreateType = (typeof PROJECT_CREATE_TYPES)[number];
+export const PROJECT_LIST_FILTERS = [
+  "All Open Projects",
+  "Recently Created",
+  "Managed By Me",
+  "Projects Overdue",
+] as const;
+export type ProjectListFilter = (typeof PROJECT_LIST_FILTERS)[number];
 
 export function normalizeIdeaStage(stage: string | undefined): IdeaStage {
   if (stage === "Scoring") return "In Progress";
@@ -124,4 +132,68 @@ export function ideaObjectiveLabel(
   const linked = idea.objectiveId ? objectives.find((row) => row.id === idea.objectiveId) : undefined;
   if (linked) return `${linked.code} ${linked.name}`.trim();
   return idea.objectiveName?.trim() || "";
+}
+
+export function nextProjectNumber(projects: { number?: number }[]) {
+  return Math.max(0, ...projects.map((row) => row.number ?? 0)) + 1;
+}
+
+export function projectDisplayId(project: { id: string; number?: number }) {
+  return project.number != null ? String(project.number) : project.id.replace(/^p-/, "");
+}
+
+export function projectEarnedValue(project: { progress: number; budgetAmount: number }) {
+  return Math.round((project.progress / 100) * project.budgetAmount);
+}
+
+export function projectIsOverdue(project: { due: string; status: Project["status"] }, today: string) {
+  return isOpenProjectStatus(project.status) && Boolean(project.due) && project.due < today;
+}
+
+export function projectManagedBy(project: { manager: string }, userName?: string) {
+  const name = userName?.trim() ?? "";
+  if (!name) return false;
+  const last = name.split(" ").slice(-1)[0] ?? "";
+  return project.manager === name || (Boolean(last) && project.manager.includes(last));
+}
+
+export function lastProjectContactIso(
+  projectId: string,
+  input: {
+    activities?: { projectId?: string; at?: string }[];
+    tickets?: { id: string; projectId?: string; submitted: string }[];
+    ticketMessages?: { ticketId: string; createdAt: string }[];
+    timeEntries?: { projectId: string; date: string }[];
+  },
+) {
+  const dates: string[] = [];
+  for (const row of input.activities ?? []) {
+    if (row.projectId === projectId && row.at) dates.push(row.at.slice(0, 10));
+  }
+  const ticketIds = new Set<string>();
+  for (const row of input.tickets ?? []) {
+    if (row.projectId === projectId) {
+      ticketIds.add(row.id);
+      if (row.submitted) dates.push(row.submitted.slice(0, 10));
+    }
+  }
+  for (const row of input.ticketMessages ?? []) {
+    if (ticketIds.has(row.ticketId) && row.createdAt) dates.push(row.createdAt.slice(0, 10));
+  }
+  for (const row of input.timeEntries ?? []) {
+    if (row.projectId === projectId && row.date) dates.push(row.date.slice(0, 10));
+  }
+  dates.sort();
+  return dates.at(-1);
+}
+
+export function filterProjectList(
+  projects: Project[],
+  filter: string,
+  ctx: { userName?: string; today: string },
+) {
+  if (filter === "Managed By Me") return projects.filter((row) => projectManagedBy(row, ctx.userName));
+  if (filter === "Recently Created") return [...projects].sort((a, b) => b.start.localeCompare(a.start));
+  if (filter === "Projects Overdue") return projects.filter((row) => projectIsOverdue(row, ctx.today));
+  return projects.filter((row) => isOpenProjectStatus(row.status));
 }

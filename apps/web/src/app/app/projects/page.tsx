@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
-import { MoreVertical, Plus } from "lucide-react";
+import { Lock, MoreVertical, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { Avatar, Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
 import { initialsFromName } from "@/lib/seed";
@@ -13,32 +13,49 @@ import { useAppStore } from "@/lib/store";
 import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
 import { hiddenMoney } from "@/lib/rbac";
-import { isOpenProjectStatus, isWatchLifecycle } from "@/lib/project-lifecycle";
-
-const FILTERS = ["All open projects", "My projects", "At risk", "Recently created"];
+import {
+  PROJECT_LIST_FILTERS,
+  filterProjectList,
+  lastProjectContactIso,
+  projectDisplayId,
+  projectEarnedValue,
+} from "@/lib/ppm";
+import { todayIso } from "@/lib/timesheet";
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { user, can, canSeeFinancials } = useAuth();
   const projects = useAppStore((s) => s.projects);
   const companies = useAppStore((s) => s.companies);
+  const activities = useAppStore((s) => s.activities);
+  const tickets = useAppStore((s) => s.tickets);
+  const ticketMessages = useAppStore((s) => s.ticketMessages);
+  const timeEntries = useAppStore((s) => s.timeEntries);
   const deleteProject = useAppStore((s) => s.deleteProject);
   const duplicateProject = useAppStore((s) => s.duplicateProject);
   const updateProject = useAppStore((s) => s.updateProject);
   const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const pushToast = useAppStore((s) => s.pushToast);
-  const [filter, setFilter] = useState(FILTERS[0]);
+  const [filter, setFilter] = useState<(typeof PROJECT_LIST_FILTERS)[number]>(PROJECT_LIST_FILTERS[0]);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
 
-  const rows = useMemo(() => {
-    if (filter === "My projects") return projects.filter((p) => p.manager === user?.name || p.manager.includes(user?.name.split(" ").slice(-1)[0] ?? "Doyle"));
-    if (filter === "At risk") return projects.filter((p) => isWatchLifecycle(p.status));
-    if (filter === "Recently created") return [...projects];
-    return projects.filter((p) => isOpenProjectStatus(p.status));
-  }, [filter, projects, user]);
+  const rows = useMemo(
+    () =>
+      filterProjectList(projects, filter, { userName: user?.name, today: todayIso() }).map((p) => {
+        const contact = lastProjectContactIso(p.id, { activities, tickets, ticketMessages, timeEntries });
+        return {
+          ...p,
+          displayId: projectDisplayId(p),
+          earned: projectEarnedValue(p),
+          lastContact: contact ? formatDisplayDate(contact) : "-",
+          confidential: companies.find((c) => c.id === p.companyId)?.privacy === "Confidential",
+        };
+      }),
+    [activities, companies, filter, projects, ticketMessages, tickets, timeEntries, user],
+  );
 
   const editing = projects.find((p) => p.id === editId);
 
@@ -56,13 +73,17 @@ export default function ProjectsPage() {
                 exportCsv(
                   "projects.csv",
                   rows.map((p) => ({
+                    id: p.displayId,
                     name: p.name,
                     company: p.companyName,
+                    type: p.projectType,
                     manager: p.manager,
                     status: p.status,
                     progress: p.progress,
+                    earned: p.earned,
                     due: p.due,
                     budget: p.budgetAmount,
+                    lastContact: p.lastContact,
                   })),
                 )
               }
@@ -78,56 +99,70 @@ export default function ProjectsPage() {
         }
       />
       <FilterChips
-        items={FILTERS}
+        items={[...PROJECT_LIST_FILTERS]}
         active={filter}
-        onChange={(v) => startTransition(() => setFilter(v))}
+        onChange={(v) => startTransition(() => setFilter(v as (typeof PROJECT_LIST_FILTERS)[number]))}
       />
-      <div className="panel overflow-hidden">
+      <div className="panel table-wrap">
         <table className="table">
           <thead>
             <tr>
-              <th>Project</th>
-              <th>Company</th>
-              <th>Owner</th>
-              <th>Progress</th>
-              <th>Status</th>
-              <th>Due</th>
-              <th>Budget</th>
+              <th className="whitespace-nowrap">Project</th>
+              <th className="whitespace-nowrap">Id</th>
+              <th className="whitespace-nowrap">Company</th>
+              <th className="whitespace-nowrap">Type</th>
+              <th className="whitespace-nowrap">Manager</th>
+              <th className="whitespace-nowrap">Status</th>
+              <th className="whitespace-nowrap">Earned</th>
+              <th className="whitespace-nowrap">Budget</th>
+              <th className="whitespace-nowrap">Due</th>
+              <th className="whitespace-nowrap">Last contact</th>
+              <th className="whitespace-nowrap">Progress</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {rows.map((p) => (
               <tr key={p.id}>
-                <td>
-                  <Link
-                    href={`/app/projects/view/?id=${p.id}`}
-                    className="font-semibold text-[var(--color-navy)] hover:underline"
-                    onMouseEnter={() => router.prefetch(`/app/projects/view/?id=${p.id}`)}
-                  >
-                    {p.name}
-                  </Link>
-                  <div className="text-xs text-[var(--color-muted)]">{p.projectType}</div>
+                <td className="whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    {p.confidential ? <Lock size={14} aria-label="Confidential" className="shrink-0 text-[var(--color-muted)]" /> : null}
+                    <Link
+                      href={`/app/projects/view/?id=${p.id}`}
+                      className="font-semibold text-[var(--color-navy)] hover:underline"
+                      onMouseEnter={() => router.prefetch(`/app/projects/view/?id=${p.id}`)}
+                    >
+                      {p.name}
+                    </Link>
+                  </div>
                 </td>
+                <td className="tabular-nums whitespace-nowrap">{p.displayId}</td>
                 <td>
-                  <Link href={`/app/companies/view/?id=${p.companyId}`} className="hover:underline">
-                    {p.companyName}
-                  </Link>
+                  {p.companyId ? (
+                    <Link href={`/app/companies/view/?id=${p.companyId}`} className="hover:underline">
+                      {p.companyName}
+                    </Link>
+                  ) : (
+                    p.companyName
+                  )}
                 </td>
-                <td>
+                <td className="whitespace-nowrap">{p.projectType}</td>
+                <td className="whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <Avatar initials={initialsFromName(p.manager)} name={p.manager} size={28} />
                     <span>{p.manager}</span>
                   </div>
                 </td>
-                <td className="min-w-[140px]">
-                  <ProgressBar value={p.progress} />
-                </td>
                 <td>
                   <StatusPill tone={statusTone(p.status)}>{p.status}</StatusPill>
                 </td>
-                <td>{formatDisplayDate(p.due)}</td>
-                <td className="tabular-nums">{hiddenMoney(canSeeFinancials, money(p.budgetAmount))}</td>
+                <td className="tabular-nums whitespace-nowrap">{hiddenMoney(canSeeFinancials, money(p.earned))}</td>
+                <td className="tabular-nums whitespace-nowrap">{hiddenMoney(canSeeFinancials, money(p.budgetAmount))}</td>
+                <td className="whitespace-nowrap">{formatDisplayDate(p.due)}</td>
+                <td className="whitespace-nowrap">{p.lastContact}</td>
+                <td className="min-w-[140px]">
+                  <ProgressBar value={p.progress} />
+                </td>
                 <td
                   className="row-actions text-right"
                   onMouseEnter={() => setMenuId(p.id)}
