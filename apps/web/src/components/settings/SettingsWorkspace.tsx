@@ -228,10 +228,12 @@ export function SettingsWorkspace() {
                           {m.financialVisibility === "rates_and_budgets" ? "Rates and budgets" : "Hours only"}
                         </td>
                         <td>
-                          <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
-                          {m.invitedAt ? (
-                            <div className="mt-1 text-xs text-[var(--color-muted)]">Invited {m.invitedAt}</div>
-                          ) : null}
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusPill tone={m.active ? "success" : "neutral"}>{m.active ? "Active" : "Inactive"}</StatusPill>
+                            {m.invitedAt ? (
+                              <div className="text-xs text-[var(--color-muted)] whitespace-nowrap">Invited {m.invitedAt}</div>
+                            ) : null}
+                          </div>
                         </td>
                         <td
                           className="row-actions text-right"

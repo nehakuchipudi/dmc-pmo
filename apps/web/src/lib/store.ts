@@ -657,12 +657,12 @@ function sendUserInviteMail(
   });
 }
 
-function persistOutbox(get: () => AppState, note?: NotificationItem) {
+function persistOutbox(get: () => AppState) {
   const extras = readAccountExtras();
   writeAccountExtras({
     ...extras,
     mail: get().emailOutbox,
-    notes: note ? [note, ...extras.notes.filter((row) => row.id !== note.id)] : extras.notes,
+    notes: get().notifications,
   });
 }
 
@@ -699,7 +699,7 @@ function recordAssignmentMail(
     emailOutbox: [mail, ...s.emailOutbox],
     notifications: [note, ...s.notifications],
   }));
-  persistOutbox(get, note);
+  persistOutbox(get);
   void deliverMail({
     to: input.to,
     subject: input.subject,
@@ -831,12 +831,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ focusCompanyId: id });
   },
-  markNotificationRead: (id) =>
+  markNotificationRead: (id) => {
     set((s) => ({
       notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    })),
-  markAllNotificationsRead: () =>
-    set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+    }));
+    persistOutbox(get);
+  },
+  markAllNotificationsRead: () => {
+    set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
+    persistOutbox(get);
+  },
   trackView: (type, id, label) =>
     set((s) => ({
       recentlyViewed: [{ type, id, label }, ...s.recentlyViewed.filter((r) => !(r.type === type && r.id === id))].slice(0, 8),
@@ -1955,13 +1959,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         ],
       }));
     }
-    const extras = readAccountExtras();
-    const welcomeMail = get().emailOutbox.filter((e) => e.subject.includes("Welcome to DMC PMO"));
-    const welcomeNotes = get().notifications.filter((n) => n.title === "Welcome to DMC PMO");
     writeAccountExtras({
       team: get().team,
-      mail: [...welcomeMail, ...extras.mail.filter((e) => !welcomeMail.some((w) => w.id === e.id))],
-      notes: [...welcomeNotes, ...extras.notes.filter((n) => !welcomeNotes.some((w) => w.id === n.id))],
+      mail: get().emailOutbox,
+      notes: get().notifications,
     });
     get().pushToast(isNew ? `Account ready for ${email}` : `Signed in as ${email}`);
     return user;
@@ -2825,8 +2826,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           href,
         }));
         set((s) => ({ notifications: [...notes, ...s.notifications] }));
-        const extras = readAccountExtras();
-        writeAccountExtras({ ...extras, notes: [...notes, ...extras.notes] });
+        persistOutbox(get);
       }
     }
     get().pushToast("Note added");
