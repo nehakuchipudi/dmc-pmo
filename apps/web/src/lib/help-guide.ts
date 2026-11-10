@@ -140,7 +140,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Edit plan is the project schedule: a task table beside a day-scale Gantt. Add, change, and delete milestones and tasks there.",
     steps: [
       "Open a project and choose Edit plan, or open the Schedule tab.",
-      "Use Add milestone or Add task on the one-line toolbar. Select a row first to nest a task under that milestone.",
+      "Use Add milestone or Add task on the one-line toolbar. New milestones land at the bottom. Select a milestone and use Move up or Move down to reorder. Select a row first to nest a task under that milestone.",
       "Select a milestone or task and press Delete, or use the row Delete control.",
       "Drag the arrow between the table and Gantt to give either side more room.",
       "Drag bars or edit dates on the table. Switch Days and Weeks on the same toolbar.",
@@ -506,6 +506,24 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Project headers use this workflow when someone moves status.",
     ],
     tips: ["Only Admin can edit the matrix. Everyone with Users access can view it."],
+  },
+  {
+    id: "invoice-templates",
+    title: "Invoice templates",
+    group: "Admin",
+    href: "/app/settings/?section=billing",
+    audience: "internal",
+    viewCap: "view_billing",
+    keywords: ["invoice template", "billing settings", "progress billing", "time and materials"],
+    summary:
+      "Settings, Billing holds invoice templates. A template is a blank starting point: name, terms, and title pattern. Dollar amounts are entered on the invoice, not on the template.",
+    steps: [
+      "Open Settings, then Billing.",
+      "Select Time and materials, Progress billing, Retainer period, Fixed fee milestone, or Expense recovery.",
+      "Edit the name, title pattern, and terms. Leave amounts off.",
+      "Create invoice still lets you pick the same templates. Line items start empty.",
+    ],
+    tips: ["Finance and Admin can save templates. Amounts belong on the invoice."],
   },
   {
     id: "capabilities",

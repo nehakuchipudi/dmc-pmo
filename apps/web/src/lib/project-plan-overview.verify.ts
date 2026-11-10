@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "./project-tabs";
-import { scheduleWindow } from "./project-plan";
+import { scheduleWindow, sortPlanItems } from "./project-plan";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +33,14 @@ assert.deepEqual(scheduleWindow("2026-06-03", "2026-11-10", "2026-08-10"), {
   over: 0,
 });
 assert.equal(scheduleWindow("2026-06-03", "2026-11-09", "2026-11-10").over, 1);
+assert.deepEqual(
+  sortPlanItems([
+    { name: "New milestone", sortOrder: 2 },
+    { name: "Milestone 1", sortOrder: 0 },
+    { name: "Milestone 2", sortOrder: 1 },
+  ]).map((row) => row.name),
+  ["Milestone 1", "Milestone 2", "New milestone"],
+);
 
 const detail = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(detail, /ProjectOverviewBoard/);
@@ -48,6 +56,9 @@ assert.match(detail, /className="record-tabs"/);
 const schedule = readFileSync(join(root, "../components/schedule/ProjectSchedule.tsx"), "utf8");
 assert.match(schedule, /Add milestone/);
 assert.match(schedule, /Add task/);
+assert.match(schedule, /Move up/);
+assert.match(schedule, /Move down/);
+assert.match(schedule, /onReorderMilestones/);
 assert.match(schedule, /plan-gantt-caption/);
 assert.match(schedule, /plan-board is-split/);
 assert.doesNotMatch(schedule, /GanttBoard/);

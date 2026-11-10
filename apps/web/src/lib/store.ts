@@ -355,6 +355,7 @@ type AppState = {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   reorderTasks: (orderedIds: string[]) => void;
+  reorderMilestones: (orderedIds: string[]) => void;
   createMilestone: (
     projectId: string,
     name: string,
@@ -487,6 +488,7 @@ type AppState = {
   updateInvoice: (id: string, patch: Partial<Invoice>) => void;
   createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
   updateInvoiceTemplate: (id: string, patch: Partial<InvoiceTemplate>) => void;
+  deleteInvoiceTemplate: (id: string) => void;
   generateProjectInvoice: (projectId: string) => string;
   generatePeriodInvoice: (periodId: string) => string;
   addProjectFile: (projectId: string, file: Omit<ProjectFile, "id">) => void;
@@ -1792,25 +1794,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
+  reorderMilestones: (orderedIds) => {
+    if (!requireCap(get, "manage_plan")) return;
+    set((s) => ({
+      milestones: s.milestones.map((milestone) => {
+        const index = orderedIds.indexOf(milestone.id);
+        return index >= 0 ? { ...milestone, sortOrder: index } : milestone;
+      }),
+    }));
+  },
+
   createMilestone: (projectId, name, due, opts) => {
     if (!requireCap(get, "manage_plan")) return "";
     const id = uid("m");
     const kind = opts?.kind ?? (opts?.parentId ? "group" : "phase");
-    set((s) => ({
-      milestones: [
-        {
-          id,
-          projectId,
-          name,
-          due,
-          start: opts?.start ?? todayIso(),
-          status: "Not Started",
-          kind,
-          parentId: opts?.parentId,
-        },
-        ...s.milestones,
-      ],
-    }));
+    set((s) => {
+      const parentId = opts?.parentId;
+      const siblings = s.milestones.filter(
+        (row) => row.projectId === projectId && (row.parentId ?? "") === (parentId ?? ""),
+      );
+      const sortOrder = siblings.reduce((max, row) => Math.max(max, row.sortOrder ?? -1), -1) + 1;
+      return {
+        milestones: [
+          ...s.milestones,
+          {
+            id,
+            projectId,
+            name,
+            due,
+            start: opts?.start ?? todayIso(),
+            status: "Not Started",
+            kind,
+            parentId,
+            sortOrder,
+          },
+        ],
+      };
+    });
     const project = get().projects.find((p) => p.id === projectId);
     get().logActivity({
       type: "milestone",
@@ -2738,6 +2758,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       invoiceTemplates: s.invoiceTemplates.map((template) => (template.id === id ? { ...template, ...patch } : template)),
     }));
     get().pushToast("Invoice template updated");
+  },
+
+  deleteInvoiceTemplate: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const template = get().invoiceTemplates.find((row) => row.id === id);
+    set((s) => ({ invoiceTemplates: s.invoiceTemplates.filter((row) => row.id !== id) }));
+    if (template) get().pushToast(`${template.name} removed`);
   },
 
   generateProjectInvoice: (projectId) => {
