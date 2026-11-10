@@ -211,12 +211,12 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_timesheets",
     keywords: ["timesheet", "time", "hours", "log time", "approve time", "daily", "weekly", "overview", "timer", "phase", "subtask", "edit time", "delete time"],
     summary:
-      "Timesheets has Overview, Daily, and Weekly views. Search adds a project, phase, task, or subtask row. Click a day to add or edit activity. Extra filters and timers sit in the three-dot menu.",
+      "Timesheets has Overview, Daily, and Weekly views. On Weekly, search a project, milestone, or task to add a row. Hover a day for the blue +, then save or edit the time later.",
     steps: [
       "Open Timesheets and stay on Weekly for day-to-day logging.",
-      "Search a project, phase, task, or subtask, then click a day cell.",
-      "Add hours, or open a logged line to edit, submit, or delete it from the three-dot menu.",
-      "Use + on a day to add another activity on the same work.",
+      "Search Find work to add to your timesheet for a project, milestone, or task.",
+      "Hover a day cell for the blue +, then Save log. Click the hours later to edit.",
+      "Use More worklog details for start time, class, milestone, and task.",
     ],
     tips: ["Staff can edit or delete their own drafts. Approvers change approved time. Extra filters live under the three dots."],
   },
