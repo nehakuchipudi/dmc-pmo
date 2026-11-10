@@ -84,17 +84,17 @@ const FEATURES = [
 
 const ACTION_SHOTS = [
   {
-    src: "/marketing/card-overview.jpg?v=6",
+    src: "/marketing/shot-overview.jpg?v=7",
     title: "Project record",
     body: "Status, cost, team, and progress stay on the same job.",
   },
   {
-    src: "/marketing/card-plan.jpg?v=6",
+    src: "/marketing/shot-plan.jpg?v=7",
     title: "Delivery plan",
     body: "Phases and tasks on a schedule the team can run.",
   },
   {
-    src: "/marketing/card-insights.jpg?v=6",
+    src: "/marketing/shot-insights.jpg?v=7",
     title: "Weekly brief",
     body: "Capacity, risk, gates, and cash that need attention.",
   },

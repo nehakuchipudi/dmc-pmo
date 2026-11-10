@@ -28,8 +28,6 @@ const PACKS = [
   },
 ] as const;
 
-const SPINE = ["Companies", "Projects", "Field work", "Time", "Invoices", "Weekly brief"];
-
 export function LandingPacks() {
   const [active, setActive] = useState(0);
   const pack = PACKS[active] ?? PACKS[0];
@@ -86,11 +84,6 @@ export function LandingPacks() {
             </ul>
           </aside>
         </div>
-        <ol className="mkt-pack-spine" aria-label="What the workspace carries">
-          {SPINE.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ol>
       </div>
     </section>
   );
