@@ -490,26 +490,6 @@
   color: var(--mkt-purple);
 }
 
-.mkt-pack-spine {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  margin: 28px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mkt-pack-spine li {
-  position: relative;
-  padding: 12px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--mkt-ink);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
 .mkt-pmo-head {
   width: min(760px, 100%);
   margin: 0 auto 8px;
@@ -629,9 +609,11 @@
 }
 
 .mkt-pmo-stage .mkt-shot img {
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  height: 100%;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: top center;
 }
 
 .mkt-pmo-stage-copy {
@@ -761,6 +743,17 @@
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(10px);
+}
+
+.mkt-action-card .mkt-shot {
+  background: #f4f5f9;
+}
+
+.mkt-action-card .mkt-shot img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: top center;
 }
 
 .mkt-action-card h3 {
@@ -1489,7 +1482,6 @@
   .mkt-hero-cover .mkt-hero-benefits,
   .mkt-hero-stage,
   .mkt-packs-console,
-  .mkt-pack-spine,
   .mkt-action-grid,
   .mkt-audiences,
   .mkt-pmo-console,

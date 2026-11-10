@@ -26,7 +26,7 @@ const PILLARS = [
     title: "Project planning",
     body: "Milestones the team can run.",
     detail: "Phases, dates, and owners sit on the same plan the delivery team runs each week.",
-    image: "/marketing/card-plan.jpg?v=6",
+    image: "/marketing/shot-plan.jpg?v=7",
     watch: "watch-projects",
   },
   {
@@ -50,7 +50,7 @@ const PILLARS = [
     title: "PMO insights",
     body: "The call you need this week.",
     detail: "A weekly brief of capacity, risk, gates, and cash that needs a call.",
-    image: "/marketing/card-insights.jpg?v=6",
+    image: "/marketing/shot-insights.jpg?v=7",
     watch: "watch-ai",
   },
   {
@@ -58,7 +58,7 @@ const PILLARS = [
     title: "Service operations",
     body: "Field work in the same workspace.",
     detail: "Work Journey, schedule, approvals, and the employee clock live next to the project book.",
-    image: "/marketing/card-overview.jpg?v=6",
+    image: "/marketing/shot-overview.jpg?v=7",
     watch: "watchnow",
   },
 ] as const;
