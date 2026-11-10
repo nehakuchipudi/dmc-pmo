@@ -69,13 +69,29 @@ export function fillInvoiceTitle(pattern: string, ctx: { company: string; projec
     .trim();
 }
 
+export function blankTemplateLine(line: Omit<InvoiceLineItem, "id">): Omit<InvoiceLineItem, "id"> {
+  return {
+    kind: line.kind,
+    description: line.description ?? "",
+    taxPct: line.taxPct ?? 0,
+    includeInPdf: line.includeInPdf !== false,
+    amount: 0,
+  };
+}
+
+export function blankInvoiceTemplate<T extends { defaultLines?: Omit<InvoiceLineItem, "id">[] }>(template: T): T {
+  return {
+    ...template,
+    defaultLines: (template.defaultLines ?? []).map((line) => blankTemplateLine(line)),
+  };
+}
+
 export function linesFromTemplate(template: InvoiceTemplate, taxPct?: number): InvoiceLineItem[] {
   const rate = taxPct ?? template.taxPct;
-  return template.defaultLines.map((line) =>
+  return (template.defaultLines ?? []).map((line) =>
     emptyInvoiceLine(line.kind, {
-      ...line,
+      ...blankTemplateLine(line),
       taxPct: line.taxPct ?? rate,
-      amount: computeLineAmount({ ...line, amount: line.amount }),
     }),
   );
 }

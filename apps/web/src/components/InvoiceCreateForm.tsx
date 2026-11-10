@@ -7,6 +7,7 @@ import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
+  blankTemplateLine,
   computeLineAmount,
   dueFromTerms,
   emptyInvoiceLine,
@@ -159,9 +160,9 @@ export function InvoiceCreateForm({
               : kind === "purchase"
                 ? "Purchase"
                 : "Expense",
-        hours: kind === "service" ? 1 : undefined,
-        rate: kind === "service" ? 180 : kind === "material" ? 0 : undefined,
-        quantity: kind === "material" ? 1 : undefined,
+        hours: undefined,
+        rate: undefined,
+        quantity: undefined,
         taxPct: Number(tplTax) || 0,
       }),
     ]);
@@ -331,7 +332,7 @@ export function InvoiceCreateForm({
   function saveTemplate(asNew: boolean) {
     const payload = {
       name: tplName.trim() || "Custom invoice",
-      summary: tplSummary.trim() || "Saved from the create invoice form.",
+      summary: "",
       kind: template?.kind ?? ("progress" as const),
       titlePattern: title.trim() || "Invoice for {company}",
       terms,
@@ -340,7 +341,7 @@ export function InvoiceCreateForm({
       description,
       internalDescription,
       invoiceFor: template?.invoiceFor ?? "Work completed",
-      defaultLines: lines.map(({ id: _id, ...line }) => line),
+      defaultLines: lines.map(({ id: _id, ...line }) => blankTemplateLine(line)),
     };
     if (!asNew && template) {
       updateInvoiceTemplate(template.id, payload);

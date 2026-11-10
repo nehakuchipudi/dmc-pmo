@@ -670,6 +670,40 @@ button, input, select, textarea { font: inherit; }
   align-self: start;
   padding: 24px 28px 40px;
 }
+.settings-billing {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+.settings-template-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+.settings-template-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-template-card strong {
+  color: var(--color-navy);
+  font-weight: 650;
+}
+.settings-template-card span {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+.settings-template-card.is-active {
+  border-color: var(--color-navy);
+  box-shadow: inset 3px 0 0 var(--color-navy);
+}
 .settings-users {
   display: flex;
   flex-direction: column;
@@ -3555,6 +3589,7 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 960px) {
   .settings-shell { grid-template-columns: 1fr; min-height: 0; }
   .settings-rail { border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .settings-billing { grid-template-columns: 1fr; }
   .record-grid, .plan-split, .company-overview-hero, .company-split { grid-template-columns: 1fr; }
   .company-summary-grid, .project-health-strip { grid-template-columns: 1fr 1fr; }
   .project-facts { grid-template-columns: 1fr 1fr; }

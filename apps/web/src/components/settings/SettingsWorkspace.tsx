@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Globe, Layers, MoreVertical, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
+import { Globe, Layers, MoreVertical, Receipt, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
+import { SettingsBilling } from "@/components/settings/SettingsBilling";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
@@ -16,19 +17,20 @@ import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { inviteLandingHref } from "@/lib/user-invite";
 
-type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "prefs";
+type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "billing" | "prefs";
 
-const SECTIONS: SettingsSection[] = ["capabilities", "users", "lifecycle", "email", "prefs"];
+const SECTIONS: SettingsSection[] = ["capabilities", "users", "lifecycle", "email", "billing", "prefs"];
 
 function isSettingsSection(value: string | null): value is SettingsSection {
   return !!value && SECTIONS.includes(value as SettingsSection);
 }
 
-const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?: boolean }[] = [
+const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?: boolean; needBilling?: boolean }[] = [
   { id: "capabilities", label: "Capabilities", icon: Layers },
   { id: "users", label: "Users & roles", icon: Users, needUsers: true },
   { id: "lifecycle", label: "Lifecycle", icon: Workflow, needUsers: true },
   { id: "email", label: "Email domain", icon: Globe, needUsers: true },
+  { id: "billing", label: "Billing", icon: Receipt, needBilling: true },
   { id: "prefs", label: "Preferences", icon: SettingsIcon },
 ];
 
@@ -73,7 +75,7 @@ export function SettingsWorkspace() {
     router.replace(qs ? `/app/settings/?${qs}` : "/app/settings/", { scroll: false });
   }
 
-  const items = RAIL.filter((item) => !item.needUsers || canViewUsers);
+  const items = RAIL.filter((item) => (!item.needUsers || canViewUsers) && (!item.needBilling || can("view_billing")));
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return team.filter((m) => {
@@ -396,6 +398,8 @@ export function SettingsWorkspace() {
             </div>
           </div>
         ) : null}
+
+        {section === "billing" ? <SettingsBilling /> : null}
 
         {section === "email" ? (
           <>
