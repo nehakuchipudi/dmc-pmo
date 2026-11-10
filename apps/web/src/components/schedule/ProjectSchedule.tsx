@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  startTransition,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -12,14 +11,13 @@ import {
 } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { clampSplitPct } from "@/lib/mentions";
-import { GanttBoard } from "@/components/Gantt";
 import {
   addDays,
   buildPlanRows,
-  durationDays,
   ganttDayLabel,
   ganttMonthBands,
   isWeekend,
+  phaseMilestones,
   type PlanRow,
 } from "@/lib/project-plan";
 import { formatShortDate, money } from "@/lib/seed";
@@ -62,6 +60,7 @@ export function ProjectSchedule({
   onUpdateTask,
   onUpdateMilestone,
   onDeleteTask,
+  onDeleteMilestone,
   onReorderTasks,
   onAddTaskLink,
   onRemoveTaskLink,
@@ -91,8 +90,8 @@ export function ProjectSchedule({
   onAddTaskLink: (taskId: string, link: Omit<TaskLink, "id">) => void;
   onRemoveTaskLink: (taskId: string, linkId: string) => void;
 }) {
-  const [view, setView] = useState<"List" | "Gantt" | "Split">("Split");
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [linkTaskId, setLinkTaskId] = useState<string | null>(null);
   const [linkUrl, setLinkUrl] = useState("https://");
@@ -100,12 +99,12 @@ export function ProjectSchedule({
   const [linkFileId, setLinkFileId] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [scale, setScale] = useState<"Days" | "Weeks">("Weeks");
+  const [scale, setScale] = useState<"Days" | "Weeks">("Days");
   const [paneWidth, setPaneWidth] = useState(0);
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return 46;
     const raw = Number(window.localStorage.getItem("dmc-pmo-plan-split"));
-    return Number.isFinite(raw) && raw > 0 ? clampSplitPct(raw) : 46;
+    return Number.isFinite(raw) && raw > 0 ? clampSplitPct(raw) : 38;
   });
   const [splitting, setSplitting] = useState(false);
   const zoom = 36;
@@ -160,25 +159,26 @@ export function ProjectSchedule({
   const tickStep = scale === "Days" ? 1 : 7;
   const ticks = Array.from({ length: Math.ceil(dayCount / tickStep) }, (_, i) => addDays(bounds.start, i * tickStep));
   const monthBands = ganttMonthBands(ticks);
-  const minZoom = scale === "Days" ? 8 : 22;
+  const minZoom = scale === "Days" ? 28 : 22;
   const fittedZoom = paneWidth > 0 ? Math.floor((paneWidth - 2) / Math.max(ticks.length, 1)) : 0;
-  const cellWidth = view === "Split" ? Math.max(minZoom, fittedZoom || zoom) : zoom;
+  const cellWidth = Math.max(minZoom, fittedZoom || zoom);
   const timelineWidth = Math.max(ticks.length * cellWidth, paneWidth || 520);
   const span = Math.max(Date.parse(`${bounds.end}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`), 1);
   const today = new Date().toISOString().slice(0, 10);
   const todayOffset = Date.parse(`${today}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`);
   const todayPct = todayOffset >= 0 && todayOffset <= span ? (todayOffset / span) * 100 : null;
-  const compact = view === "Split";
+  const compact = true;
+  const phases = phaseMilestones(milestones);
 
   useLayoutEffect(() => {
     const pane = ganttRef.current;
-    if (!pane || view !== "Split") return;
+    if (!pane) return;
     const measure = () => setPaneWidth(pane.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(pane);
     return () => observer.disconnect();
-  }, [view]);
+  }, [scale, visibleRows.length]);
 
   function pctLeft(iso: string) {
     const left = ((Date.parse(`${iso}T12:00:00`) - Date.parse(`${bounds.start}T12:00:00`)) / span) * 100;
@@ -294,102 +294,102 @@ export function ProjectSchedule({
   }
 
   const people = assignees.length ? assignees : ["M. Doyle", "J. Kim", "S. Ahmed", "S. Cho", "J. Alvarez"];
+  const selected = visibleRows.find((row) => row.id === selectedId);
+
+  function addTaskFromToolbar() {
+    if (selected?.kind === "milestone") {
+      onAddTask(selected.id);
+      return;
+    }
+    if (selected?.kind === "task") {
+      onAddTask(selected.milestoneId ?? phases[0]?.id ?? selected.id);
+      return;
+    }
+    if (selected?.kind === "subtask" && selected.parentTaskId) {
+      onAddSubtask(selected.parentTaskId);
+      return;
+    }
+    if (phases[0]) onAddTask(phases[0].id);
+    else onAddPhase();
+  }
+
+  function deleteSelected() {
+    if (!selected) return;
+    if (selected.kind === "milestone") onDeleteMilestone(selected.id);
+    if (selected.kind === "task" || selected.kind === "subtask") onDeleteTask(selected.id);
+    setSelectedId(null);
+  }
 
   return (
     <div className="plan-workspace">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-[var(--color-ink)]">Project plan</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Project, milestone, task, and subtask on one schedule
-          </p>
-          {projectStart && projectDue && onUpdateDates ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-              <label className="inline-flex items-center gap-2">
-                Planned start
-                <input type="date" className="field-input" value={projectStart} onChange={(e) => onUpdateDates(e.target.value, projectDue)} />
-              </label>
-              <label className="inline-flex items-center gap-2">
-                Deadline
-                <input type="date" className="field-input" value={projectDue} onChange={(e) => onUpdateDates(projectStart, e.target.value)} />
-              </label>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
-            {(["List", "Gantt", "Split"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                  view === item ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
-                }`}
-                onClick={() => startTransition(() => setView(item))}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-          {view !== "Gantt" ? (
-            <button type="button" className="btn btn-primary" onClick={onAddPhase}>
-              Add milestone
+      <div className="plan-head-line">
+        <h2 className="text-lg font-semibold text-[var(--color-ink)]">Project plan</h2>
+        {projectStart && projectDue && onUpdateDates ? (
+          <>
+            <label className="inline-flex items-center gap-2 text-sm">
+              Planned start
+              <input type="date" className="field-input" value={projectStart} onChange={(e) => onUpdateDates(e.target.value, projectDue)} />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              Deadline
+              <input type="date" className="field-input" value={projectDue} onChange={(e) => onUpdateDates(projectStart, e.target.value)} />
+            </label>
+          </>
+        ) : null}
+      </div>
+
+      <div className="plan-toolbar">
+        <button type="button" className="btn btn-primary" onClick={onAddPhase}>
+          Add milestone
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={addTaskFromToolbar}>
+          Add task
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={deleteSelected} disabled={!selected || selected.kind === "project"}>
+          Delete
+        </button>
+        <input
+          className="field-input plan-toolbar-search"
+          placeholder="Search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
+          {(["Days", "Weeks"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`rounded-md px-2.5 py-1 text-sm font-semibold ${
+                scale === item ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
+              }`}
+              onClick={() => setScale(item)}
+            >
+              {item}
             </button>
-          ) : null}
+          ))}
         </div>
       </div>
 
-      {view === "Gantt" ? (
-        <GanttBoard milestones={milestones} tasks={tasks} onUpdateTask={onUpdateTask} />
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <input
-              className="field-input max-w-sm"
-              placeholder="Search tasks"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {view === "Split" ? (
-              <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-1">
-                  {(["Days", "Weeks"] as const).map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      className={`rounded-md px-2.5 py-1 text-sm font-semibold ${
-                        scale === item ? "bg-[var(--color-navy)] text-white" : "text-[var(--color-muted)]"
-                      }`}
-                      onClick={() => setScale(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
           <div
-            className={`plan-board ${view === "Split" ? "is-split" : ""}`}
+            className="plan-board is-split"
             ref={boardRef}
-            style={view === "Split" ? ({ ["--plan-split"]: `${splitPct}%` } as CSSProperties) : undefined}
+            style={{ ["--plan-split"]: `${splitPct}%` } as CSSProperties}
           >
             <div className="plan-table-wrap panel" ref={tableRef} onScroll={syncScroll("table")}>
               <table className={`wbs-table plan-table ${compact ? "is-compact" : ""}`}>
                 <thead>
                   <tr>
-                    <th className="wbs-name">Task</th>
-                    <th>Assignee</th>
-                    {compact ? null : <th className="wbs-num">Duration</th>}
+                    <th className="wbs-name">Milestones and tasks</th>
+                    {compact ? null : <th>Assignee</th>}
+                    <th className="wbs-num">Dur.</th>
                     <th className="wbs-date">Start</th>
                     <th className="wbs-date">Due</th>
-                    <th>Status</th>
+                    {compact ? null : <th>Status</th>}
                     {compact ? null : <th className="wbs-num">Budget</th>}
                     {compact ? null : <th className="wbs-num">Estimated Hours</th>}
                     {compact ? null : <th className="wbs-num">Actual Hours</th>}
                     {compact ? null : <th>Dependency</th>}
-                    <th />
+                    {compact ? null : <th />}
                   </tr>
                 </thead>
                 <tbody>
@@ -398,7 +398,8 @@ export function ProjectSchedule({
                     return (
                       <tr
                         key={row.id}
-                        className={`plan-row is-${row.kind} ${overId === row.id ? "is-over" : ""} ${draggingId === row.id ? "is-dragging" : ""}`}
+                        className={`plan-row is-${row.kind} ${overId === row.id ? "is-over" : ""} ${draggingId === row.id ? "is-dragging" : ""} ${selectedId === row.id ? "is-selected" : ""}`}
+                        onClick={() => setSelectedId(row.id)}
                         draggable={row.kind === "task" || row.kind === "subtask"}
                         onDragStart={() => setDraggingId(row.id)}
                         onDragOver={(e) => {
@@ -441,6 +442,7 @@ export function ProjectSchedule({
                             )}
                           </div>
                         </td>
+                        {compact ? null : (
                         <td>
                           {editable ? (
                             <select className="wbs-select" value={row.assignee} onChange={(e) => onUpdateTask(row.id, { assignee: e.target.value })}>
@@ -477,7 +479,8 @@ export function ProjectSchedule({
                             <span className="text-[var(--color-muted)]">-</span>
                           )}
                         </td>
-                        {compact ? null : <td className="wbs-num tabular-nums">{row.duration}d</td>}
+                        )}
+                        <td className="wbs-num tabular-nums">{row.duration}d</td>
                         <td className="wbs-date">
                           {editable ? (
                             <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateTask(row.id, { start: e.target.value })} />
@@ -492,6 +495,7 @@ export function ProjectSchedule({
                             <span className="tabular-nums">{formatShortDate(row.due)}</span>
                           )}
                         </td>
+                        {compact ? null : (
                         <td>
                           {editable ? (
                             <select
@@ -509,6 +513,7 @@ export function ProjectSchedule({
                             <span className={statusClass(row.status)}>{row.status}</span>
                           )}
                         </td>
+                        )}
                         {compact ? null : <td className="wbs-num tabular-nums">{money(row.budget)}</td>}
                         {compact ? null : (
                           <td className="wbs-num">
@@ -550,11 +555,17 @@ export function ProjectSchedule({
                             )}
                           </td>
                         )}
+                        {compact ? null : (
                         <td className="text-right">
                           {row.kind === "milestone" ? (
-                            <button type="button" className="btn btn-ghost text-sm" onClick={() => onAddTask(row.id)}>
-                              Add task
-                            </button>
+                            <div className="flex justify-end gap-1">
+                              <button type="button" className="btn btn-ghost text-sm" onClick={() => onAddTask(row.id)}>
+                                Add task
+                              </button>
+                              <button type="button" className="btn btn-ghost text-sm" onClick={() => onDeleteMilestone(row.id)}>
+                                Delete
+                              </button>
+                            </div>
                           ) : null}
                           {row.kind === "task" ? (
                             <div className="flex justify-end gap-1">
@@ -575,12 +586,13 @@ export function ProjectSchedule({
                             </button>
                           ) : null}
                         </td>
+                        )}
                       </tr>
                     );
                   })}
                   {!visibleRows.length ? (
                     <tr>
-                      <td colSpan={compact ? 6 : 11} className="p-8 text-center text-[var(--color-muted)]">
+                      <td colSpan={compact ? 4 : 11} className="p-8 text-center text-[var(--color-muted)]">
                         No milestones yet. Add a milestone to start the plan.
                       </td>
                     </tr>
@@ -589,7 +601,6 @@ export function ProjectSchedule({
               </table>
             </div>
 
-            {view === "Split" ? (
               <div
                 className={`plan-split-handle ${splitting ? "is-dragging" : ""}`}
                 role="separator"
@@ -618,9 +629,6 @@ export function ProjectSchedule({
                   <ChevronRight size={16} />
                 </button>
               </div>
-            ) : null}
-
-            {view === "Split" ? (
               <div className="plan-gantt panel" ref={ganttRef} onScroll={syncScroll("gantt")}>
                 <div className="plan-gantt-inner" style={{ width: timelineWidth }}>
                   <div className="plan-gantt-head">
@@ -637,7 +645,7 @@ export function ProjectSchedule({
                     <div className="plan-gantt-ticks" style={{ gridTemplateColumns: `repeat(${ticks.length}, ${cellWidth}px)` }}>
                       {ticks.map((tick) => (
                         <div key={tick} className={`plan-gantt-tick ${isWeekend(tick) ? "is-weekend" : ""}`}>
-                          {ganttDayLabel(tick)}
+                          {scale === "Days" ? String(Number(tick.slice(8))) : ganttDayLabel(tick)}
                         </div>
                       ))}
                     </div>
@@ -659,13 +667,14 @@ export function ProjectSchedule({
                           ) : null,
                         )}
                         <div
-                          className={`plan-gantt-bar is-${row.kind}`}
+                          className={`plan-gantt-bar is-${row.kind} ${selectedId === row.id ? "is-selected" : ""}`}
                           style={{
                             left: `${pctLeft(row.start)}%`,
                             width: `${pctWidth(row.start, row.due)}%`,
                             background: color,
                           }}
                           title={`${row.name}: ${formatShortDate(row.start)} to ${formatShortDate(row.due)}`}
+                          onClick={() => setSelectedId(row.id)}
                           onPointerDown={(e) => row.task && beginBarDrag(e, row, "move")}
                           onPointerMove={moveBar}
                           onPointerUp={endBarDrag}
@@ -677,20 +686,20 @@ export function ProjectSchedule({
                               <span className="plan-gantt-handle is-end" onPointerDown={(e) => { e.stopPropagation(); beginBarDrag(e, row, "end"); }} />
                             </>
                           ) : null}
-                          <span className="plan-gantt-label">
-                            {row.name} · {durationDays(row.start, row.due)}d
-                          </span>
                         </div>
+                        <span
+                          className="plan-gantt-caption"
+                          style={{ left: `calc(${pctLeft(row.start)}% + ${pctWidth(row.start, row.due)}% + 8px)` }}
+                        >
+                          {row.name}
+                        </span>
                       </div>
                     );
                   })}
                   {todayPct != null ? <div className="plan-gantt-today" style={{ left: `${todayPct}%` }} aria-hidden /> : null}
                 </div>
               </div>
-            ) : null}
           </div>
-        </>
-      )}
 
       {linkTaskId ? (
         <div className="panel p-4">

@@ -531,9 +531,11 @@ export function ProjectTeamPreview({
 export function ProjectTeamRail({
   projectId,
   onManage,
+  compact = false,
 }: {
   projectId: string;
   onManage: () => void;
+  compact?: boolean;
 }) {
   const team = useAppStore((s) => s.team);
   const allocations = useAppStore((s) => s.allocations);
@@ -578,9 +580,11 @@ export function ProjectTeamRail({
         );
       })}
       {!cards.length ? <p className="text-sm text-[var(--color-muted)]">No team assigned.</p> : null}
-      <button type="button" className="btn btn-ghost mt-2 w-full" onClick={onManage}>
-        Manage team
-      </button>
+      {compact ? null : (
+        <button type="button" className="btn btn-ghost mt-2 w-full" onClick={onManage}>
+          Manage team
+        </button>
+      )}
     </div>
   );
 }

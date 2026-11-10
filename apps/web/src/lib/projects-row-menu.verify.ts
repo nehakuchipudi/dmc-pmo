@@ -19,7 +19,7 @@ assert.match(page, /Add activity/);
 assert.match(page, /Log time/);
 assert.match(page, /Add task/);
 assert.match(page, /Edit project/);
-assert.match(page, /Edit schedule/);
+assert.match(page, /Edit plan/);
 assert.match(page, /Assign work/);
 assert.match(page, /Approve/);
 assert.match(page, /Create invoice/);
