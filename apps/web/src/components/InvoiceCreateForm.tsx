@@ -7,7 +7,6 @@ import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
-  blankTemplateLine,
   computeLineAmount,
   dueFromTerms,
   emptyInvoiceLine,
@@ -85,7 +84,6 @@ export function InvoiceCreateForm({
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [tplName, setTplName] = useState("");
-  const [tplSummary, setTplSummary] = useState("");
   const [tplTax, setTplTax] = useState("0");
   const [pickedExpenses, setPickedExpenses] = useState<string[]>([]);
   const [pickedPurchases, setPickedPurchases] = useState<string[]>([]);
@@ -112,7 +110,6 @@ export function InvoiceCreateForm({
     setInternalDescription(next.internalDescription);
     setLines(linesFromTemplate(next));
     setTplName(next.name);
-    setTplSummary(next.summary);
     setTplTax(String(next.taxPct));
   }
 
@@ -338,10 +335,10 @@ export function InvoiceCreateForm({
       terms,
       currency,
       taxPct: Number(tplTax) || 0,
-      description,
-      internalDescription,
+      description: asNew ? "" : (template?.description ?? ""),
+      internalDescription: asNew ? "" : (template?.internalDescription ?? ""),
       invoiceFor: template?.invoiceFor ?? "Work completed",
-      defaultLines: lines.map(({ id: _id, ...line }) => blankTemplateLine(line)),
+      defaultLines: [],
     };
     if (!asNew && template) {
       updateInvoiceTemplate(template.id, payload);
@@ -685,7 +682,7 @@ export function InvoiceCreateForm({
           </div>
           <div className="invoice-create-template">
             <h3>Template</h3>
-            <p>{template?.summary ?? "Choose a starting point, then edit the lines."}</p>
+            <p>{template?.summary || "Choose a starting point, then edit the lines."}</p>
             <div className="invoice-create-template-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setEditingTemplate((v) => !v)}>
                 {editingTemplate ? "Close editor" : "Edit template"}
@@ -695,9 +692,6 @@ export function InvoiceCreateForm({
               <div className="invoice-create-template-edit">
                 <Field label="Template name">
                   <TextInput value={tplName} onChange={(e) => setTplName(e.target.value)} />
-                </Field>
-                <Field label="Summary">
-                  <TextTextarea value={tplSummary} onChange={(e) => setTplSummary(e.target.value)} />
                 </Field>
                 <Field label="Default tax %">
                   <TextInput type="number" min={0} step="0.1" value={tplTax} onChange={(e) => setTplTax(e.target.value)} />

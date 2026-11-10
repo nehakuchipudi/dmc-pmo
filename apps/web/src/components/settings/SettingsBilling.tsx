@@ -114,12 +114,11 @@ export function SettingsBilling() {
       </header>
 
       <div className="settings-billing">
-        <div className="panel settings-template-list" role="list">
+        <div className="panel settings-template-list">
           {templates.map((template) => (
             <button
               key={template.id}
               type="button"
-              role="listitem"
               className={`settings-template-card ${template.id === activeId ? "is-active" : ""}`}
               onClick={() => select(template.id)}
             >

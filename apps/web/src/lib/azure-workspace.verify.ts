@@ -38,6 +38,25 @@ export function verifyAzureWorkspaceRoundTrip() {
   if (!companies.some((row) => row.id === "c-2")) throw new Error("merge dropped remote company");
   if (companies.find((row) => row.id === "c-1")?.name !== "Local Co") throw new Error("local company should win");
   if (workspaceRecordCount(local.data) < 1) throw new Error("record count");
+  const priced = workspacePatch({
+    version: 1,
+    data: {
+      invoiceTemplates: [
+        {
+          id: "tpl-progress",
+          name: "Progress billing",
+          summary: "Invoice a slice of the project budget as work lands.",
+          defaultLines: [{ kind: "service", description: "Progress", amount: 8500 }],
+        },
+      ],
+    },
+  });
+  const templates = priced.invoiceTemplates as { id: string; summary: string; defaultLines: { amount: number }[] }[];
+  const progress = templates.find((row) => row.id === "tpl-progress");
+  if (!progress) throw new Error("progress template missing");
+  if (progress.summary) throw new Error("template summary should be blank");
+  if (progress.defaultLines.length) throw new Error("seed templates should have no lines");
+  if (priced.templatesBlankGeneration !== "blank-v1") throw new Error("blank generation");
   return true;
 }
 

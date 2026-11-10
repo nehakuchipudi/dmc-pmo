@@ -79,9 +79,12 @@ export function blankTemplateLine(line: Omit<InvoiceLineItem, "id">): Omit<Invoi
   };
 }
 
-export function blankInvoiceTemplate<T extends { defaultLines?: Omit<InvoiceLineItem, "id">[] }>(template: T): T {
+export function blankInvoiceTemplate<T extends { summary?: string; defaultLines?: Omit<InvoiceLineItem, "id">[] }>(
+  template: T,
+): T {
   return {
     ...template,
+    summary: "",
     defaultLines: (template.defaultLines ?? []).map((line) => blankTemplateLine(line)),
   };
 }

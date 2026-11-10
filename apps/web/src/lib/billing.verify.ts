@@ -60,7 +60,7 @@ assert.match(invoice, /Add expense/);
 assert.match(invoice, /Add purchase/);
 assert.match(invoice, /Add material/);
 assert.match(invoice, /Add selected/);
-assert.match(invoice, /blankTemplateLine/);
+assert.match(invoice, /defaultLines: \[\]/);
 
 const seed = readFileSync(join(root, "seed.ts"), "utf8");
 assert.match(seed, /id: "tpl-tm"/);
@@ -83,5 +83,10 @@ assert.match(billingSettings, /Invoice templates live here/);
 assert.match(billingSettings, /Time and materials/);
 assert.match(billingSettings, /Progress billing/);
 assert.match(billingSettings, /Amounts stay off the template/);
+
+const snapshot = readFileSync(join(root, "workspace-snapshot.ts"), "utf8");
+assert.match(snapshot, /TEMPLATES_BLANK_GENERATION/);
+assert.match(snapshot, /sanitizeInvoiceTemplates/);
+assert.doesNotMatch(invoice, /Field label="Summary"/);
 
 console.log("billing.verify ok");

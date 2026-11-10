@@ -133,7 +133,14 @@ import type {
   TimeEntry,
   TimeTimer,
 } from "./types";
-import { computeLineAmount, dueFromTerms, emptyInvoiceLine, invoiceTotals, nextInvoiceNumber } from "./invoice";
+import {
+  blankInvoiceTemplate,
+  computeLineAmount,
+  dueFromTerms,
+  emptyInvoiceLine,
+  invoiceTotals,
+  nextInvoiceNumber,
+} from "./invoice";
 import {
   DEFAULT_RETAINER_INVOICE_LINE,
   DEFAULT_RETAINER_RATE,
@@ -2746,7 +2753,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   createInvoiceTemplate: (input) => {
     if (!requireCap(get, "manage_invoice")) return "";
     const id = uid("tpl");
-    const template: InvoiceTemplate = { ...input, id };
+    const template: InvoiceTemplate = blankInvoiceTemplate({ ...input, id, summary: "" });
     set((s) => ({ invoiceTemplates: [template, ...s.invoiceTemplates] }));
     get().pushToast(`${template.name} saved as a template`);
     return id;
@@ -2755,7 +2762,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateInvoiceTemplate: (id, patch) => {
     if (!requireCap(get, "manage_invoice")) return;
     set((s) => ({
-      invoiceTemplates: s.invoiceTemplates.map((template) => (template.id === id ? { ...template, ...patch } : template)),
+      invoiceTemplates: s.invoiceTemplates.map((template) =>
+        template.id === id ? blankInvoiceTemplate({ ...template, ...patch, summary: "" }) : template,
+      ),
     }));
     get().pushToast("Invoice template updated");
   },

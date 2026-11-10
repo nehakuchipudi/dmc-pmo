@@ -1,8 +1,10 @@
 import { blankInvoiceTemplate } from "./invoice";
+import { seedInvoiceTemplates } from "./seed";
 import type { InvoiceTemplate } from "./types";
 
 export const WORKSPACE_KEYS = [
   "seedGeneration",
+  "templatesBlankGeneration",
   "companies",
   "companyAssets",
   "contacts",
@@ -49,6 +51,7 @@ export const WORKSPACE_KEYS = [
 ] as const;
 
 export const EMPTY_WORKSPACE_GENERATION = "empty-v1";
+export const TEMPLATES_BLANK_GENERATION = "blank-v1";
 export const LOCAL_WORKSPACE_KEY = "dmc-pmo-workspace";
 
 const RECORD_KEYS = [
@@ -100,10 +103,24 @@ export type WorkspaceSnapshot = {
 export function emptyWorkspaceData(): Record<string, unknown> {
   const data: Record<string, unknown> = {
     seedGeneration: EMPTY_WORKSPACE_GENERATION,
+    templatesBlankGeneration: TEMPLATES_BLANK_GENERATION,
     focusCompanyId: null,
   };
   for (const key of RECORD_KEYS) data[key] = [];
   return data;
+}
+
+function sanitizeInvoiceTemplates(rows: unknown[], resetSeed: boolean): InvoiceTemplate[] {
+  const seedIds = new Set(seedInvoiceTemplates.map((row) => row.id));
+  const extras: InvoiceTemplate[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object" || !("id" in row)) continue;
+    const template = blankInvoiceTemplate(row as InvoiceTemplate);
+    if (resetSeed && seedIds.has(template.id)) continue;
+    extras.push({ ...template, summary: "" });
+  }
+  if (resetSeed) return [...seedInvoiceTemplates.map((row) => ({ ...row })), ...extras];
+  return extras;
 }
 
 export function extractWorkspace(state: Record<string, unknown>): WorkspaceSnapshot {
@@ -112,6 +129,7 @@ export function extractWorkspace(state: Record<string, unknown>): WorkspaceSnaps
     if (state[key] !== undefined) data[key] = state[key];
   }
   data.seedGeneration = EMPTY_WORKSPACE_GENERATION;
+  data.templatesBlankGeneration = TEMPLATES_BLANK_GENERATION;
   return { version: 1, data };
 }
 
@@ -121,15 +139,16 @@ export function workspacePatch(snapshot: WorkspaceSnapshot | null | undefined) {
     ...snapshot.data,
     seedGeneration: EMPTY_WORKSPACE_GENERATION,
   };
+  const resetSeedTemplates = source.templatesBlankGeneration !== TEMPLATES_BLANK_GENERATION;
   const patch: Record<string, unknown> = {};
   for (const key of WORKSPACE_KEYS) {
     if (source[key] !== undefined) patch[key] = source[key];
   }
-  if (Array.isArray(patch.invoiceTemplates)) {
-    patch.invoiceTemplates = patch.invoiceTemplates.map((row) =>
-      row && typeof row === "object" ? blankInvoiceTemplate(row as InvoiceTemplate) : row,
-    );
+  if (Array.isArray(patch.invoiceTemplates) || resetSeedTemplates) {
+    const rows = Array.isArray(patch.invoiceTemplates) ? patch.invoiceTemplates : [];
+    patch.invoiceTemplates = sanitizeInvoiceTemplates(rows, resetSeedTemplates);
   }
+  patch.templatesBlankGeneration = TEMPLATES_BLANK_GENERATION;
   return patch;
 }
 
