@@ -263,7 +263,7 @@ function ActivityFields({
 }) {
   const milestones = useAppStore((s) => s.milestones);
   const tasks = useAppStore((s) => s.tasks);
-  const [hours, setHours] = useState(entry ? formatHms(entry.hours) : "00:00:00");
+  const [hours, setHours] = useState(entry ? formatHms(entry.hours) : "01:00:00");
   const [note, setNote] = useState(entry?.note ?? `Time Entry - ${work.projectName}`);
   const [billable, setBillable] = useState(entry?.billable ?? true);
   const [start, setStart] = useState(entry?.start ?? "09:00");
