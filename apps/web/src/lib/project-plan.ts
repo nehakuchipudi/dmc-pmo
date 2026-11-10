@@ -14,6 +14,13 @@ export function durationDays(start: string, due: string) {
   return Math.max(1, Math.round((toTime(due) - toTime(start)) / 86400000) + 1);
 }
 
+export function scheduleWindow(start: string, due: string, today: string) {
+  const elapsed = Math.max(0, Math.round((toTime(today) - toTime(start)) / 86400000));
+  const remaining = Math.max(0, Math.round((toTime(due) - toTime(today)) / 86400000));
+  const over = today > due ? Math.max(0, Math.round((toTime(today) - toTime(due)) / 86400000)) : 0;
+  return { elapsed, remaining, over };
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function ganttDayLabel(iso: string) {

@@ -130,13 +130,15 @@ export function Tabs({
   tabs,
   active,
   onChange,
+  className,
 }: {
   tabs: string[];
   active: string;
   onChange: (tab: string) => void;
+  className?: string;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b border-[var(--color-border)]">
+    <div className={clsx("mb-4 flex flex-nowrap gap-1 overflow-x-auto border-b border-[var(--color-border)]", className)}>
       {tabs.map((tab) => (
         <button
           key={tab}

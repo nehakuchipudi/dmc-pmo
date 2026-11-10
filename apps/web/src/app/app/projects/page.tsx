@@ -249,7 +249,7 @@ export default function ProjectsPage() {
                         router.push(projectWorkspaceHref(p.id, "Schedule"));
                       }}
                     >
-                      Edit schedule
+                      Edit plan
                     </button>
                     {can("manage_project_team") ? (
                       <button

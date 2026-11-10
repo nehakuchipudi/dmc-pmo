@@ -95,9 +95,9 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     viewCap: "view_projects",
     keywords: ["project", "workspace", "delivery", "engagement", "status"],
     summary:
-      "Projects is delivery. Each workspace has Overview, Team, Schedule, Insights, Tasks, Activity, Attachments, Expenses, Rates, Billing, Assets, and Details.",
+      "Projects is delivery. Each workspace has Overview, Team, Schedule, Insights, Activity, Attachments, Expenses, and Billing.",
     howTo: [
-      "Open Projects to see id, type, manager, earned value, budget, due, and last contact. Use the row menu to add activity, log time, add a task, edit the project or schedule, assign work, approve, or create an invoice.",
+      "Open Projects to see id, type, manager, earned value, budget, due, and last contact. Use the row menu to add activity, log time, add a task, edit the project or plan, assign work, approve, or create an invoice.",
       "Change lifecycle status from the header if your role is allowed.",
       "On Activity, type @ to mention a teammate such as @A.Chen.",
       "Schedule has a drag handle between the plan table and the Gantt.",
@@ -116,10 +116,10 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     href: "/app/projects",
     viewCap: "view_projects",
     keywords: ["plan", "gantt", "schedule", "milestone", "phase", "wbs", "splitter"],
-    summary: "Schedule is the project plan: phases, milestones, tasks, dates, and a Gantt. Drag the split arrow to resize the table and chart.",
+    summary: "Edit plan is the project schedule: a table of milestones and tasks beside a Gantt. Add, change, and delete work there.",
     howTo: [
-      "Open a project, then Schedule.",
-      "Add a milestone or task from the plan or ask AI to add them.",
+      "Open a project, then Edit plan or Schedule.",
+      "Add a milestone or task from the one-line toolbar. Select a row to delete it.",
       "Drag the arrow between the table and Gantt to give one side more room.",
     ],
     canDo: ["Add, rename, or delete milestones and tasks", "Request or approve a signoff"],

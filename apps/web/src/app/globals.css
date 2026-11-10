@@ -1096,6 +1096,8 @@ button, input, select, textarea { font: inherit; }
   border-bottom: 2px solid transparent;
   cursor: pointer;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color 160ms ease, border-color 160ms ease;
 }
 .tab.active {
@@ -2541,8 +2543,13 @@ button, input, select, textarea { font: inherit; }
 }
 .record-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  overflow-x: auto;
+}
+.record-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
 .record-grid {
   display: grid;
@@ -3165,6 +3172,38 @@ button, input, select, textarea { font: inherit; }
   align-items: start;
 }
 .plan-workspace { display: grid; gap: 12px; min-width: 0; }
+.plan-head-line,
+.plan-toolbar,
+.overview-plan-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+.plan-head-line { gap: 12px; }
+.plan-toolbar-search,
+.overview-plan-search {
+  min-width: 160px;
+  max-width: 220px;
+  margin-left: auto;
+}
+.overview-plan-toolbar .field-input { min-width: 140px; width: auto; }
+.overview-plan-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-weight: 650;
+  color: var(--color-navy);
+  cursor: pointer;
+  text-align: left;
+}
+.overview-plan-task { padding-left: 28px; }
+.overview-rail-metric { display: grid; gap: 8px; }
+.overview-rail-value { font-weight: 650; color: var(--color-navy); }
+.overview-rail-stat { font-size: 1.05rem; font-weight: 650; color: var(--color-navy); }
+.overview-rail-stat.is-over { color: var(--color-danger); }
+.plan-row.is-selected td { background: #e8f1fb; }
 .plan-board { display: grid; gap: 12px; min-width: 0; }
 .plan-board.is-split {
   grid-template-columns: minmax(220px, var(--plan-split, 46%)) 28px minmax(220px, 1fr);
@@ -3219,7 +3258,14 @@ button, input, select, textarea { font: inherit; }
 }
 .plan-board.is-split .plan-gantt { border-left: 1px solid var(--color-border); background: #fbfcfe; }
 .plan-table { min-width: 980px; }
-.plan-table.is-compact { min-width: 560px; }
+.plan-table.is-compact { min-width: 420px; }
+.plan-table.is-compact .wbs-date-input,
+.plan-table.is-compact .wbs-name-input {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+  font-size: 12px;
+}
 .plan-board.is-split .plan-table thead th {
   height: 56px;
   position: sticky;
@@ -3284,7 +3330,7 @@ button, input, select, textarea { font: inherit; }
   position: relative;
   height: 42px;
   border-bottom: 1px solid #edf2f6;
-  overflow: hidden;
+  overflow: visible;
 }
 .plan-gantt-lane.is-project, .plan-gantt-lane.is-milestone { background: #fbfcfe; }
 .plan-gantt-weekend {
@@ -3312,6 +3358,18 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
   min-width: 12px;
   z-index: 1;
+}
+.plan-gantt-bar.is-selected { outline: 2px solid var(--color-navy); outline-offset: 1px; }
+.plan-gantt-caption {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-navy);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
 }
 .plan-gantt-bar.is-project, .plan-gantt-bar.is-milestone { height: 12px; top: 15px; border-radius: 3px; }
 .plan-gantt-bar.is-subtask { height: 14px; top: 14px; opacity: 0.9; }
