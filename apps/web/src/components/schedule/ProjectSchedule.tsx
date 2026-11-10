@@ -113,9 +113,14 @@ export function ProjectSchedule({
   const boardRef = useRef<HTMLDivElement>(null);
   const splitDrag = useRef<{ startX: number; startPct: number } | null>(null);
   const syncingScroll = useRef(false);
-  const dragRef = useRef<{ id: string; mode: "move" | "start" | "end"; startX: number; start: string; due: string } | null>(
-    null,
-  );
+  const dragRef = useRef<{
+    id: string;
+    mode: "move" | "start" | "end";
+    startX: number;
+    start: string;
+    due: string;
+    kind: "task" | "milestone";
+  } | null>(null);
 
   const rows = useMemo(
     () =>
@@ -240,10 +245,17 @@ export function ProjectSchedule({
   }
 
   function beginBarDrag(event: ReactPointerEvent, row: PlanRow, mode: "move" | "start" | "end") {
-    if (!row.task) return;
+    if (row.kind === "project") return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { id: row.task.id, mode, startX: event.clientX, start: row.task.start, due: row.task.due };
+    dragRef.current = {
+      id: row.id,
+      mode,
+      startX: event.clientX,
+      start: row.start,
+      due: row.due,
+      kind: row.kind === "milestone" ? "milestone" : "task",
+    };
   }
 
   function moveBar(event: ReactPointerEvent) {
@@ -252,15 +264,19 @@ export function ProjectSchedule({
     const dayPx = timelineWidth / dayCount;
     const days = Math.round((event.clientX - drag.startX) / dayPx);
     if (!days) return;
-    if (drag.mode === "move") {
-      onUpdateTask(drag.id, { start: addDays(drag.start, days), due: addDays(drag.due, days) });
-    } else if (drag.mode === "start") {
-      const next = addDays(drag.start, days);
-      if (next <= drag.due) onUpdateTask(drag.id, { start: next });
-    } else {
-      const next = addDays(drag.due, days);
-      if (next >= drag.start) onUpdateTask(drag.id, { due: next });
-    }
+    const patch =
+      drag.mode === "move"
+        ? { start: addDays(drag.start, days), due: addDays(drag.due, days) }
+        : drag.mode === "start"
+          ? addDays(drag.start, days) <= drag.due
+            ? { start: addDays(drag.start, days) }
+            : null
+          : addDays(drag.due, days) >= drag.start
+            ? { due: addDays(drag.due, days) }
+            : null;
+    if (!patch) return;
+    if (drag.kind === "milestone") onUpdateMilestone(drag.id, patch);
+    else onUpdateTask(drag.id, patch);
   }
 
   function endBarDrag() {
@@ -484,6 +500,8 @@ export function ProjectSchedule({
                         <td className="wbs-date">
                           {editable ? (
                             <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateTask(row.id, { start: e.target.value })} />
+                          ) : row.kind === "milestone" ? (
+                            <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateMilestone(row.id, { start: e.target.value })} />
                           ) : (
                             <span className="tabular-nums">{formatShortDate(row.start)}</span>
                           )}
@@ -491,6 +509,8 @@ export function ProjectSchedule({
                         <td className="wbs-date">
                           {editable ? (
                             <input type="date" className="wbs-date-input" value={row.due} onChange={(e) => onUpdateTask(row.id, { due: e.target.value })} />
+                          ) : row.kind === "milestone" ? (
+                            <input type="date" className="wbs-date-input" value={row.due} onChange={(e) => onUpdateMilestone(row.id, { due: e.target.value })} />
                           ) : (
                             <span className="tabular-nums">{formatShortDate(row.due)}</span>
                           )}
@@ -675,14 +695,14 @@ export function ProjectSchedule({
                           }}
                           title={`${row.name}: ${formatShortDate(row.start)} to ${formatShortDate(row.due)}`}
                           onClick={() => setSelectedId(row.id)}
-                          onPointerDown={(e) => row.task && beginBarDrag(e, row, "move")}
+                          onPointerDown={(e) => beginBarDrag(e, row, "move")}
                           onPointerMove={moveBar}
                           onPointerUp={endBarDrag}
                         >
-                          {row.task ? (
+                          {row.kind !== "project" ? (
                             <>
                               <span className="plan-gantt-handle is-start" onPointerDown={(e) => { e.stopPropagation(); beginBarDrag(e, row, "start"); }} />
-                              <span className="plan-gantt-progress" style={{ width: `${row.progress}%` }} />
+                              {row.task ? <span className="plan-gantt-progress" style={{ width: `${row.progress}%` }} /> : null}
                               <span className="plan-gantt-handle is-end" onPointerDown={(e) => { e.stopPropagation(); beginBarDrag(e, row, "end"); }} />
                             </>
                           ) : null}
