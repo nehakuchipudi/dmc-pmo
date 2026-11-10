@@ -1738,6 +1738,13 @@ button, input, select, textarea { font: inherit; }
   opacity: 1;
   isolation: isolate;
 }
+.row-menu.is-fixed {
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 80;
+  overflow-y: auto;
+}
 .row-menu button {
   display: block;
   width: 100%;

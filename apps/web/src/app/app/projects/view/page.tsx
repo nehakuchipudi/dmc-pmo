@@ -7,7 +7,8 @@ import { ProjectDetail } from "../[id]/project-detail";
 function Inner() {
   const params = useSearchParams();
   const id = params.get("id") ?? "";
-  return <ProjectDetail id={id} />;
+  const tab = params.get("tab") ?? undefined;
+  return <ProjectDetail id={id} initialTab={tab} />;
 }
 
 export default function ProjectViewPage() {

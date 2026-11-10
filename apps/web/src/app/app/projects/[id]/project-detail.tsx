@@ -34,21 +34,9 @@ import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 import type { CompanyAssetKind, CompanyAssetStatus, ProjectHealth } from "@/lib/types";
+import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
 
-const TABS = [
-  "Overview",
-  "Team",
-  "Schedule",
-  "Insights",
-  "Tasks",
-  "Activity",
-  "Attachments",
-  "Expenses",
-  "Rates",
-  "Billing",
-  "Assets",
-  "Details",
-];
+const TABS = [...PROJECT_WORKSPACE_TABS];
 const PROJECT_TYPES = ["Internal", "Client Work", "Retainer", "Fixed Fee", "Capital / PMO"];
 
 function activityDate(when: string) {
@@ -102,7 +90,7 @@ function HealthCard({
   );
 }
 
-export function ProjectDetail({ id }: { id: string }) {
+export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: string }) {
   const router = useRouter();
   const { user, can } = useAuth();
   const projects = useAppStore((s) => s.projects);
@@ -150,7 +138,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const approveExpense = useAppStore((s) => s.approveExpense);
   const createCompanyAsset = useAppStore((s) => s.createCompanyAsset);
   const deleteCompanyAsset = useAppStore((s) => s.deleteCompanyAsset);
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState(() => resolveProjectTab(initialTab));
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
   const [editOpen, setEditOpen] = useState(false);
@@ -269,6 +257,10 @@ export function ProjectDetail({ id }: { id: string }) {
   const availableRateNames = teamMembers.filter((m) => m.active && !team.includes(m.name)).map((m) => m.name);
 
   useEffect(() => {
+    setTab(resolveProjectTab(initialTab));
+  }, [initialTab]);
+
+  useEffect(() => {
     if (!project) return;
     trackView("project", project.id, project.name);
   }, [project, trackView]);
@@ -290,7 +282,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const billed = projectInvoices.reduce((sum, row) => sum + row.amount, 0);
 
   function goTab(next: string) {
-    startTransition(() => setTab(next));
+    startTransition(() => setTab(resolveProjectTab(next)));
   }
 
   return (
