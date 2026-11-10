@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
 import { Lock, MoreVertical, Plus } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { RowMenu } from "@/components/RowMenu";
+import {
+  AddActivityModal,
+  ApproveProjectModal,
+  AssignWorkModal,
+  CreateInvoiceModal,
+} from "@/components/projects/ProjectRowModals";
 import { Avatar, Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill, TextInput, TextSelect, statusTone } from "@/components/ui";
 import { initialsFromName } from "@/lib/seed";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -20,7 +27,9 @@ import {
   projectDisplayId,
   projectEarnedValue,
 } from "@/lib/ppm";
+import { projectWorkspaceHref } from "@/lib/project-tabs";
 import { todayIso } from "@/lib/timesheet";
+import type { Project } from "@/lib/types";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -31,16 +40,16 @@ export default function ProjectsPage() {
   const tickets = useAppStore((s) => s.tickets);
   const ticketMessages = useAppStore((s) => s.ticketMessages);
   const timeEntries = useAppStore((s) => s.timeEntries);
-  const deleteProject = useAppStore((s) => s.deleteProject);
-  const duplicateProject = useAppStore((s) => s.duplicateProject);
   const updateProject = useAppStore((s) => s.updateProject);
-  const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
-  const queueEmail = useAppStore((s) => s.queueEmail);
-  const pushToast = useAppStore((s) => s.pushToast);
   const [filter, setFilter] = useState<(typeof PROJECT_LIST_FILTERS)[number]>(PROJECT_LIST_FILTERS[0]);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
-  const [menuId, setMenuId] = useState<string | null>(null);
+  const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
+  const [menu, setMenu] = useState<{ id: string; el: HTMLElement } | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [activityProject, setActivityProject] = useState<Project | null>(null);
+  const [assignProject, setAssignProject] = useState<Project | null>(null);
+  const [approveProject, setApproveProject] = useState<Project | null>(null);
+  const [invoiceProject, setInvoiceProject] = useState<Project | null>(null);
 
   const rows = useMemo(
     () =>
@@ -163,77 +172,122 @@ export default function ProjectsPage() {
                 <td className="min-w-[140px]">
                   <ProgressBar value={p.progress} />
                 </td>
-                <td
-                  className="row-actions text-right"
-                  onMouseEnter={() => setMenuId(p.id)}
-                  onMouseLeave={() => setMenuId((id) => (id === p.id ? null : id))}
-                >
+                <td className="row-actions text-right">
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    aria-label="Actions"
-                    onClick={() => setMenuId(menuId === p.id ? null : p.id)}
+                    aria-label={`Actions for ${p.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={menu?.id === p.id}
+                    onClick={(e) => {
+                      const el = e.currentTarget;
+                      setMenu((cur) => (cur?.id === p.id ? null : { id: p.id, el }));
+                    }}
                   >
                     <MoreVertical size={16} />
                   </button>
-                  {menuId === p.id ? (
-                    <div className="row-menu">
-                      {can("edit_project") ? (
-                      <button type="button" onClick={() => { setEditId(p.id); setMenuId(null); }}>
+                  <RowMenu
+                    open={menu?.id === p.id}
+                    anchor={menu?.id === p.id ? menu.el : null}
+                    onClose={() => setMenu(null)}
+                  >
+                    {can("add_note") ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setActivityProject(p);
+                          setMenu(null);
+                        }}
+                      >
+                        Add activity
+                      </button>
+                    ) : null}
+                    {can("log_time") ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setCreateDefaults({ projectId: p.id, companyId: p.companyId });
+                          setCreateKind("time");
+                          setMenu(null);
+                        }}
+                      >
+                        Log time
+                      </button>
+                    ) : null}
+                    {can("create_task") ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setCreateDefaults({ projectId: p.id, companyId: p.companyId });
+                          setCreateKind("task");
+                          setMenu(null);
+                        }}
+                      >
+                        Add task
+                      </button>
+                    ) : null}
+                    {can("edit_project") ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setEditId(p.id);
+                          setMenu(null);
+                        }}
+                      >
                         Edit project
                       </button>
-                      ) : null}
-                      {can("create_project") ? (
+                    ) : null}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(null);
+                        router.push(projectWorkspaceHref(p.id, "Schedule"));
+                      }}
+                    >
+                      Edit schedule
+                    </button>
+                    {can("manage_project_team") ? (
                       <button
                         type="button"
+                        role="menuitem"
                         onClick={() => {
-                          const id = duplicateProject(p.id);
-                          setMenuId(null);
-                          if (id) router.push(`/app/projects/view/?id=${id}`);
+                          setAssignProject(p);
+                          setMenu(null);
                         }}
                       >
-                        Duplicate
+                        Assign work
                       </button>
-                      ) : null}
-                      {can("create_invoice") ? (
+                    ) : null}
+                    {can("approve_time") || can("approve_expense") || can("approve_signoff") || can("edit_project") ? (
                       <button
                         type="button"
+                        role="menuitem"
                         onClick={() => {
-                          const id = generateProjectInvoice(p.id);
-                          setMenuId(null);
-                          if (id) router.push(`/app/billing/view/?id=${id}`);
+                          setApproveProject(p);
+                          setMenu(null);
                         }}
                       >
-                        Generate invoice
+                        Approve
                       </button>
-                      ) : null}
+                    ) : null}
+                    {can("create_invoice") ? (
                       <button
                         type="button"
+                        role="menuitem"
                         onClick={() => {
-                          queueEmail(
-                            "ops@dillonmorgan.com",
-                            `Project update: ${p.name}`,
-                            `Status ${p.status}, progress ${p.progress}%.`,
-                          );
-                          pushToast("Email queued");
-                          setMenuId(null);
+                          setInvoiceProject(p);
+                          setMenu(null);
                         }}
                       >
-                        Email update
+                        Create invoice
                       </button>
-                      {can("delete_project") ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          deleteProject(p.id);
-                          setMenuId(null);
-                        }}
-                      >
-                        Delete
-                      </button>
-                      ) : null}
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </RowMenu>
                 </td>
               </tr>
             ))}
@@ -241,7 +295,18 @@ export default function ProjectsPage() {
         </table>
       </div>
 
-      <CreateForms kind={createKind} onClose={() => setCreateKind(null)} />
+      <CreateForms
+        kind={createKind}
+        defaults={createDefaults}
+        onClose={() => {
+          setCreateKind(null);
+          setCreateDefaults({});
+        }}
+      />
+      <AddActivityModal project={activityProject} onClose={() => setActivityProject(null)} />
+      <AssignWorkModal project={assignProject} onClose={() => setAssignProject(null)} />
+      <ApproveProjectModal project={approveProject} onClose={() => setApproveProject(null)} />
+      <CreateInvoiceModal project={invoiceProject} onClose={() => setInvoiceProject(null)} />
 
       <Modal open={!!editing} title="Edit project" onClose={() => setEditId(null)}>
         {editing ? (

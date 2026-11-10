@@ -97,7 +97,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     summary:
       "Projects is delivery. Each workspace has Overview, Team, Schedule, Insights, Tasks, Activity, Attachments, Expenses, Rates, Billing, Assets, and Details.",
     howTo: [
-      "Open Projects to see id, type, manager, earned value, budget, due, and last contact. New project includes company, contact, type, status, project manager, planned dates, template, and custom fields.",
+      "Open Projects to see id, type, manager, earned value, budget, due, and last contact. Use the row menu to add activity, log time, add a task, edit the project or schedule, assign work, approve, or create an invoice.",
       "Change lifecycle status from the header if your role is allowed.",
       "On Activity, type @ to mention a teammate such as @A.Chen.",
       "Schedule has a drag handle between the plan table and the Gantt.",

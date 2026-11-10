@@ -124,7 +124,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Click a project name to open the workspace. On Activity, type @ to tag a teammate such as @A.Chen.",
       "Use New project from the list, Create (+), or a company page. Fill company, contact, type, status, project manager, planned dates, template, and custom fields.",
       "Change lifecycle status from the project header if your role is allowed.",
-      "Row actions can edit, duplicate, generate an invoice, email an update, or delete, based on role.",
+      "The row menu opens add activity, log time, add task, edit project, edit schedule, assign work, approve, and create invoice, based on role.",
     ],
     tips: ["Staff can open projects but cannot create them or see budget amounts unless granted rates and budgets."],
   },
