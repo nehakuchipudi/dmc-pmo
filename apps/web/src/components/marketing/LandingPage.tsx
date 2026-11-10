@@ -12,12 +12,10 @@ import {
   ChevronDown,
   ClipboardCheck,
   Layers3,
-  Lightbulb,
   Menu,
   Play,
   ShieldAlert,
   Target,
-  TrendingUp,
   Users,
   Wallet,
   X,
@@ -26,6 +24,7 @@ import {
 import { LandingConnected } from "@/components/marketing/LandingConnected";
 import { LandingDemo } from "@/components/marketing/LandingDemo";
 import { LandingFaq } from "@/components/marketing/LandingFaq";
+import { LandingPacks } from "@/components/marketing/LandingPacks";
 import { LandingTour } from "@/components/marketing/LandingTour";
 import { useAuth } from "@/lib/auth";
 
@@ -139,9 +138,9 @@ const NAV = [
   },
   {
     label: "How it works",
-    href: "#journey",
+    href: "#packs",
     items: [
-      { label: "Companies to outcomes", href: "#journey" },
+      { label: "Companies to outcomes", href: "#packs" },
       { label: "Inside the tool", href: "#action" },
     ],
   },
@@ -155,15 +154,6 @@ const NAV = [
     ],
   },
 ] as const;
-
-const JOURNEY = [
-  { title: "Capabilities", body: "Enable project, delivery, or field service", icon: Layers3 },
-  { title: "Companies", body: "Keep the client on every job", icon: Building2 },
-  { title: "Ideas", body: "Capture work before it is a project", icon: Lightbulb },
-  { title: "Projects", body: "Plan, staff, and track delivery", icon: Briefcase },
-  { title: "Field service", body: "Dispatch work orders and the crew", icon: ClipboardCheck },
-  { title: "Outcomes", body: "Time, invoices, and the weekly brief", icon: TrendingUp },
-];
 
 export function LandingPage() {
   const { user, isClient } = useAuth();
@@ -312,30 +302,7 @@ export function LandingPage() {
         </aside>
       </section>
 
-      <section className="mkt-band mkt-band-journey" id="journey">
-        <div className="mkt-band-inner">
-          <p className="mkt-kicker">The DMC PMO journey</p>
-          <h2>From companies to outcomes.</h2>
-          <p className="mkt-lead">
-            Choose the packs you need, then move from the client record through projects and field work to time,
-            invoices, and the weekly brief.
-          </p>
-          <ol className="mkt-journey-steps">
-            {JOURNEY.map((step) => {
-              const Icon = step.icon;
-              return (
-                <li key={step.title}>
-                  <span className="mkt-journey-icon">
-                    <Icon size={18} />
-                  </span>
-                  <strong>{step.title}</strong>
-                  <span>{step.body}</span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      </section>
+      <LandingPacks />
 
       <LandingConnected />
 
@@ -440,7 +407,7 @@ export function LandingPage() {
         <div className="mkt-footer-links">
           <a href="#product">Product</a>
           <a href="#platform">Capabilities</a>
-          <a href="#journey">How it works</a>
+          <a href="#packs">How it works</a>
           <a href="#faq">FAQ</a>
           <a href="#demo">Request a demo</a>
           <Link href="/login">Sign in</Link>
