@@ -1,9 +1,23 @@
 import { azureApiUrl, azureDatabaseEnabled, azureRuntimeConfig } from "./azure-config";
 import { acquireWorkspaceToken } from "./entra";
 import { useAppStore } from "./store";
-import { extractWorkspace, workspacePatch, type WorkspaceSnapshot } from "./workspace-snapshot";
+import {
+  extractWorkspace,
+  mergeWorkspace,
+  readLocalWorkspace,
+  workspacePatch,
+  workspaceRecordCount,
+  writeLocalWorkspace,
+  type WorkspaceSnapshot,
+} from "./workspace-snapshot";
 
-export { extractWorkspace, workspacePatch, WORKSPACE_KEYS, type WorkspaceSnapshot } from "./workspace-snapshot";
+export {
+  extractWorkspace,
+  mergeWorkspace,
+  workspacePatch,
+  WORKSPACE_KEYS,
+  type WorkspaceSnapshot,
+} from "./workspace-snapshot";
 
 function workspaceEndpoint() {
   return `${azureApiUrl()}/api/workspace`;
@@ -19,18 +33,29 @@ async function authHeaders() {
   return headers;
 }
 
+type PullResult =
+  | { status: "disabled" | "unauthenticated" | "empty"; snapshot: null }
+  | { status: "loaded"; snapshot: WorkspaceSnapshot };
+
 export async function pullAzureWorkspace() {
-  if (!azureDatabaseEnabled() && !azureApiUrl()) return null;
+  const result = await pullAzureWorkspaceStatus();
+  if (result.status === "loaded") return result.snapshot;
+  return null;
+}
+
+export async function pullAzureWorkspaceStatus(): Promise<PullResult> {
+  if (!azureDatabaseEnabled() && !azureApiUrl()) return { status: "disabled", snapshot: null };
   const headers = await authHeaders();
-  if (!headers) return null;
+  if (!headers) return { status: "unauthenticated", snapshot: null };
   const res = await fetch(workspaceEndpoint(), {
     headers,
     cache: "no-store",
   });
-  if (res.status === 401) return null;
+  if (res.status === 401) return { status: "unauthenticated", snapshot: null };
   if (!res.ok) throw new Error(await res.text());
   const body = (await res.json()) as { snapshot?: WorkspaceSnapshot | null };
-  return body.snapshot ?? null;
+  if (!body.snapshot?.data) return { status: "empty", snapshot: null };
+  return { status: "loaded", snapshot: body.snapshot };
 }
 
 export async function pushAzureWorkspace(snapshot: WorkspaceSnapshot) {
@@ -45,52 +70,119 @@ export async function pushAzureWorkspace(snapshot: WorkspaceSnapshot) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+let applyingRemote = false;
+
 export function applyWorkspaceSnapshot(snapshot: WorkspaceSnapshot) {
   const patch = workspacePatch(snapshot);
-  if (Object.keys(patch).length) useAppStore.setState(patch);
+  if (!Object.keys(patch).length) return;
+  applyingRemote = true;
+  useAppStore.setState(patch);
+  applyingRemote = false;
   if (patch.focusCompanyId === null && typeof window !== "undefined") {
     window.localStorage.removeItem("dmc-pmo-focus-company");
   }
 }
 
-export function startWorkspaceSync(onStatus?: (message: string) => void) {
-  if (typeof window === "undefined") return () => {};
-  if (!azureDatabaseEnabled() && !azureApiUrl()) return () => {};
+function currentSnapshot() {
+  return extractWorkspace(useAppStore.getState() as unknown as Record<string, unknown>);
+}
 
-  let timer: number | undefined;
-  let stopped = false;
+function restoreLocalCache() {
+  const cached = readLocalWorkspace();
+  if (!cached?.data) return;
+  if (workspaceRecordCount(cached.data) === 0) return;
+  applyWorkspaceSnapshot(cached);
+}
 
-  const persist = () => {
-    window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      const snapshot = extractWorkspace(useAppStore.getState() as unknown as Record<string, unknown>);
-      void pushAzureWorkspace(snapshot).catch((error) => {
-        console.warn("Azure workspace save failed", error);
-        onStatus?.("Azure Database save failed. Your latest change is still on this device.");
-      });
-    }, 800);
-  };
+function persistSnapshot(snapshot: WorkspaceSnapshot, onStatus?: (message: string) => void) {
+  writeLocalWorkspace(snapshot);
+  void pushAzureWorkspace(snapshot).catch((error) => {
+    console.warn("Azure workspace save failed", error);
+    onStatus?.("Azure Database save failed. Your latest change is still on this device.");
+  });
+}
 
+export function refreshWorkspaceFromAzure(onStatus?: (message: string) => void) {
   void (async () => {
     try {
-      const remote = await pullAzureWorkspace();
-      if (stopped) return;
-      if (remote?.data) {
-        applyWorkspaceSnapshot(remote);
-        onStatus?.("Workspace loaded from Azure Database.");
-      } else {
-        persist();
-      }
+      const result = await pullAzureWorkspaceStatus();
+      if (result.status !== "loaded" || !result.snapshot) return;
+      const merged = mergeWorkspace(currentSnapshot(), result.snapshot);
+      applyWorkspaceSnapshot(merged);
+      writeLocalWorkspace(merged);
     } catch (error) {
       console.warn("Azure workspace load failed", error);
       onStatus?.("Could not reach Azure Database. Working from this browser until it reconnects.");
     }
   })();
+}
 
-  const unsubscribe = useAppStore.subscribe(persist);
+export function startWorkspaceSync(onStatus?: (message: string) => void) {
+  if (typeof window === "undefined") return () => {};
+
+  let timer: number | undefined;
+  let stopped = false;
+  let ready = false;
+
+  restoreLocalCache();
+
+  const persist = (immediate = false) => {
+    if (!ready || applyingRemote || stopped) return;
+    const snapshot = currentSnapshot();
+    const cached = readLocalWorkspace();
+    if (workspaceRecordCount(snapshot.data) === 0 && cached && workspaceRecordCount(cached.data) > 0) {
+      applyWorkspaceSnapshot(cached);
+      return;
+    }
+    const run = () => persistSnapshot(currentSnapshot(), onStatus);
+    if (immediate) {
+      window.clearTimeout(timer);
+      run();
+      return;
+    }
+    window.clearTimeout(timer);
+    timer = window.setTimeout(run, 400);
+  };
+
+  void (async () => {
+    try {
+      const result = await pullAzureWorkspaceStatus();
+      if (stopped) return;
+      if (result.status === "loaded" && result.snapshot) {
+        const merged = mergeWorkspace(currentSnapshot(), result.snapshot);
+        applyWorkspaceSnapshot(merged);
+        writeLocalWorkspace(merged);
+        onStatus?.("Workspace loaded from Azure Database.");
+      } else if (result.status === "empty") {
+        writeLocalWorkspace(currentSnapshot());
+      } else {
+        writeLocalWorkspace(currentSnapshot());
+      }
+    } catch (error) {
+      console.warn("Azure workspace load failed", error);
+      onStatus?.("Could not reach Azure Database. Working from this browser until it reconnects.");
+    } finally {
+      if (!stopped) {
+        ready = true;
+        persist(true);
+      }
+    }
+  })();
+
+  const unsubscribe = useAppStore.subscribe(() => persist());
+  const flush = () => persist(true);
+  const onHidden = () => {
+    if (document.visibilityState === "hidden") flush();
+  };
+  window.addEventListener("beforeunload", flush);
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", onHidden);
   return () => {
     stopped = true;
     window.clearTimeout(timer);
     unsubscribe();
+    window.removeEventListener("beforeunload", flush);
+    window.removeEventListener("pagehide", flush);
+    document.removeEventListener("visibilitychange", onHidden);
   };
 }

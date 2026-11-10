@@ -10,7 +10,7 @@ import {
 } from "react";
 import { findAccount } from "./directory";
 import { entraConfigured, startEntraSignOut } from "./entra";
-import { applyWorkspaceSnapshot, pullAzureWorkspace } from "./workspace-sync";
+import { refreshWorkspaceFromAzure } from "./workspace-sync";
 import { users } from "./data";
 import { applyTeamRole, can as roleCan, canSeeFinancials as roleSeesMoney, type Capability } from "./rbac";
 import { useAppStore } from "./store";
@@ -37,11 +37,7 @@ function lookupUser(id: string | null) {
 }
 
 function hydrateAzureWorkspace() {
-  void pullAzureWorkspace()
-    .then((remote) => {
-      if (remote?.data) applyWorkspaceSnapshot(remote);
-    })
-    .catch(() => {});
+  refreshWorkspaceFromAzure();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
