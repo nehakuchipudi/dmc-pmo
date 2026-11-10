@@ -16,7 +16,7 @@ export const WORK_TYPES = [
 
 export const OBJECT_TYPES = [
   { id: "project", label: "Projects" },
-  { id: "phase", label: "Phases" },
+  { id: "phase", label: "Milestones" },
   { id: "task", label: "Tasks" },
   { id: "subtask", label: "Subtasks" },
 ] as const;

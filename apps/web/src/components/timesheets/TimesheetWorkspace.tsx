@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Clock3, Eye, EyeOff, MoreHorizontal, Plus, Timer } from "lucide-react";
+import { Briefcase, Calendar, ChevronDown, Clock3, Eye, EyeOff, Flag, ListChecks, MoreHorizontal, Plus, Search, Timer } from "lucide-react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { TimesheetActivityModal } from "@/components/timesheets/TimesheetActivityModal";
 import {
@@ -19,12 +19,14 @@ import type { TimeEntry, TimesheetWorkKind } from "@/lib/types";
 import {
   addDays,
   entryWindow,
+  clockOrZero,
   formatClock,
-  formatClockHours,
   formatDuration,
   formatLongDay,
+  formatMonthDay,
   formatWeekRange,
-  formatWeekday,
+  formatWeekdayUpper,
+  isWeekendIso,
   overviewByCompany,
   startOfWeek,
   todayIso,
@@ -48,10 +50,16 @@ function isViewTab(value: string | null): value is ViewTab {
 }
 
 function kindLabel(kind: TimesheetWorkKind) {
-  if (kind === "phase") return "Phase";
+  if (kind === "phase") return "Milestone";
   if (kind === "task") return "Task";
-  if (kind === "subtask") return "Subtask";
+  if (kind === "subtask") return "Task";
   return "Project";
+}
+
+function WorkIcon({ kind }: { kind: TimesheetWorkKind }) {
+  if (kind === "phase") return <Flag size={18} />;
+  if (kind === "task" || kind === "subtask") return <ListChecks size={18} />;
+  return <Briefcase size={18} />;
 }
 
 function entryMatchesWorkTypes(entry: TimeEntry, types: Set<WorkTypeId>) {
@@ -724,95 +732,119 @@ export function TimesheetWorkspace() {
             onJump={() => changeView("Daily")}
           />
           <div className="ts-work-search">
-            <TextInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Find work to add: project, phase, task, or subtask"
-              aria-label="Find work to add to your timesheet"
-            />
-            {workHits.length ? (
+            <div className="ts-work-search-field">
+              <Search size={16} className="ts-work-search-icon" aria-hidden />
+              <TextInput
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Find work to add to your timesheet"
+                aria-label="Find work to add to your timesheet"
+              />
+            </div>
+            {search.trim() ? (
               <ul className="ts-work-hits">
                 {workHits.map((work) => (
                   <li key={work.key}>
                     <button type="button" className="ts-work-hit" onClick={() => pinWork(work)}>
                       <span className="ts-kind">{kindLabel(work.kind)}</span>
-                      <strong>{work.label}</strong>
-                      <span>{work.detail}</span>
-                    </button>
-                    <button type="button" className="btn btn-ghost text-sm" onClick={() => openActivity(work, weekStart, true)}>
-                      Add
+                      <strong>
+                        {kindLabel(work.kind)}: {work.label}
+                      </strong>
+                      <span>
+                        {[work.companyName && `Company: ${work.companyName}`, `Project: ${work.projectName}`, work.milestoneName && `Milestone: ${work.milestoneName}`]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     </button>
                   </li>
                 ))}
+                {!workHits.length ? <li className="px-3 py-2 text-sm text-[var(--color-muted)]">No matching projects, milestones, or tasks.</li> : null}
               </ul>
             ) : null}
           </div>
           <div className="panel overflow-auto">
             <div className="timesheet-week">
               <div className="timesheet-week-head">
-                <div>Work</div>
+                <div />
                 {weekDays(weekStart).map((iso) => (
                   <button
                     key={iso}
                     type="button"
-                    className="timesheet-cell"
+                    className={`timesheet-day-head ${isWeekendIso(iso) ? "is-weekend" : ""}`}
                     onClick={() => {
                       setDay(iso);
                       changeView("Daily");
                     }}
                   >
-                    {formatWeekday(iso)}
-                    <div className="font-normal normal-case tracking-normal">{iso.slice(5)}</div>
+                    <span>{formatWeekdayUpper(iso)}</span>
+                    <strong>{formatMonthDay(iso)}</strong>
+                    {isWeekendIso(iso) ? <Calendar size={12} aria-hidden /> : null}
                   </button>
                 ))}
-                <div>Total</div>
+                <div className="timesheet-day-head">
+                  <span>Total</span>
+                </div>
               </div>
               {visibleRows.map((row) => {
                 const work = workByKey.get(row.key);
                 return (
                   <div key={row.key} className="timesheet-week-row">
                     <div className="ts-week-work">
-                      {work ? <span className="ts-kind">{kindLabel(work.kind)}</span> : null}
-                      <strong>{work?.label ?? row.key}</strong>
-                      {work?.detail ? <span>{work.detail}</span> : null}
+                      {work ? <span className="ts-week-glyph">{<WorkIcon kind={work.kind} />}</span> : null}
+                      <div>
+                        <strong>
+                          {work ? `${kindLabel(work.kind)}: ${work.label}` : row.key}
+                        </strong>
+                        {work ? (
+                          <span>
+                            {[
+                              work.companyName && `Company: ${work.companyName}`,
+                              `Project: ${work.projectName}`,
+                              work.milestoneName && work.kind !== "phase" ? `Milestone: ${work.milestoneName}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     {row.cells.map((hours, index) => {
                       const date = weekDays(weekStart)[index];
                       return (
-                        <div key={`${row.key}-${date}`} className="ts-week-cell">
+                        <div key={`${row.key}-${date}`} className={`ts-week-cell ${hours ? "has-time" : ""}`}>
                           <button
                             type="button"
-                            className="timesheet-cell ts-week-hit"
+                            className="ts-week-slot"
                             onClick={() => work && openActivity(work, date, !hours)}
                           >
-                            {hours ? formatClockHours(hours) : ""}
+                            {clockOrZero(hours)}
                           </button>
                           <button
                             type="button"
                             className="ts-week-add"
-                            aria-label={`Add another entry on ${date}`}
+                            aria-label={`Add time on ${date}`}
                             onClick={() => work && openActivity(work, date, true)}
                           >
-                            <Plus size={12} />
+                            <Plus size={16} />
                           </button>
                         </div>
                       );
                     })}
-                    <div className="timesheet-cell font-semibold">{formatClockHours(row.total)}</div>
+                    <div className="timesheet-cell font-semibold">{clockOrZero(row.total)}</div>
                   </div>
                 );
               })}
-              <div className="timesheet-week-row">
+              <div className="timesheet-week-row is-totals">
                 <div className="font-semibold">Totals</div>
                 {matrix.totals.map((hours, index) => (
                   <div key={`total-${index}`} className="timesheet-cell font-semibold">
-                    {hours ? formatClockHours(hours) : "0:00"}
+                    {clockOrZero(hours)}
                   </div>
                 ))}
-                <div className="timesheet-cell font-semibold">{formatClockHours(matrix.grand) || "0:00"}</div>
+                <div className="timesheet-cell font-semibold">{clockOrZero(matrix.grand)}</div>
               </div>
             </div>
-            {!visibleRows.length ? <p className="p-6 text-sm text-[var(--color-muted)]">No time in this week. Search a project, phase, task, or subtask to add a row.</p> : null}
+            {!visibleRows.length ? <p className="p-6 text-sm text-[var(--color-muted)]">No time in this week. Search a project, milestone, or task to add a row.</p> : null}
           </div>
         </section>
       ) : null}
@@ -822,6 +854,7 @@ export function TimesheetWorkspace() {
           work={activity.work}
           date={activity.date}
           startOnAdd={activity.add}
+          personName={user.name}
           entries={scoped.filter(
             (entry) =>
               entry.date === activity.date && workFromEntry(entry, projects, tasks, milestones).key === activity.work.key,

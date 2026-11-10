@@ -72,6 +72,9 @@ assert.ok(allHits.some((hit) => hit.kind === "phase"));
 assert.ok(allHits.some((hit) => hit.kind === "task"));
 assert.ok(allHits.some((hit) => hit.kind === "subtask"));
 
+const milestoneHits = searchTimesheetWork({ query: "milestone", objectType: "All", projects, tasks, milestones });
+assert.ok(milestoneHits.some((hit) => hit.kind === "phase"));
+
 const entry: TimeEntry = {
   id: "te1",
   userName: "A. Chen",

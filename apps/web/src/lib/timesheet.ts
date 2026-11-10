@@ -34,6 +34,41 @@ export function formatWeekday(iso: string) {
   return parseIso(iso).toLocaleDateString("en-US", { weekday: "short" });
 }
 
+export function formatWeekdayUpper(iso: string) {
+  return formatWeekday(iso).toUpperCase();
+}
+
+export function formatMonthDay(iso: string) {
+  return parseIso(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function isWeekendIso(iso: string) {
+  const day = parseIso(iso).getDay();
+  return day === 0 || day === 6;
+}
+
+export function formatHms(hours: number) {
+  const total = Math.max(0, Math.round(hours * 3600));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+export function parseDurationInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  const parts = trimmed.split(":");
+  if (parts.length === 3) {
+    return (Number(parts[0]) || 0) + (Number(parts[1]) || 0) / 60 + (Number(parts[2]) || 0) / 3600;
+  }
+  return parseHoursInput(trimmed);
+}
+
+export function clockOrZero(hours: number) {
+  return formatClockHours(hours) || "0:00";
+}
+
 export function formatDayLabel(iso: string) {
   return parseIso(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }

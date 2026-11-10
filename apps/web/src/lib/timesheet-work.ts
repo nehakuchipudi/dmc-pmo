@@ -7,6 +7,7 @@ export type TimesheetWork = {
   kind: TimesheetWorkKind;
   projectId: string;
   projectName: string;
+  companyName?: string;
   milestoneId?: string;
   milestoneName?: string;
   taskId?: string;
@@ -58,13 +59,14 @@ export function describeWork(work: Pick<TimesheetWork, "kind" | "projectName" | 
 
 function hydrate(
   kind: TimesheetWorkKind,
-  project: Pick<Project, "id" | "name">,
+  project: Pick<Project, "id" | "name"> & { companyName?: string },
   extras?: { milestone?: Pick<Milestone, "id" | "name">; task?: Pick<Task, "id" | "name" | "parentTaskId">; parentTaskName?: string },
 ): TimesheetWork {
   const base = {
     kind,
     projectId: project.id,
     projectName: project.name,
+    companyName: project.companyName,
     milestoneId: extras?.milestone?.id,
     milestoneName: extras?.milestone?.name,
     taskId: extras?.task?.id,
@@ -74,9 +76,9 @@ function hydrate(
   return { ...base, key: workKey(base), ...describeWork(base) };
 }
 
-type ProjectRef = Pick<Project, "id" | "name">;
+type ProjectRef = Pick<Project, "id" | "name"> & { companyName?: string };
 type TaskRef = Pick<Task, "id" | "name" | "projectId" | "milestoneId" | "parentTaskId">;
-type MilestoneRef = Pick<Milestone, "id" | "name" | "projectId" | "kind">;
+type MilestoneRef = Pick<Milestone, "id" | "name" | "projectId" | "kind" | "parentId">;
 
 export function workFromEntry(
   entry: TimeEntry,
@@ -87,6 +89,7 @@ export function workFromEntry(
   const project = projects.find((item) => item.id === entry.projectId) ?? {
     id: entry.projectId,
     name: entry.projectName,
+    companyName: undefined,
   };
   const task = tasks.find((item) => item.id === entry.taskId);
   const parent = task?.parentTaskId ? tasks.find((item) => item.id === task.parentTaskId) : undefined;
@@ -110,14 +113,16 @@ export function searchTimesheetWork(input: {
 
   if (allow("project")) {
     for (const project of input.projects) {
-      if (project.name.toLowerCase().includes(q)) hits.push(hydrate("project", project));
+      const hay = `${project.name} ${project.companyName ?? ""}`.toLowerCase();
+      if (hay.includes(q)) hits.push(hydrate("project", project));
     }
   }
   if (allow("phase")) {
-    for (const phase of input.milestones.filter((item) => item.kind === "phase")) {
+    for (const phase of input.milestones.filter((item) => item.kind === "phase" || !item.parentId)) {
       const project = input.projects.find((item) => item.id === phase.projectId);
       if (!project) continue;
-      if (`${phase.name} ${project.name}`.toLowerCase().includes(q)) {
+      const hay = `${phase.name} ${project.name} ${project.companyName ?? ""} milestone`.toLowerCase();
+      if (hay.includes(q)) {
         hits.push(hydrate("phase", project, { milestone: phase }));
       }
     }
@@ -130,7 +135,7 @@ export function searchTimesheetWork(input: {
       if (!project) continue;
       const parent = task.parentTaskId ? input.tasks.find((item) => item.id === task.parentTaskId) : undefined;
       const milestone = input.milestones.find((item) => item.id === task.milestoneId);
-      const hay = `${task.name} ${parent?.name ?? ""} ${milestone?.name ?? ""} ${project.name}`.toLowerCase();
+      const hay = `${task.name} ${parent?.name ?? ""} ${milestone?.name ?? ""} ${project.name} ${project.companyName ?? ""}`.toLowerCase();
       if (hay.includes(q)) hits.push(hydrate(kind, project, { milestone, task, parentTaskName: parent?.name }));
     }
   }

@@ -2102,9 +2102,26 @@ button, input, select, textarea { font: inherit; }
 .timesheet-week-head > * {
   color: var(--color-muted);
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.timesheet-day-head {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+.timesheet-day-head strong {
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: none;
+  color: var(--color-navy);
+}
+.timesheet-day-head.is-weekend { color: var(--color-muted); }
 .timesheet-cell { text-align: center; font-variant-numeric: tabular-nums; }
 .timesheet-day-list { display: grid; gap: 10px; }
 .ts-toolbar {
@@ -2333,6 +2350,17 @@ button, input, select, textarea { font: inherit; }
 }
 .ts-timer-chip strong { font-variant-numeric: tabular-nums; }
 .ts-work-search { position: relative; margin-bottom: 12px; }
+.ts-work-search-field { position: relative; }
+.ts-work-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+.ts-work-search .field-input { padding-left: 36px; }
 .ts-work-hits {
   position: absolute;
   z-index: 20;
@@ -2386,33 +2414,133 @@ button, input, select, textarea { font: inherit; }
   text-transform: uppercase;
   padding: 4px 6px;
 }
-.ts-week-work { display: grid; gap: 2px; }
-.ts-week-work .ts-kind { grid-row: auto; justify-self: start; }
-.ts-week-work strong { color: var(--color-navy); }
-.ts-week-work span:last-child { color: var(--color-muted); font-size: 0.72rem; }
+.ts-week-work {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.ts-week-glyph {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-fog);
+  color: var(--color-navy);
+}
+.ts-week-work strong { display: block; color: var(--color-navy); }
+.ts-week-work span { color: var(--color-muted); font-size: 0.72rem; }
 .ts-week-cell {
   position: relative;
   display: grid;
-  align-items: center;
+  place-items: center;
+  min-height: 48px;
 }
-.ts-week-add {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+.ts-week-slot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  min-width: 58px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #eef3f8;
+  color: var(--color-navy);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.ts-week-cell.has-time .ts-week-slot { background: #e3edf8; }
+.ts-week-cell:hover .ts-week-slot { background: #d7e8fb; }
+.ts-week-add {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--color-muted);
+  color: #2563eb;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0;
 }
 .ts-week-cell:hover .ts-week-add,
-.ts-week-add:focus-visible { opacity: 1; background: #2563eb; color: #fff; }
+.ts-week-add:focus-visible { opacity: 1; color: #2563eb; }
+.ts-activity-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: -8px 0 12px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+.ts-activity-day { margin-left: auto; color: var(--color-muted); font-size: 0.82rem; align-self: center; }
+.ts-worklog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--color-navy);
+  font-weight: 650;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.ts-worklog-entry {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin: 12px 0 8px;
+  color: var(--color-navy);
+}
+.ts-worklog-entry h3 { margin: 0; font-size: 0.95rem; }
+.ts-worklog-entry p { margin: 4px 0 0; color: var(--color-muted); font-size: 0.78rem; }
+.ts-worklog-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ts-rounded-time {
+  display: grid;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  position: relative;
+  min-width: 160px;
+}
+.ts-rounded-time .field-input { padding-right: 32px; font-variant-numeric: tabular-nums; }
+.ts-rounded-clear {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.ts-worklog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ts-inline-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-navy);
+}
 .icon-btn.ts-add-btn:hover,
 .icon-btn.ts-add-btn:focus-visible {
   background: #2563eb;
