@@ -68,6 +68,17 @@ export function sortPlanItems<T extends { sortOrder?: number; name: string }>(it
     .map((row) => row.item);
 }
 
+export function moveIdInList(ids: string[], id: string, direction: -1 | 1) {
+  const index = ids.indexOf(id);
+  const next = index + direction;
+  if (index < 0 || next < 0 || next >= ids.length) return null;
+  const ordered = [...ids];
+  const [row] = ordered.splice(index, 1);
+  if (!row) return null;
+  ordered.splice(next, 0, row);
+  return ordered;
+}
+
 export function phaseMilestones(milestones: Milestone[]) {
   return milestones.filter((row) => row.kind === "phase" || !row.parentId);
 }

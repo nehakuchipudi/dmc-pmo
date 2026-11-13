@@ -300,7 +300,7 @@ button, input, select, textarea { font: inherit; }
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(140px, 1fr) minmax(240px, 480px) auto;
+  grid-template-columns: minmax(380px, 1.8fr) minmax(160px, 280px) auto;
   gap: 14px;
   align-items: center;
   min-height: 64px;
@@ -344,25 +344,20 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  row-gap: 2px;
   min-width: 0;
   font-size: 0.84rem;
 }
-.crumb-item { display: inline-flex; align-items: center; min-width: 0; }
+.crumb-item { display: inline-flex; align-items: center; flex-shrink: 0; }
 .crumb-sep { margin: 0 7px; color: #b3c0cd; }
 .crumb-link {
   color: var(--color-muted);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .crumb-link:hover { color: var(--color-navy); }
 .crumb-current {
   color: var(--color-ink);
   font-weight: 650;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -431,7 +426,7 @@ button, input, select, textarea { font: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: 220px;
+  max-width: 280px;
   min-height: 36px;
   padding: 4px 10px 4px 8px;
   border-radius: 999px;
@@ -2719,7 +2714,9 @@ button, input, select, textarea { font: inherit; }
   overflow-x: auto;
 }
 .record-actions .btn,
-.page-header-actions .btn {
+.page-header-actions .btn,
+.plan-toolbar .btn,
+.overview-plan-toolbar .btn {
   min-height: 30px;
   height: 30px;
   padding: 0 10px;
@@ -2730,9 +2727,19 @@ button, input, select, textarea { font: inherit; }
   white-space: nowrap;
 }
 .record-actions .btn svg,
-.page-header-actions .btn svg {
+.page-header-actions .btn svg,
+.plan-toolbar .btn svg,
+.overview-plan-toolbar .btn svg {
   width: 13px;
   height: 13px;
+}
+.plan-head-line .field-input,
+.plan-toolbar .field-input,
+.overview-plan-toolbar .field-input {
+  min-height: 30px;
+  height: 30px;
+  padding: 0 10px;
+  width: auto;
 }
 .record-tabs {
   flex-wrap: nowrap;
