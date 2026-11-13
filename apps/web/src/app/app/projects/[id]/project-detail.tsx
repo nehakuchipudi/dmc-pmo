@@ -30,7 +30,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
 import { vendorCompanies } from "@/lib/company-kinds";
-import { scheduleWindow } from "@/lib/project-plan";
+import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
 import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
 import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
@@ -65,6 +65,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const createMilestone = useAppStore((s) => s.createMilestone);
   const createTask = useAppStore((s) => s.createTask);
   const reorderTasks = useAppStore((s) => s.reorderTasks);
+  const reorderMilestones = useAppStore((s) => s.reorderMilestones);
   const updateTask = useAppStore((s) => s.updateTask);
   const updateMilestone = useAppStore((s) => s.updateMilestone);
   const deleteTask = useAppStore((s) => s.deleteTask);
@@ -101,7 +102,10 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
     () => milestones.filter((m) => m.projectId === project?.id),
     [milestones, project?.id],
   );
-  const phases = useMemo(() => ms.filter((m) => m.kind === "phase" || !m.parentId), [ms]);
+  const phases = useMemo(
+    () => sortPlanItems(ms.filter((m) => m.kind === "phase" || !m.parentId)),
+    [ms],
+  );
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.projectId === project?.id),
     [tasks, project?.id],
@@ -487,6 +491,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             onDeleteTask={deleteTask}
             onDeleteMilestone={deleteMilestone}
             onReorderTasks={reorderTasks}
+            onReorderMilestones={reorderMilestones}
             onAddTaskLink={addTaskLink}
             onRemoveTaskLink={removeTaskLink}
           />

@@ -242,6 +242,7 @@ export interface Milestone {
   status: MilestoneStatus;
   kind: "phase" | "group";
   parentId?: string;
+  sortOrder?: number;
   contractorCompanyId?: string;
   contractorName?: string;
   contractNumber?: string;

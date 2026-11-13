@@ -57,7 +57,15 @@ export function isWeekend(iso: string) {
 }
 
 export function sortPlanItems<T extends { sortOrder?: number; name: string }>(items: T[]) {
-  return items.slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name));
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const ao = a.item.sortOrder ?? a.index;
+      const bo = b.item.sortOrder ?? b.index;
+      if (ao !== bo) return ao - bo;
+      return a.index - b.index;
+    })
+    .map((row) => row.item);
 }
 
 export function phaseMilestones(milestones: Milestone[]) {
@@ -133,7 +141,7 @@ export function buildPlanRows(input: {
   const q = input.query?.trim().toLowerCase() ?? "";
   const match = (name: string, assignee?: string) =>
     !q || name.toLowerCase().includes(q) || (assignee ?? "").toLowerCase().includes(q);
-  const phases = phaseMilestones(input.milestones);
+  const phases = sortPlanItems(phaseMilestones(input.milestones));
   const childrenOf = (parentId: string) =>
     sortPlanItems(input.tasks.filter((task) => task.parentTaskId === parentId));
 

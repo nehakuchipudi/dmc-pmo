@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type UIEvent,
 } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { clampSplitPct } from "@/lib/mentions";
 import {
   addDays,
@@ -62,6 +62,7 @@ export function ProjectSchedule({
   onDeleteTask,
   onDeleteMilestone,
   onReorderTasks,
+  onReorderMilestones,
   onAddTaskLink,
   onRemoveTaskLink,
 }: {
@@ -87,6 +88,7 @@ export function ProjectSchedule({
   onDeleteTask: (id: string) => void;
   onDeleteMilestone: (id: string) => void;
   onReorderTasks: (orderedIds: string[]) => void;
+  onReorderMilestones: (orderedIds: string[]) => void;
   onAddTaskLink: (taskId: string, link: Omit<TaskLink, "id">) => void;
   onRemoveTaskLink: (taskId: string, linkId: string) => void;
 }) {
@@ -336,6 +338,31 @@ export function ProjectSchedule({
     setSelectedId(null);
   }
 
+  function siblingMilestoneIds(row: PlanRow) {
+    const parentId = row.milestone?.parentId;
+    return visibleRows
+      .filter((item) => item.kind === "milestone" && item.milestone?.parentId === parentId)
+      .map((item) => item.id);
+  }
+
+  function moveSelected(direction: -1 | 1) {
+    if (selected?.kind !== "milestone") return;
+    const ids = siblingMilestoneIds(selected);
+    const index = ids.indexOf(selected.id);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= ids.length) return;
+    const ordered = [...ids];
+    const [row] = ordered.splice(index, 1);
+    ordered.splice(next, 0, row);
+    onReorderMilestones(ordered);
+  }
+
+  const canMoveMilestone = selected?.kind === "milestone";
+  const milestoneIds = selected && canMoveMilestone ? siblingMilestoneIds(selected) : [];
+  const selectedMilestoneAt = selected ? milestoneIds.indexOf(selected.id) : -1;
+  const canMoveUp = canMoveMilestone && selectedMilestoneAt > 0;
+  const canMoveDown = canMoveMilestone && selectedMilestoneAt >= 0 && selectedMilestoneAt < milestoneIds.length - 1;
+
   return (
     <div className="plan-workspace">
       <div className="plan-head-line">
@@ -363,6 +390,14 @@ export function ProjectSchedule({
         </button>
         <button type="button" className="btn btn-ghost" onClick={deleteSelected} disabled={!selected || selected.kind === "project"}>
           Delete
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => moveSelected(-1)} disabled={!canMoveUp}>
+          <ChevronUp size={16} />
+          Move up
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => moveSelected(1)} disabled={!canMoveDown}>
+          <ChevronDown size={16} />
+          Move down
         </button>
         <input
           className="field-input plan-toolbar-search"

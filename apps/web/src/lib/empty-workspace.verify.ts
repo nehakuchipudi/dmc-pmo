@@ -31,17 +31,17 @@ assert.deepEqual(staticRecordIds([]), [{ id: "_" }]);
 const stale = workspacePatch({
   version: 1,
   data: {
-    companies: [{ id: "c-cascade", name: "Cascade Ventures" }],
+    companies: [{ id: "c-new", name: "Acme" }],
     team: [{ id: "tm-dm" }],
     enabledPacks: ["service_operations"],
-    workOrders: [{ id: "wo-old" }],
+    workOrders: [{ id: "wo-keep" }],
   },
 });
 assert.equal(stale.seedGeneration, EMPTY_WORKSPACE_GENERATION);
-assert.deepEqual(stale.companies, []);
+assert.deepEqual(stale.companies, [{ id: "c-new", name: "Acme" }]);
 assert.deepEqual(stale.team, [{ id: "tm-dm" }]);
 assert.deepEqual(stale.enabledPacks, ["service_operations"]);
-assert.deepEqual(stale.workOrders, []);
+assert.deepEqual(stale.workOrders, [{ id: "wo-keep" }]);
 
 const fresh = workspacePatch({
   version: 1,

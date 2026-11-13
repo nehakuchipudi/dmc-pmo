@@ -1,4 +1,10 @@
-import { extractWorkspace, workspacePatch, type WorkspaceSnapshot } from "./workspace-snapshot";
+import {
+  extractWorkspace,
+  mergeWorkspace,
+  workspacePatch,
+  workspaceRecordCount,
+  type WorkspaceSnapshot,
+} from "./workspace-snapshot";
 
 export function verifyAzureWorkspaceRoundTrip() {
   const state = {
@@ -17,6 +23,40 @@ export function verifyAzureWorkspaceRoundTrip() {
   if (Object.keys(empty).length) throw new Error("null snapshot should be empty");
   const invalid = workspacePatch({ version: 1 } as WorkspaceSnapshot);
   if (Object.keys(invalid).length) throw new Error("missing data should be empty");
+  const local: WorkspaceSnapshot = {
+    version: 1,
+    data: { projects: [{ id: "p-local", name: "Kept" }], companies: [{ id: "c-1", name: "Local Co" }] },
+  };
+  const remote: WorkspaceSnapshot = {
+    version: 1,
+    data: { projects: [], companies: [{ id: "c-1", name: "Remote Co" }, { id: "c-2", name: "Other" }] },
+  };
+  const merged = mergeWorkspace(local, remote);
+  const projects = merged.data.projects as { id: string }[];
+  const companies = merged.data.companies as { id: string; name: string }[];
+  if (!projects.some((row) => row.id === "p-local")) throw new Error("merge dropped local project");
+  if (!companies.some((row) => row.id === "c-2")) throw new Error("merge dropped remote company");
+  if (companies.find((row) => row.id === "c-1")?.name !== "Local Co") throw new Error("local company should win");
+  if (workspaceRecordCount(local.data) < 1) throw new Error("record count");
+  const priced = workspacePatch({
+    version: 1,
+    data: {
+      invoiceTemplates: [
+        {
+          id: "tpl-progress",
+          name: "Progress billing",
+          summary: "Invoice a slice of the project budget as work lands.",
+          defaultLines: [{ kind: "service", description: "Progress", amount: 8500 }],
+        },
+      ],
+    },
+  });
+  const templates = priced.invoiceTemplates as { id: string; summary: string; defaultLines: { amount: number }[] }[];
+  const progress = templates.find((row) => row.id === "tpl-progress");
+  if (!progress) throw new Error("progress template missing");
+  if (progress.summary) throw new Error("template summary should be blank");
+  if (progress.defaultLines.length) throw new Error("seed templates should have no lines");
+  if (priced.templatesBlankGeneration !== "blank-v1") throw new Error("blank generation");
   return true;
 }
 
