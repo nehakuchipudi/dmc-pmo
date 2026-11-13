@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "./project-tabs";
-import { scheduleWindow, sortPlanItems } from "./project-plan";
+import { moveIdInList, scheduleWindow, sortPlanItems } from "./project-plan";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -41,10 +41,15 @@ assert.deepEqual(
   ]).map((row) => row.name),
   ["Milestone 1", "Milestone 2", "New milestone"],
 );
+assert.deepEqual(moveIdInList(["a", "b", "c"], "b", -1), ["b", "a", "c"]);
+assert.deepEqual(moveIdInList(["a", "b", "c"], "b", 1), ["a", "c", "b"]);
+assert.equal(moveIdInList(["a", "b"], "a", -1), null);
+assert.equal(moveIdInList(["a", "b"], "b", 1), null);
+assert.equal(moveIdInList(["a"], "a", 1), null);
 
 const detail = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(detail, /ProjectOverviewBoard/);
-assert.match(detail, /Edit plan/);
+assert.match(detail, /onEditPlan/);
 assert.match(detail, /createMilestone/);
 assert.doesNotMatch(detail, /project-health-strip/);
 assert.doesNotMatch(detail, /tab === "Tasks"/);
@@ -59,6 +64,8 @@ assert.match(schedule, /Add task/);
 assert.match(schedule, /Move up/);
 assert.match(schedule, /Move down/);
 assert.match(schedule, /onReorderMilestones/);
+assert.match(schedule, /onReorderTasks\(ordered\)/);
+assert.match(schedule, /selected\.kind === "milestone"/);
 assert.match(schedule, /plan-gantt-caption/);
 assert.match(schedule, /plan-board is-split/);
 assert.doesNotMatch(schedule, /GanttBoard/);
@@ -71,7 +78,11 @@ assert.match(overview, /Add task/);
 
 const css = readFileSync(join(root, "../app/globals.css"), "utf8");
 assert.match(css, /\.plan-toolbar/);
+assert.match(css, /\.plan-toolbar \.btn/);
 assert.match(css, /\.plan-gantt-caption/);
 assert.match(css, /\.record-tabs/);
+assert.match(css, /\.crumb-link \{[^}]*white-space: nowrap/);
+assert.doesNotMatch(css, /\.crumb-link \{[^}]*max-width/);
+assert.doesNotMatch(css, /\.crumb-current \{[^}]*max-width/);
 
 console.log("project-plan-overview.verify ok");

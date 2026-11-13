@@ -17,6 +17,7 @@ import {
   ganttDayLabel,
   ganttMonthBands,
   isWeekend,
+  moveIdInList,
   phaseMilestones,
   type PlanRow,
 } from "@/lib/project-plan";
@@ -213,8 +214,16 @@ export function ProjectSchedule({
   }
 
   function siblingIds(row: PlanRow) {
+    if (row.kind === "milestone") {
+      const parentId = row.milestone?.parentId;
+      return visibleRows
+        .filter((item) => item.kind === "milestone" && item.milestone?.parentId === parentId)
+        .map((item) => item.id);
+    }
     if (row.kind === "subtask") {
-      return tasks.filter((item) => item.parentTaskId === row.parentTaskId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((item) => item.id);
+      return visibleRows
+        .filter((item) => item.kind === "subtask" && item.parentTaskId === row.parentTaskId)
+        .map((item) => item.id);
     }
     if (row.kind === "task") {
       return visibleRows.filter((item) => item.kind === "task" && item.milestoneId === row.milestoneId).map((item) => item.id);
@@ -338,30 +347,18 @@ export function ProjectSchedule({
     setSelectedId(null);
   }
 
-  function siblingMilestoneIds(row: PlanRow) {
-    const parentId = row.milestone?.parentId;
-    return visibleRows
-      .filter((item) => item.kind === "milestone" && item.milestone?.parentId === parentId)
-      .map((item) => item.id);
-  }
-
   function moveSelected(direction: -1 | 1) {
-    if (selected?.kind !== "milestone") return;
-    const ids = siblingMilestoneIds(selected);
-    const index = ids.indexOf(selected.id);
-    const next = index + direction;
-    if (index < 0 || next < 0 || next >= ids.length) return;
-    const ordered = [...ids];
-    const [row] = ordered.splice(index, 1);
-    ordered.splice(next, 0, row);
-    onReorderMilestones(ordered);
+    if (!selected || selected.kind === "project") return;
+    const ordered = moveIdInList(siblingIds(selected), selected.id, direction);
+    if (!ordered) return;
+    if (selected.kind === "milestone") onReorderMilestones(ordered);
+    else onReorderTasks(ordered);
   }
 
-  const canMoveMilestone = selected?.kind === "milestone";
-  const milestoneIds = selected && canMoveMilestone ? siblingMilestoneIds(selected) : [];
-  const selectedMilestoneAt = selected ? milestoneIds.indexOf(selected.id) : -1;
-  const canMoveUp = canMoveMilestone && selectedMilestoneAt > 0;
-  const canMoveDown = canMoveMilestone && selectedMilestoneAt >= 0 && selectedMilestoneAt < milestoneIds.length - 1;
+  const moveIds = selected && selected.kind !== "project" ? siblingIds(selected) : [];
+  const selectedAt = selected ? moveIds.indexOf(selected.id) : -1;
+  const canMoveUp = selectedAt > 0;
+  const canMoveDown = selectedAt >= 0 && selectedAt < moveIds.length - 1;
 
   return (
     <div className="plan-workspace">
@@ -392,11 +389,11 @@ export function ProjectSchedule({
           Delete
         </button>
         <button type="button" className="btn btn-ghost" onClick={() => moveSelected(-1)} disabled={!canMoveUp}>
-          <ChevronUp size={16} />
+          <ChevronUp size={14} />
           Move up
         </button>
         <button type="button" className="btn btn-ghost" onClick={() => moveSelected(1)} disabled={!canMoveDown}>
-          <ChevronDown size={16} />
+          <ChevronDown size={14} />
           Move down
         </button>
         <input
