@@ -277,7 +277,7 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
   const { today, mon, tue, wed, thu, fri } = weekDates();
   const cascade = state.companies.find((row) => row.id === "c-cascade");
 
-  let projects = [...state.projects];
+  const projects = [...state.projects];
   if (!projects.some((row) => row.id === "p-dmc-playbook")) {
     projects.push({
       id: "p-dmc-playbook",
