@@ -22,7 +22,10 @@ assert.match(store, /persistOutbox\(get\)/);
 assert.match(store, /notes: get\(\)\.notifications/);
 
 assert.match(css, /\.settings-users \.table th:nth-child\(6\),\n\.settings-users \.table td:nth-child\(6\) \{ width: 16%; \}/);
+assert.match(css, /\.settings-users \.table th:last-child,\n\.settings-users \.table td:last-child \{\n  width: 8%;/);
 assert.match(users, /whitespace-nowrap/);
 assert.match(users, /Invited \{m\.invitedAt\}/);
+assert.match(users, /RowMenu/);
+assert.match(users, /icon-btn/);
 
 console.log("shell-notifications.verify ok");

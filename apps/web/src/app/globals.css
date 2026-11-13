@@ -710,7 +710,7 @@ button, input, select, textarea { font: inherit; }
   gap: 16px;
 }
 .settings-users .table-wrap {
-  overflow: visible;
+  overflow: hidden;
 }
 .settings-users .page-header,
 .settings-users .settings-search {
@@ -733,7 +733,7 @@ button, input, select, textarea { font: inherit; }
 .settings-users .table td:nth-child(2) { width: 14%; }
 .settings-users .table th:nth-child(3),
 .settings-users .table td:nth-child(3) {
-  width: 22%;
+  width: 18%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -746,10 +746,16 @@ button, input, select, textarea { font: inherit; }
 .settings-users .table td:nth-child(6) { width: 16%; }
 .settings-users .table th:last-child,
 .settings-users .table td:last-child {
-  width: 48px;
-  padding-right: 8px;
-  overflow: visible;
+  width: 8%;
+  padding: 8px 12px 8px 4px;
+  overflow: hidden;
   white-space: nowrap;
+  text-align: right;
+}
+.settings-users .row-actions .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 .settings-search {
   display: block;
