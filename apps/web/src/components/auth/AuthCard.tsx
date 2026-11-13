@@ -21,7 +21,7 @@ export function AuthCard({
             DILLON MORGAN CONSULTING
           </div>
         </div>
-        <h1 className="page-title text-[1.7rem]">{title}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className="page-sub mb-6">{subtitle}</p>
         {children}
         <Link href="/" className="mt-6 inline-block text-sm font-semibold text-[var(--color-navy)]">
