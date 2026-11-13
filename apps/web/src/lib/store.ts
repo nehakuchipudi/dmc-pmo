@@ -300,6 +300,7 @@ type AppState = {
   allocations: ResourceAllocation[];
   toasts: Toast[];
   seedGeneration: string;
+  demoWorkspaceGeneration?: string;
   recentlyViewed: { type: string; id: string; label: string }[];
   focusCompanyId: string | null;
   projectWorkflow: ProjectWorkflow;
@@ -900,6 +901,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   allocations: seedAllocations,
   toasts: [],
   seedGeneration: EMPTY_WORKSPACE_GENERATION,
+  demoWorkspaceGeneration: undefined,
   recentlyViewed: [],
   focusCompanyId: null,
   projectWorkflow: loadProjectWorkflow(),
