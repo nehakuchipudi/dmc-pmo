@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Check, ChevronDown, Flag, ListChecks, MoreHorizontal, Pause, Play, X } from "lucide-react";
+import { Briefcase, ChevronDown, Flag, ListChecks, MoreHorizontal, Pause, Play, X } from "lucide-react";
 import { ConfirmModal, Field, Modal, StatusPill, TextInput, TextSelect, TextTextarea, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 import type { TimeEntry } from "@/lib/types";
-import { formatClockHours, formatHms, formatLongDay, parseDurationInput } from "@/lib/timesheet";
+import { formatClockHours, formatHms, formatLongDay, HOUR_PRESETS, parseDurationInput } from "@/lib/timesheet";
 import { type TimesheetWork } from "@/lib/timesheet-work";
 
 function WorkGlyph({ kind }: { kind: TimesheetWork["kind"] }) {
@@ -274,7 +274,10 @@ function ActivityFields({
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [running, setRunning] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(entry ? Math.round(entry.hours * 3600) : 0);
+  const [timerText, setTimerText] = useState(entry ? formatHms(entry.hours) : "00:00:00");
+  const [hoursError, setHoursError] = useState("");
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [loggedAt] = useState(() => new Date());
   const phases = useMemo(
     () => milestones.filter((item) => item.projectId === work.projectId && (item.kind === "phase" || !item.parentId)),
@@ -292,20 +295,49 @@ function ActivityFields({
     return () => window.clearInterval(id);
   }, [running, startedAt]);
 
-  function applyTimer() {
-    const seconds = running && startedAt ? Math.floor((Date.now() - startedAt) / 1000) : elapsed;
-    setHours(formatHms(seconds / 3600));
+  function currentSeconds() {
+    if (running && startedAt) return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    return elapsed;
+  }
+
+  function applyHours(nextHours: number, source: "timer" | "rounded" | "preset") {
+    const safe = Math.max(0, nextHours);
+    const stamp = formatHms(safe);
+    setHoursError("");
+    if (source !== "rounded") setHours(stamp);
+    if (source !== "timer") {
+      setTimerText(stamp);
+      setElapsed(Math.round(safe * 3600));
+    }
+    if (source === "timer") setElapsed(Math.round(safe * 3600));
+  }
+
+  function stopTimer(syncRounded = true) {
+    const seconds = currentSeconds();
+    setElapsed(seconds);
     setRunning(false);
     setStartedAt(null);
+    const stamp = formatHms(seconds / 3600);
+    setTimerText(stamp);
+    if (syncRounded && seconds > 0) setHours(stamp);
+    return seconds;
   }
+
+  const timerValue = running ? formatHms(elapsed / 3600) : timerText;
 
   return (
     <form
       className="ts-activity-form"
       onSubmit={(e) => {
         e.preventDefault();
-        const parsed = parseDurationInput(hours);
-        if (parsed <= 0) return;
+        const seconds = running ? stopTimer(true) : elapsed;
+        const fromTimer = parseDurationInput(running ? formatHms(seconds / 3600) : timerText);
+        const fromRounded = parseDurationInput(hours);
+        const parsed = fromTimer > 0 ? fromTimer : fromRounded;
+        if (parsed <= 0) {
+          setHoursError("Enter the hours you worked.");
+          return;
+        }
         onSubmit({
           hours: parsed,
           note,
@@ -404,14 +436,28 @@ function ActivityFields({
           <input
             className="field-input"
             value={hours}
-            onChange={(e) => setHours(e.target.value)}
+            onChange={(e) => {
+              setHours(e.target.value);
+              setHoursError("");
+            }}
+            onBlur={() => {
+              const parsed = parseDurationInput(hours);
+              if (parsed > 0) setHours(formatHms(parsed));
+            }}
+            placeholder="8 or 08:00:00"
             aria-label="Rounded time"
           />
           <button
             type="button"
             className="ts-rounded-clear"
             aria-label="Clear rounded time"
-            onClick={() => setHours("00:00:00")}
+            onClick={() => {
+              setHours("00:00:00");
+              setTimerText("00:00:00");
+              setElapsed(0);
+              setRunning(false);
+              setStartedAt(null);
+            }}
           >
             <X size={12} />
           </button>
@@ -426,30 +472,82 @@ function ActivityFields({
             {submitLabel}
           </button>
           <div className="ts-inline-timer">
-            <span className="tabular-nums">{formatHms(elapsed / 3600)}</span>
+            <input
+              className="ts-hours-input"
+              value={timerValue}
+              onChange={(e) => {
+                if (running) stopTimer(false);
+                const next = e.target.value;
+                setTimerText(next);
+                const parsed = parseDurationInput(next);
+                if (parsed > 0) applyHours(parsed, "timer");
+                else setHoursError("");
+              }}
+              onBlur={() => {
+                const parsed = parseDurationInput(timerText);
+                if (parsed > 0) {
+                  applyHours(parsed, "preset");
+                }
+              }}
+              placeholder="00:00:00"
+              aria-label="Hours worked"
+              title="Type hours worked, such as 8, 2:30, or 08:00:00"
+            />
             <button
               type="button"
               className="icon-btn"
               aria-label={running ? "Pause timer" : "Start timer"}
               onClick={() => {
                 if (running) {
-                  setElapsed(startedAt ? Math.floor((Date.now() - startedAt) / 1000) : elapsed);
-                  setRunning(false);
-                  setStartedAt(null);
+                  stopTimer(true);
                   return;
                 }
-                setStartedAt(Date.now() - elapsed * 1000);
+                const parsed = parseDurationInput(timerText);
+                const seconds = parsed > 0 ? Math.round(parsed * 3600) : elapsed;
+                setElapsed(seconds);
+                setStartedAt(Date.now() - seconds * 1000);
                 setRunning(true);
+                setHoursError("");
               }}
             >
               {running ? <Pause size={14} /> : <Play size={14} />}
             </button>
-            <button type="button" className="icon-btn" aria-label="Use timer duration" onClick={applyTimer}>
-              <Check size={14} />
-            </button>
+            <div
+              className="ts-duration-menu"
+              onMouseLeave={() => setPresetsOpen(false)}
+            >
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Choose hours"
+                aria-expanded={presetsOpen}
+                onClick={() => setPresetsOpen((open) => !open)}
+              >
+                <ChevronDown size={14} />
+              </button>
+              {presetsOpen ? (
+                <div className="menu-popover ts-duration-popover fade-in">
+                  {HOUR_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="menu-row"
+                      onClick={() => {
+                        if (running) stopTimer(false);
+                        applyHours(preset.hours, "preset");
+                        setPresetsOpen(false);
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
+      {hoursError ? <p className="ts-hours-error">{hoursError}</p> : null}
       <p className="sr-only">{date}</p>
     </form>
   );
