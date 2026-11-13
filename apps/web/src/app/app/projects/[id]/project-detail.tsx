@@ -14,6 +14,7 @@ import { ProjectLifecycleBar } from "@/components/records/ProjectLifecycle";
 import { ProjectInsights } from "@/components/records/ProjectInsights";
 import { ProjectTeamPanel, ProjectTeamRail } from "@/components/records/ProjectTeamPanel";
 import {
+  RecordActionButtons,
   RecordFact,
   RecordRailBlock,
   RecordShell,
@@ -32,7 +33,6 @@ import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
 import { vendorCompanies } from "@/lib/company-kinds";
 import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
 import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
-import { exportProjectPlanPdf } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
 import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
 
@@ -72,7 +72,6 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const deleteMilestone = useAppStore((s) => s.deleteMilestone);
   const trackView = useAppStore((s) => s.trackView);
   const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
-  const queueEmail = useAppStore((s) => s.queueEmail);
   const pushToast = useAppStore((s) => s.pushToast);
   const addProjectFile = useAppStore((s) => s.addProjectFile);
   const deleteProjectFile = useAppStore((s) => s.deleteProjectFile);
@@ -236,45 +235,22 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
           </>
         }
         actions={
-          <>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setCreateDefaults({ projectId: project.id, companyId: project.companyId });
-                setCreateKind("time");
-              }}
-            >
-              Log time
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
-              Edit
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => exportProjectPlanPdf(project, ms, projectTasks)}
-            >
-              Export
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                queueEmail(
-                  companyContact?.email ?? "client@example.com",
-                  `Update on ${project.name}`,
-                  `Progress is ${project.progress}%.`,
-                );
-                pushToast(`Email queued to ${companyContact?.email ?? "client"}`);
-              }}
-            >
-              Portal update
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => goTab("Schedule")}>
-              Edit plan
-            </button>
-          </>
+          <RecordActionButtons
+            favorite={!!project.favorite}
+            onActivity={() => {
+              setCreateDefaults({ projectId: project.id, companyId: project.companyId });
+              setCreateKind("time");
+            }}
+            onEdit={() => setEditOpen(true)}
+            onPortal={() => {
+              pushToast("Portal access is managed on contacts for this company.");
+            }}
+            onFavorite={() => updateProject(project.id, { favorite: !project.favorite })}
+            onNewProject={() => {
+              setCreateDefaults({ companyId: project.companyId });
+              setCreateKind("project");
+            }}
+          />
         }
         stepper={
           <ProjectLifecycleBar
