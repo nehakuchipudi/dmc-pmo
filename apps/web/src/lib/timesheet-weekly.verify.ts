@@ -12,6 +12,12 @@ assert.equal(clockOrZero(1.5), "1:30");
 assert.equal(formatHms(0.05), "00:03:00");
 assert.equal(parseDurationInput("00:03:00"), 0.05);
 assert.equal(parseDurationInput("1:30"), 1.5);
+assert.equal(parseDurationInput("8"), 8);
+assert.equal(parseDurationInput("2.5"), 2.5);
+assert.equal(parseDurationInput("2h"), 2);
+assert.equal(parseDurationInput("90m"), 1.5);
+assert.equal(parseDurationInput("2h 30m"), 2.5);
+assert.equal(parseDurationInput("8 hours"), 8);
 
 const hits = searchTimesheetWork({
   query: "internal",
@@ -33,10 +39,14 @@ assert.match(modal, /Add new activity/);
 assert.match(modal, /Save Log/);
 assert.match(modal, /More worklog details/);
 assert.match(modal, /Rounded time/);
+assert.match(modal, /Hours worked/);
+assert.match(modal, /ts-hours-input/);
+assert.match(modal, /Choose hours/);
 assert.match(modal, /updateTimeEntry/);
 
 const css = readFileSync(join(root, "../app/globals.css"), "utf8");
 assert.match(css, /\.ts-week-cell:hover \.ts-week-add/);
 assert.match(css, /#2563eb/);
+assert.match(css, /\.ts-hours-input/);
 
 console.log("timesheet-weekly.verify ok");

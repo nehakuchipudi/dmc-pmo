@@ -56,14 +56,40 @@ export function formatHms(hours: number) {
 }
 
 export function parseDurationInput(value: string) {
-  const trimmed = value.trim();
+  const trimmed = value.trim().toLowerCase().replace(/,/g, "");
   if (!trimmed) return 0;
+
+  const named = trimmed.match(
+    /^(?:(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours))?(?:\s*(?:and|&)?\s*)?(?:(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes))?$/,
+  );
+  if (named && (named[1] || named[2])) {
+    return (Number(named[1]) || 0) + (Number(named[2]) || 0) / 60;
+  }
+
   const parts = trimmed.split(":");
   if (parts.length === 3) {
-    return (Number(parts[0]) || 0) + (Number(parts[1]) || 0) / 60 + (Number(parts[2]) || 0) / 3600;
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    const seconds = Number(parts[2]);
+    if ([hours, minutes, seconds].every((n) => Number.isFinite(n))) {
+      return Math.max(0, hours + minutes / 60 + seconds / 3600);
+    }
   }
-  return parseHoursInput(trimmed);
+  if (parts.length === 2) return Math.max(0, parseHoursInput(trimmed));
+
+  const numeric = Number(trimmed);
+  if (Number.isFinite(numeric) && numeric >= 0) return numeric;
+  return 0;
 }
+
+export const HOUR_PRESETS = [
+  { label: "15 min", hours: 0.25 },
+  { label: "30 min", hours: 0.5 },
+  { label: "1 hour", hours: 1 },
+  { label: "2 hours", hours: 2 },
+  { label: "4 hours", hours: 4 },
+  { label: "8 hours", hours: 8 },
+] as const;
 
 export function clockOrZero(hours: number) {
   return formatClockHours(hours) || "0:00";
