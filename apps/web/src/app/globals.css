@@ -3617,6 +3617,10 @@ button, input, select, textarea { font: inherit; }
   align-items: start;
 }
 .plan-workspace { display: grid; gap: 12px; min-width: 0; }
+.overview-plan {
+  display: grid;
+  gap: 14px;
+}
 .plan-head-line,
 .plan-toolbar,
 .overview-plan-toolbar {

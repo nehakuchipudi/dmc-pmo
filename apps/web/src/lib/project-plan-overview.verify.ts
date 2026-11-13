@@ -77,6 +77,7 @@ assert.match(overview, /Edit plan/);
 assert.match(overview, /Add task/);
 
 const css = readFileSync(join(root, "../app/globals.css"), "utf8");
+assert.match(css, /\.overview-plan \{[^}]*gap:\s*14px/);
 assert.match(css, /\.plan-toolbar/);
 assert.match(css, /\.plan-toolbar \.btn/);
 assert.match(css, /\.plan-gantt-caption/);
