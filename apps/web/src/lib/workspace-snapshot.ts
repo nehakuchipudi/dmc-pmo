@@ -53,7 +53,7 @@ export const WORKSPACE_KEYS = [
 
 export const EMPTY_WORKSPACE_GENERATION = "empty-v1";
 export const TEMPLATES_BLANK_GENERATION = "blank-v1";
-export const DEMO_WORKSPACE_GENERATION = "play-v1";
+export const DEMO_WORKSPACE_GENERATION = "play-v2";
 export const LOCAL_WORKSPACE_KEY = "dmc-pmo-workspace";
 
 const RECORD_KEYS = [

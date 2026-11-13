@@ -89,4 +89,27 @@ assert.match(snapshot, /TEMPLATES_BLANK_GENERATION/);
 assert.match(snapshot, /sanitizeInvoiceTemplates/);
 assert.doesNotMatch(invoice, /Field label="Summary"/);
 
+const letterhead = readFileSync(join(root, "invoice.ts"), "utf8");
+assert.match(letterhead, /5 Cowboys Way Suite 300/);
+assert.match(letterhead, /mzee.dillon@dillonmorgan.com/);
+
+const detail = readFileSync(join(root, "../app/app/billing/[id]/invoice-detail.tsx"), "utf8");
+assert.match(detail, /InvoiceDocument/);
+assert.match(detail, /Email PDF/);
+assert.match(detail, /Send via Activity/);
+
+const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx"), "utf8");
+assert.match(paper, /AMOUNT DUE THIS INVOICE/);
+assert.match(paper, /DmcMark/);
+assert.match(paper, /INVOICE DATE/);
+
+const pdf = readFileSync(join(root, "pdf.ts"), "utf8");
+assert.match(pdf, /FIRM_LETTERHEAD/);
+assert.match(pdf, /invoicePdfName/);
+
+const catalog = readFileSync(join(root, "demo-catalog.ts"), "utf8");
+assert.match(catalog, /number: "50526"/);
+assert.match(catalog, /Weeks 1-3: Discovery & Current State Mapping/);
+assert.match(catalog, /QuickBooks:/);
+
 console.log("billing.verify ok");

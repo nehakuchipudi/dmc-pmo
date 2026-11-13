@@ -23,6 +23,8 @@ assert.ok(empty.projects.some((row) => row.id === "p-dmc-playbook"));
 assert.ok(empty.tasks.length > 10);
 assert.ok(empty.tickets.length >= 3);
 assert.ok(empty.invoices.length >= 4);
+assert.ok(empty.invoices.some((row) => row.number === "50526"));
+assert.ok(empty.companies.some((row) => row.id === "c-melissa"));
 assert.ok(empty.timeEntries.length >= 5);
 assert.ok(empty.retainers.length >= 3);
 assert.ok(empty.ideas.length >= 3);

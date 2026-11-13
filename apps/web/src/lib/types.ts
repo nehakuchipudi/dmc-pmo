@@ -363,6 +363,13 @@ export interface InvoiceTemplate {
   defaultLines: Omit<InvoiceLineItem, "id">[];
 }
 
+export interface InvoicePayment {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+}
+
 export interface Invoice {
   id: string;
   number: string;
@@ -377,8 +384,11 @@ export interface Invoice {
   retainerId?: string;
   title?: string;
   owner?: string;
+  creator?: string;
+  manager?: string;
   billToContactId?: string;
   billToName?: string;
+  billToLines?: string[];
   currency?: string;
   raised?: string;
   billingThrough?: string;
@@ -387,6 +397,10 @@ export interface Invoice {
   internalDescription?: string;
   templateId?: string;
   taxAmount?: number;
+  reference?: string;
+  modifiedBy?: string;
+  modifiedAt?: string;
+  payments?: InvoicePayment[];
 }
 
 export type TimesheetWorkKind = "project" | "phase" | "task" | "subtask";

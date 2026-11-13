@@ -2719,6 +2719,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       retainerId: retainer?.id,
       title: opts?.title ?? opts?.description ?? (project ? `${project.name} invoice` : `Invoice for ${company.name}`),
       owner: opts?.owner,
+      creator: currentUser()?.name,
+      manager: opts?.owner,
       billToContactId: contact?.id ?? opts?.billToContactId,
       billToName: contact?.name ?? opts?.billToName,
       currency: opts?.currency ?? "USD",
@@ -3194,7 +3196,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (inv.status === "Paid") return;
     set((s) => ({
-      invoices: s.invoices.map((i) => (i.id === id ? { ...i, status: "Paid" } : i)),
+      invoices: s.invoices.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              status: "Paid",
+              payments: i.payments?.length
+                ? i.payments
+                : [{ id: uid("pay"), date: todayIso(), description: "Payment", amount: i.amount }],
+            }
+          : i,
+      ),
       notifications: [
         {
           id: uid("n"),
