@@ -3,14 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Mail, Star, X } from "lucide-react";
+import { Mail, X } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
-import { RecordFact, RecordMetric, RecordRailBlock, RecordShell, TonePill } from "@/components/records/RecordChrome";
+import {
+  RecordActionButtons,
+  RecordFact,
+  RecordMetric,
+  RecordRailBlock,
+  RecordShell,
+  TonePill,
+} from "@/components/records/RecordChrome";
 import { composeActivityFeed } from "@/lib/activity";
 import {
   Avatar,
@@ -225,38 +232,17 @@ export function CompanyDetail({ id }: { id: string }) {
           </>
         }
         actions={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setCreateKind("time")}>
-              Add activity
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
-              Edit
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setTab("Contacts");
-                pushToast("Portal access is managed on contacts for this company.");
-              }}
-            >
-              Portal
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-pressed={!!company.favorite}
-              onClick={() => updateCompany(company.id, { favorite: !company.favorite })}
-            >
-              <Star size={16} fill={company.favorite ? "currentColor" : "none"} />
-              Favorite
-            </button>
-            <IfCan cap="create_project">
-              <button type="button" className="btn btn-primary" onClick={() => setCreateKind("project")}>
-                New project
-              </button>
-            </IfCan>
-          </>
+          <RecordActionButtons
+            favorite={!!company.favorite}
+            onActivity={() => setCreateKind("time")}
+            onEdit={() => setEditOpen(true)}
+            onPortal={() => {
+              setTab("Contacts");
+              pushToast("Portal access is managed on contacts for this company.");
+            }}
+            onFavorite={() => updateCompany(company.id, { favorite: !company.favorite })}
+            onNewProject={() => setCreateKind("project")}
+          />
         }
         rail={
           <>

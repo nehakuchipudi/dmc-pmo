@@ -139,7 +139,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     summary:
       "Edit plan is the project schedule: a task table beside a day-scale Gantt. Add, change, and delete milestones and tasks there.",
     steps: [
-      "Open a project and choose Edit plan, or open the Schedule tab.",
+      "Open a project and open the Schedule tab.",
       "Use Add milestone or Add task on the one-line toolbar. New milestones land at the bottom. Select a milestone and use Move up or Move down to reorder. Select a row first to nest a task under that milestone.",
       "Select a milestone or task and press Delete, or use the row Delete control.",
       "Drag the arrow between the table and Gantt to give either side more room.",

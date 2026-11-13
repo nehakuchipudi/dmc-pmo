@@ -1,8 +1,49 @@
 "use client";
 
 import { clsx } from "clsx";
+import { Star } from "lucide-react";
 import type { ReactNode } from "react";
+import { IfCan } from "@/components/auth/IfCan";
 import { StatusPill, statusTone } from "@/components/ui";
+
+export function RecordActionButtons({
+  favorite,
+  onActivity,
+  onEdit,
+  onPortal,
+  onFavorite,
+  onNewProject,
+}: {
+  favorite: boolean;
+  onActivity: () => void;
+  onEdit: () => void;
+  onPortal: () => void;
+  onFavorite: () => void;
+  onNewProject: () => void;
+}) {
+  return (
+    <>
+      <button type="button" className="btn btn-ghost" onClick={onActivity}>
+        Add activity
+      </button>
+      <button type="button" className="btn btn-ghost" onClick={onEdit}>
+        Edit
+      </button>
+      <button type="button" className="btn btn-ghost" onClick={onPortal}>
+        Portal
+      </button>
+      <button type="button" className="btn btn-ghost" aria-pressed={favorite} onClick={onFavorite}>
+        <Star size={14} fill={favorite ? "currentColor" : "none"} />
+        Favorite
+      </button>
+      <IfCan cap="create_project">
+        <button type="button" className="btn btn-primary" onClick={onNewProject}>
+          New project
+        </button>
+      </IfCan>
+    </>
+  );
+}
 
 export function RecordShell({
   breadcrumb,

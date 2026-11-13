@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Globe, Layers, MoreVertical, Receipt, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
 import { clsx } from "clsx";
+import { RowMenu } from "@/components/RowMenu";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
@@ -57,7 +58,7 @@ export function SettingsWorkspace() {
   const [section, setSection] = useState<SettingsSection>(isSettingsSection(requested) ? requested : "capabilities");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [menuId, setMenuId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ id: string; el: HTMLElement } | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [query, setQuery] = useState("");
   const editing = team.find((m) => m.id === editId);
@@ -237,62 +238,68 @@ export function SettingsWorkspace() {
                             ) : null}
                           </div>
                         </td>
-                        <td
-                          className="row-actions text-right"
-                          onMouseEnter={() => setMenuId(m.id)}
-                          onMouseLeave={() => setMenuId((id) => (id === m.id ? null : id))}
-                        >
+                        <td className="row-actions text-right">
                           {canManageUsers ? (
                             <>
                               <button
                                 type="button"
-                                className="btn btn-ghost"
+                                className="icon-btn"
                                 aria-label={`Actions for ${m.name}`}
-                                onClick={() => setMenuId(menuId === m.id ? null : m.id)}
+                                aria-haspopup="menu"
+                                aria-expanded={menu?.id === m.id}
+                                onClick={(e) => {
+                                  const el = e.currentTarget;
+                                  setMenu((cur) => (cur?.id === m.id ? null : { id: m.id, el }));
+                                }}
                               >
                                 <MoreVertical size={16} />
                               </button>
-                              {menuId === m.id ? (
-                                <div className="row-menu">
-                                  <button type="button" onClick={() => { setEditId(m.id); setMenuId(null); }}>
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      inviteTeamMember(m.id);
-                                      setMenuId(null);
-                                    }}
-                                  >
-                                    {m.invitedAt ? "Resend invite" : "Send invite"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const href = inviteLandingHref({
-                                        email: m.email,
-                                        firstName: m.firstName,
-                                        lastName: m.lastName,
-                                        role: m.role,
-                                      });
-                                      void navigator.clipboard.writeText(href);
-                                      pushToast("Invite link copied");
-                                      setMenuId(null);
-                                    }}
-                                  >
-                                    Copy invite link
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setTeamMemberActive(m.id, !m.active);
-                                      setMenuId(null);
-                                    }}
-                                  >
-                                    {m.active ? "Deactivate" : "Reactivate"}
-                                  </button>
-                                </div>
-                              ) : null}
+                              <RowMenu
+                                open={menu?.id === m.id}
+                                anchor={menu?.id === m.id ? menu.el : null}
+                                onClose={() => setMenu(null)}
+                              >
+                                <button type="button" role="menuitem" onClick={() => { setEditId(m.id); setMenu(null); }}>
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    inviteTeamMember(m.id);
+                                    setMenu(null);
+                                  }}
+                                >
+                                  {m.invitedAt ? "Resend invite" : "Send invite"}
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    const href = inviteLandingHref({
+                                      email: m.email,
+                                      firstName: m.firstName,
+                                      lastName: m.lastName,
+                                      role: m.role,
+                                    });
+                                    void navigator.clipboard.writeText(href);
+                                    pushToast("Invite link copied");
+                                    setMenu(null);
+                                  }}
+                                >
+                                  Copy invite link
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setTeamMemberActive(m.id, !m.active);
+                                    setMenu(null);
+                                  }}
+                                >
+                                  {m.active ? "Deactivate" : "Reactivate"}
+                                </button>
+                              </RowMenu>
                             </>
                           ) : (
                             <span className="text-xs text-[var(--color-muted)]">View only</span>

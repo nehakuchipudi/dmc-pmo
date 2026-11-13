@@ -1,4 +1,5 @@
 import { azureApiUrl, azureDatabaseEnabled, azureRuntimeConfig } from "./azure-config";
+import { withDmcInternalExample } from "./dmc-internal-project";
 import { acquireWorkspaceToken } from "./entra";
 import { useAppStore } from "./store";
 import {
@@ -72,12 +73,27 @@ export async function pushAzureWorkspace(snapshot: WorkspaceSnapshot) {
 
 let applyingRemote = false;
 
+export function ensureDmcInternalExample() {
+  const state = useAppStore.getState();
+  const next = withDmcInternalExample({
+    companies: state.companies,
+    contacts: state.contacts,
+    projects: state.projects,
+    milestones: state.milestones,
+    tasks: state.tasks,
+    team: state.team,
+  });
+  if (!next) return;
+  useAppStore.setState(next);
+}
+
 export function applyWorkspaceSnapshot(snapshot: WorkspaceSnapshot) {
   const patch = workspacePatch(snapshot);
   if (!Object.keys(patch).length) return;
   applyingRemote = true;
   useAppStore.setState(patch);
   applyingRemote = false;
+  ensureDmcInternalExample();
   if (patch.focusCompanyId === null && typeof window !== "undefined") {
     window.localStorage.removeItem("dmc-pmo-focus-company");
   }
@@ -109,7 +125,7 @@ export function refreshWorkspaceFromAzure(onStatus?: (message: string) => void) 
       if (result.status !== "loaded" || !result.snapshot) return;
       const merged = mergeWorkspace(currentSnapshot(), result.snapshot);
       applyWorkspaceSnapshot(merged);
-      writeLocalWorkspace(merged);
+      writeLocalWorkspace(currentSnapshot());
     } catch (error) {
       console.warn("Azure workspace load failed", error);
       onStatus?.("Could not reach Azure Database. Working from this browser until it reconnects.");
@@ -151,11 +167,13 @@ export function startWorkspaceSync(onStatus?: (message: string) => void) {
       if (result.status === "loaded" && result.snapshot) {
         const merged = mergeWorkspace(currentSnapshot(), result.snapshot);
         applyWorkspaceSnapshot(merged);
-        writeLocalWorkspace(merged);
+        writeLocalWorkspace(currentSnapshot());
         onStatus?.("Workspace loaded from Azure Database.");
       } else if (result.status === "empty") {
+        ensureDmcInternalExample();
         writeLocalWorkspace(currentSnapshot());
       } else {
+        ensureDmcInternalExample();
         writeLocalWorkspace(currentSnapshot());
       }
     } catch (error) {

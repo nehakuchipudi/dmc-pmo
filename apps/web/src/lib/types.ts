@@ -230,6 +230,7 @@ export interface Project {
   customFields?: CompanyCustomField[];
   actualStart?: string;
   actualDue?: string;
+  favorite?: boolean;
 }
 
 /** L1 phase or L2 workstream/group in the project WBS */
