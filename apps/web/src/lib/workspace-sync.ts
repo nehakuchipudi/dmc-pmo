@@ -1,5 +1,5 @@
 import { azureApiUrl, azureDatabaseEnabled, azureRuntimeConfig } from "./azure-config";
-import { withDmcInternalExample } from "./dmc-internal-project";
+import { withDemoWorkspace } from "./demo-workspace";
 import { acquireWorkspaceToken } from "./entra";
 import { useAppStore } from "./store";
 import {
@@ -73,18 +73,53 @@ export async function pushAzureWorkspace(snapshot: WorkspaceSnapshot) {
 
 let applyingRemote = false;
 
-export function ensureDmcInternalExample() {
+export function ensureDemoWorkspace() {
   const state = useAppStore.getState();
-  const next = withDmcInternalExample({
+  const next = withDemoWorkspace({
+    demoWorkspaceGeneration: state.demoWorkspaceGeneration,
     companies: state.companies,
+    companyAssets: state.companyAssets,
     contacts: state.contacts,
     projects: state.projects,
     milestones: state.milestones,
+    tickets: state.tickets,
+    ticketMessages: state.ticketMessages,
     tasks: state.tasks,
     team: state.team,
+    invoices: state.invoices,
+    timeEntries: state.timeEntries,
+    notifications: state.notifications,
+    activities: state.activities,
+    retainers: state.retainers,
+    retainerPeriods: state.retainerPeriods,
+    automations: state.automations,
+    emailOutbox: state.emailOutbox,
+    expenses: state.expenses,
+    purchases: state.purchases,
+    billMaterials: state.billMaterials,
+    opportunities: state.opportunities,
+    objectives: state.objectives,
+    ideas: state.ideas,
+    portfolios: state.portfolios,
+    risks: state.risks,
+    issues: state.issues,
+    dependencies: state.dependencies,
+    benefits: state.benefits,
+    gates: state.gates,
+    allocations: state.allocations,
+    workOrders: state.workOrders,
+    recurringServices: state.recurringServices,
+    serviceDocuments: state.serviceDocuments,
+    fieldClocks: state.fieldClocks,
+    workspaceInstances: state.workspaceInstances,
+    promotionalTrial: state.promotionalTrial,
   });
   if (!next) return;
   useAppStore.setState(next);
+}
+
+export function ensureDmcInternalExample() {
+  ensureDemoWorkspace();
 }
 
 export function applyWorkspaceSnapshot(snapshot: WorkspaceSnapshot) {
