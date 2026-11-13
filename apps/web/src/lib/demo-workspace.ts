@@ -83,7 +83,7 @@ import type {
   TimeEntry,
 } from "./types";
 
-export const DEMO_WORKSPACE_GENERATION = "play-v1";
+export const DEMO_WORKSPACE_GENERATION = "play-v2";
 
 export type DemoWorkspaceState = {
   demoWorkspaceGeneration?: string;

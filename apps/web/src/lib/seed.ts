@@ -196,6 +196,21 @@ export function money(n: number) {
   }).format(n);
 }
 
+export function moneyExact(n: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+export function formatLongMonthDay(iso: string) {
+  if (!iso.includes("-")) return iso;
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
+}
+
 export function formatDisplayDate(iso: string) {
   if (!iso.includes("-")) return iso;
   const d = new Date(`${iso}T12:00:00`);

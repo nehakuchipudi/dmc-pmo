@@ -720,7 +720,7 @@ export function InvoiceCreateForm({
               pushToast("Add a company and at least one line item", "danger");
               return;
             }
-            exportInvoicePdf(draft);
+            exportInvoicePdf(draft, company?.address);
           }}
         >
           <FileText size={16} /> Preview PDF

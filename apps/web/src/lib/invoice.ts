@@ -1,6 +1,40 @@
 import { uid } from "./seed";
 import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "./types";
 
+export const FIRM_LETTERHEAD = {
+  name: "Dillon Morgan Consulting",
+  lines: [
+    "5 Cowboys Way Suite 300",
+    "Frisco, Texas 75034, United States",
+    "Tel: 945-900-1797",
+    "mzee.dillon@dillonmorgan.com",
+    "www.dillonmorgan.com",
+  ],
+  mark: "DMC",
+} as const;
+
+export function invoiceBillToLines(invoice: Invoice, companyAddress?: string) {
+  if (invoice.billToLines?.length) return invoice.billToLines;
+  const lines = [invoice.billToName || invoice.companyName];
+  if (invoice.billToName && invoice.billToName !== invoice.companyName) lines.push(invoice.companyName);
+  if (companyAddress) {
+    for (const part of companyAddress.split("\n").map((row) => row.trim()).filter(Boolean)) {
+      lines.push(part);
+    }
+  }
+  return lines;
+}
+
+export function invoicePdfName(invoice: Invoice) {
+  return `invoice_${invoice.number}.pdf`;
+}
+
+export function invoiceHeading(invoice: Invoice) {
+  if (invoice.title) return invoice.title;
+  const po = invoice.poNumber ? ` - PO # ${invoice.poNumber}` : "";
+  return `${invoice.companyName}${po}`;
+}
+
 export function roundMoney(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
