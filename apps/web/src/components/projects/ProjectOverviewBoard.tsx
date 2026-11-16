@@ -2,19 +2,14 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { TonePill } from "@/components/records/RecordChrome";
-import { formatShortDate, money } from "@/lib/seed";
+import { formatShortDate } from "@/lib/seed";
 import { tasksForMilestone } from "@/lib/project-plan";
 import type { Milestone, Task } from "@/lib/types";
-
-function taskBudget(task: Task) {
-  return task.budgetAmount ?? (task.estimateHours || 0) * 180;
-}
 
 export function ProjectOverviewBoard({
   phases,
   milestones,
   tasks,
-  hoursByTaskId,
   team,
   statusFilter,
   assigneeFilter,
@@ -28,7 +23,6 @@ export function ProjectOverviewBoard({
   phases: Milestone[];
   milestones: Milestone[];
   tasks: Task[];
-  hoursByTaskId: Record<string, number>;
   team: string[];
   statusFilter: string;
   assigneeFilter: string;
@@ -50,23 +44,9 @@ export function ProjectOverviewBoard({
         if (q && !task.name.toLowerCase().includes(q) && !phase.name.toLowerCase().includes(q)) return false;
         return true;
       });
-      const used = phaseTasks.reduce((sum, task) => sum + (hoursByTaskId[task.id] ?? 0), 0);
-      const budgetHours = phaseTasks.reduce((sum, task) => sum + (task.estimateHours || 0), 0);
-      const progress = phaseTasks.length
-        ? Math.round(phaseTasks.reduce((sum, task) => sum + task.progress, 0) / phaseTasks.length)
-        : 0;
-      const budget = phaseTasks.reduce((sum, task) => sum + taskBudget(task), 0);
-      return {
-        phase,
-        phaseTasks,
-        used,
-        budgetHours,
-        progress,
-        earned: Math.round((progress / 100) * budget),
-        budget,
-      };
+      return { phase, phaseTasks };
     });
-  }, [assigneeFilter, hoursByTaskId, milestones, phases, q, statusFilter, tasks]);
+  }, [assigneeFilter, milestones, phases, q, statusFilter, tasks]);
 
   return (
     <div className="overview-plan">
@@ -104,15 +84,13 @@ export function ProjectOverviewBoard({
             <tr>
               <th>Milestones and tasks</th>
               <th>Status</th>
-              <th>Earned value</th>
-              <th>Usage / budget</th>
               <th>Start</th>
               <th>Due</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ phase, phaseTasks, used, budgetHours, progress, earned, budget }) => {
+            {rows.map(({ phase, phaseTasks }) => {
               const open = !collapsed[phase.id];
               return (
                 <Fragment key={phase.id}>
@@ -133,13 +111,6 @@ export function ProjectOverviewBoard({
                     <td>
                       <TonePill value={phase.status} />
                     </td>
-                    <td className="tabular-nums">
-                      {money(earned)} / {money(budget)}
-                      <div className="text-xs text-[var(--color-muted)]">{progress}%</div>
-                    </td>
-                    <td className="tabular-nums">
-                      {used}h / {budgetHours}h
-                    </td>
                     <td>{formatShortDate(phase.start)}</td>
                     <td>{formatShortDate(phase.due)}</td>
                     <td className="text-[var(--color-muted)]">{phase.contractorName || "Unassigned"}</td>
@@ -150,12 +121,6 @@ export function ProjectOverviewBoard({
                           <td className="overview-plan-task">{task.name}</td>
                           <td>
                             <TonePill value={task.status} />
-                          </td>
-                          <td className="tabular-nums">
-                            {money(Math.round((task.progress / 100) * taskBudget(task)))} / {money(taskBudget(task))}
-                          </td>
-                          <td className="tabular-nums">
-                            {hoursByTaskId[task.id] ?? 0}h / {task.estimateHours || 0}h
                           </td>
                           <td>{formatShortDate(task.start)}</td>
                           <td>{formatShortDate(task.due)}</td>
@@ -168,7 +133,7 @@ export function ProjectOverviewBoard({
             })}
             {!rows.length ? (
               <tr>
-                <td colSpan={7} className="text-[var(--color-muted)]">
+                <td colSpan={5} className="text-[var(--color-muted)]">
                   No milestones yet. Open Edit plan to add one.
                 </td>
               </tr>
