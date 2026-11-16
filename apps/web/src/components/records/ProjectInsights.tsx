@@ -2,19 +2,12 @@
 
 import { useState } from "react";
 import { Clock3, Wallet } from "lucide-react";
-import { TonePill } from "@/components/records/RecordChrome";
 import { formatHours } from "@/lib/plan-allocation";
-import { computeProjectInsights, type InsightHealth } from "@/lib/project-insights";
+import { computeProjectInsights, type InsightTrendPoint } from "@/lib/project-insights";
 import { formatDisplayDate, money } from "@/lib/seed";
 import type { Expense, Milestone, Project, ResourceAllocation, RiskItem, Task, TeamMember, TimeEntry } from "@/lib/types";
 
 type ChartView = "bars" | "rings";
-
-function healthClass(health: InsightHealth) {
-  if (health === "Healthy") return "is-healthy";
-  if (health === "Watch") return "is-watch";
-  return "is-critical";
-}
 
 function meterPct(used: number, approved: number) {
   if (approved <= 0) return used > 0 ? 100 : 0;
@@ -61,6 +54,88 @@ function Ring({
   );
 }
 
+function polyline(points: { x: number; y: number }[]) {
+  if (!points.length) return "";
+  return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+}
+
+function BudgetTimeLine({
+  points,
+  approvedBudget,
+  approvedHours,
+}: {
+  points: InsightTrendPoint[];
+  approvedBudget: number;
+  approvedHours: number;
+}) {
+  const width = 640;
+  const height = 220;
+  const pad = { l: 36, r: 16, t: 16, b: 28 };
+  const innerW = width - pad.l - pad.r;
+  const innerH = height - pad.t - pad.b;
+  const maxPct = Math.max(100, ...points.map((point) => Math.max(point.hoursPct, point.spendPct)), 1);
+  const gap = points.length ? innerW / Math.max(points.length - 1, 1) : innerW;
+  const coords = (pct: number, index: number) => ({
+    x: pad.l + (points.length === 1 ? innerW / 2 : gap * index),
+    y: pad.t + innerH - (pct / maxPct) * innerH,
+  });
+  const spend = points.map((point, index) => coords(point.spendPct, index));
+  const hours = points.map((point, index) => coords(point.hoursPct, index));
+  const capY = coords(100, 0).y;
+  const ticks = [0, 50, 100].filter((tick) => tick <= maxPct);
+  if (maxPct > 100) ticks.push(Math.round(maxPct));
+
+  return (
+    <svg className="insight-line" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Budget and time over months">
+      {ticks.map((tick) => {
+        const y = coords(tick, 0).y;
+        return (
+          <g key={tick}>
+            <line className="insight-line-grid" x1={pad.l} y1={y} x2={width - pad.r} y2={y} />
+            <text className="spark-label" x={pad.l - 8} y={y + 3} textAnchor="end">
+              {tick}%
+            </text>
+          </g>
+        );
+      })}
+      <line className="insight-line-cap" x1={pad.l} y1={capY} x2={width - pad.r} y2={capY} />
+      <path d={polyline(spend)} className="insight-line-spend" />
+      <path d={polyline(hours)} className="insight-line-hours" />
+      {spend.map((point, index) => (
+        <circle
+          key={`s-${points[index].key}`}
+          className="insight-line-spend-dot"
+          cx={point.x}
+          cy={point.y}
+          r="3.5"
+        >
+          <title>
+            {points[index].label}: spent {money(points[index].spend)} of {money(approvedBudget)}
+          </title>
+        </circle>
+      ))}
+      {hours.map((point, index) => (
+        <circle
+          key={`h-${points[index].key}`}
+          className="insight-line-hours-dot"
+          cx={point.x}
+          cy={point.y}
+          r="3.5"
+        >
+          <title>
+            {points[index].label}: logged {formatHours(points[index].hours)} of {formatHours(approvedHours)}
+          </title>
+        </circle>
+      ))}
+      {points.map((point, index) => (
+        <text key={point.key} className="spark-label" x={coords(0, index).x} y={height - 6} textAnchor="middle">
+          {point.label}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 export function ProjectInsights({
   project,
   tasks,
@@ -71,7 +146,6 @@ export function ProjectInsights({
   team,
   risks,
   memberNames,
-  onOpenTasks,
   onOpenSchedule,
 }: {
   project: Project;
@@ -83,7 +157,6 @@ export function ProjectInsights({
   team: TeamMember[];
   risks: RiskItem[];
   memberNames: string[];
-  onOpenTasks: () => void;
   onOpenSchedule: () => void;
 }) {
   const [chartView, setChartView] = useState<ChartView>("bars");
@@ -98,30 +171,14 @@ export function ProjectInsights({
     risks,
     memberNames,
   });
-  const approvedPhases = insights.milestoneRows.filter((row) => row.status === "Approved").length;
-  const doneTasks = tasks.filter((task) => task.status === "Done").length;
-  const statusItems: { label: string; value: InsightHealth }[] = [
-    { label: "Overall", value: insights.overall },
-    { label: "Schedule", value: insights.schedule },
-    { label: "Budget", value: insights.budget },
-    { label: "Resources", value: insights.resource },
-    { label: "Risk", value: insights.risk },
-  ];
   const budgetOver = insights.remainingBudget < 0;
   const timeOver = insights.remainingHours < 0;
+  const span = insights.daysElapsed + insights.daysRemaining;
+  const elapsedPct = insights.daysOver ? 100 : span ? Math.min(100, Math.round((insights.daysElapsed / span) * 100)) : 0;
+  const nextDeadline = insights.upcoming[0];
 
   return (
     <div className="insights-dashboard">
-      <div className="insights-status" aria-label="Project health">
-        {statusItems.map((item) => (
-          <div key={item.label} className={`insights-status-chip ${healthClass(item.value)}`}>
-            <span className="insights-status-dot" />
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </div>
-
       <section className="insight-budget-card">
         <div className="insight-budget-head">
           <h2 className="section-title">Project Budget & Time Summary</h2>
@@ -212,150 +269,78 @@ export function ProjectInsights({
         </div>
       </section>
 
-      <div className="insights-facts">
-        <div>
-          <span>Progress</span>
-          <strong>{insights.progress}%</strong>
-          <em>
-            {doneTasks} of {tasks.length} {tasks.length === 1 ? "task" : "tasks"} done
-          </em>
+      <section className="insight-budget-card">
+        <div className="insight-budget-head">
+          <h2 className="section-title">Budget and time over time</h2>
+          <div className="insight-line-legend">
+            <span className="is-spend">Spend</span>
+            <span className="is-hours">Hours</span>
+            <span className="is-cap">Approved cap</span>
+          </div>
         </div>
-        <div>
-          <span>Milestones</span>
-          <strong>{insights.milestonePct}%</strong>
-          <em>
-            {approvedPhases} of {insights.milestoneRows.length} phases approved
-          </em>
-        </div>
-      </div>
+        <BudgetTimeLine points={insights.trend} approvedBudget={insights.plannedCost} approvedHours={insights.plannedHours} />
+        <p className="insight-budget-note">
+          Cumulative spend and logged hours as a percent of the approved project budget and hours.
+        </p>
+      </section>
 
-      <div className="insights-split">
-        <div className="panel p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="section-title">Milestone progress</h2>
+      <div className="insights-widgets">
+        <section className="insight-budget-card">
+          <div className="insight-budget-head">
+            <h2 className="section-title">Schedule runway</h2>
             <button type="button" className="text-sm font-semibold text-[var(--color-navy)]" onClick={onOpenSchedule}>
               Open schedule
             </button>
           </div>
-          <div className="insight-milestones">
-            {insights.milestoneRows.map((row) => (
-              <div key={row.id} className="insight-milestone">
-                <div className="insight-milestone-head">
-                  <div>
-                    <div className="font-medium">{row.name}</div>
-                    <div className="text-xs text-[var(--color-muted)]">
-                      Due {formatDisplayDate(row.due)} · {row.taskCount} {row.taskCount === 1 ? "task" : "tasks"}
-                    </div>
+          <div className="insight-budget-value">
+            {insights.daysOver
+              ? `${insights.daysOver}d late`
+              : `${insights.daysRemaining}d remaining`}
+          </div>
+          <div className="insight-budget-used">
+            {insights.overdueTasks.length
+              ? `${insights.overdueTasks.length} overdue ${insights.overdueTasks.length === 1 ? "task" : "tasks"}`
+              : "No overdue tasks"}
+          </div>
+          <div className="insight-budget-bar" aria-label="Timeline elapsed">
+            <span className={insights.daysOver ? "is-over" : "is-budget"} style={{ width: `${elapsedPct}%` }} />
+          </div>
+          <div className="insight-budget-note">
+            {nextDeadline
+              ? `Next: ${nextDeadline.name} · ${formatDisplayDate(nextDeadline.due)}`
+              : `Deadline ${formatDisplayDate(project.due)}`}
+          </div>
+        </section>
+
+        <section className="insight-budget-card">
+          <div className="insight-budget-head">
+            <h2 className="section-title">Team load</h2>
+          </div>
+          <div className="insight-budget-value">{insights.avgUtilization}%</div>
+          <div className="insight-budget-used">
+            {insights.rosterCount
+              ? `Avg utilization across ${insights.rosterCount} ${insights.rosterCount === 1 ? "person" : "people"}`
+              : "No allocations yet"}
+          </div>
+          {insights.teamLoad.length ? (
+            <div className="insight-load-list">
+              {insights.teamLoad.map((row) => (
+                <div key={row.name} className="insight-load-row">
+                  <span>{row.name}</span>
+                  <div className="insight-budget-bar">
+                    <span className={row.pct > 100 ? "is-over" : "is-time"} style={{ width: `${Math.min(100, row.pct)}%` }} />
                   </div>
-                  <TonePill value={row.status} />
+                  <strong className={row.pct > 100 ? "is-over" : undefined}>{row.pct}%</strong>
                 </div>
-                <div className="insight-meter">
-                  <span style={{ width: `${Math.min(100, row.progress)}%` }} />
-                </div>
-                <div className="insight-milestone-meta">
-                  {row.progress}% complete{row.overdue ? " · overdue" : ""}
-                </div>
-              </div>
-            ))}
-            {!insights.milestoneRows.length ? (
-              <p className="text-sm text-[var(--color-muted)]">No milestones on this project.</p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="panel p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="section-title">Overdue tasks</h2>
-            <button type="button" className="text-sm font-semibold text-[var(--color-navy)]" onClick={onOpenTasks}>
-              Open tasks
-            </button>
-          </div>
-          {insights.overdueTasks.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Task</th>
-                  <th>Owner</th>
-                  <th>Due</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {insights.overdueTasks.map((task) => (
-                  <tr key={task.id}>
-                    <td className="font-medium">{task.name}</td>
-                    <td>{task.assignee}</td>
-                    <td>{formatDisplayDate(task.due)}</td>
-                    <td>
-                      <TonePill value={task.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </div>
           ) : (
-            <p className="text-sm text-[var(--color-muted)]">No overdue tasks as of {formatDisplayDate(insights.asOf)}.</p>
+            <p className="insight-budget-note">Assign people on Team to see load.</p>
           )}
-        </div>
-      </div>
-
-      <div className="insights-split">
-        <div className="panel p-4">
-          <h2 className="section-title">Upcoming deadlines</h2>
-          {insights.upcoming.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Type</th>
-                  <th>Due</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {insights.upcoming.map((row) => (
-                  <tr key={`${row.kind}-${row.id}`}>
-                    <td className="font-medium">{row.name}</td>
-                    <td className="capitalize">{row.kind}</td>
-                    <td>{formatDisplayDate(row.due)}</td>
-                    <td>
-                      <TonePill value={row.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-sm text-[var(--color-muted)]">No upcoming deadlines after {formatDisplayDate(insights.asOf)}.</p>
-          )}
-        </div>
-        <div className="panel p-4">
-          <h2 className="section-title">Open risks</h2>
-          {insights.openRisks.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Risk</th>
-                  <th>Impact</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {insights.openRisks.map((risk) => (
-                  <tr key={risk.id}>
-                    <td className="font-medium">{risk.title}</td>
-                    <td>{risk.impact}</td>
-                    <td>
-                      <TonePill value={risk.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-sm text-[var(--color-muted)]">No open risks on this project.</p>
-          )}
-        </div>
+          {insights.overloaded ? (
+            <div className="insight-budget-remain is-over">{insights.overloaded} over capacity</div>
+          ) : null}
+        </section>
       </div>
     </div>
   );
