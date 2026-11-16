@@ -488,9 +488,9 @@ export function HelpSupport({
 
 export function HelpTrigger({ onClick, collapsed }: { onClick: () => void; collapsed?: boolean }) {
   return (
-    <button type="button" className="nav-link w-full" onClick={onClick} aria-label="Help and Support">
+    <button type="button" className="nav-link w-full" onClick={onClick} aria-label="Help and Support" title="Help & Support">
       <CircleHelp size={18} />
-      {!collapsed ? <span>Help & Support</span> : null}
+      {!collapsed ? <span>Help</span> : null}
     </button>
   );
 }

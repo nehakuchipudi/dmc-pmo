@@ -27,14 +27,14 @@ export const PACKS: { id: PackId; label: string; summary: string }[] = [
   },
 ];
 
-export const NAV_GROUPS: { id: NavGroupId; label: string; summary: string }[] = [
-  { id: "project_management", label: "Project Management", summary: "Plan, execute, and track projects." },
-  { id: "resource_management", label: "Resource Management", summary: "Manage people, capacity, and teams." },
-  { id: "service_operations", label: "Service Operations", summary: "End-to-end service and field operations." },
-  { id: "business_management", label: "Business Management", summary: "Contracts, billing, and client relationships." },
-  { id: "intelligence", label: "Intelligence & Analytics", summary: "Track performance and drive insights." },
-  { id: "administration", label: "Administration", summary: "Configure, control, and manage your organization." },
-  { id: "settings", label: "Settings", summary: "Workspace setup and automations." },
+export const NAV_GROUPS: { id: NavGroupId; label: string; shortLabel: string; summary: string }[] = [
+  { id: "project_management", label: "Project Management", shortLabel: "Projects", summary: "Plan, execute, and track projects." },
+  { id: "resource_management", label: "Resource Management", shortLabel: "Resources", summary: "Manage people, capacity, and teams." },
+  { id: "service_operations", label: "Service Operations", shortLabel: "Services", summary: "End-to-end service and field operations." },
+  { id: "business_management", label: "Business Management", shortLabel: "Business", summary: "Contracts, billing, and client relationships." },
+  { id: "intelligence", label: "Intelligence & Analytics", shortLabel: "Analytics", summary: "Track performance and drive insights." },
+  { id: "administration", label: "Administration", shortLabel: "Admin", summary: "Configure, control, and manage your organization." },
+  { id: "settings", label: "Settings", shortLabel: "Settings", summary: "Workspace setup and automations." },
 ];
 
 export const DEFAULT_PACKS: PackId[] = ["project_management", "project_delivery", "service_operations"];

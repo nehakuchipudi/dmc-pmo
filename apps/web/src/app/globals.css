@@ -31,6 +31,8 @@
   --text: 0.88rem;
   --text-title: 1.12rem;
   --text-display: 1.12rem;
+  --sidebar-width: 220px;
+  --sidebar-collapsed: 64px;
 }
 
 @theme inline {
@@ -84,22 +86,23 @@ button, input, select, textarea { font: inherit; }
 .app-shell {
   font-size: var(--text);
   display: grid;
-  grid-template-columns: 256px 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
   height: 100vh;
   min-height: 100vh;
   min-width: 0;
   overflow: hidden;
   background: var(--color-fog);
 }
-.app-shell.collapsed { grid-template-columns: 76px 1fr; }
+.app-shell.collapsed { grid-template-columns: var(--sidebar-collapsed) 1fr; }
 
 .sidebar {
   position: sticky;
   top: 0;
   align-self: start;
+  width: var(--sidebar-width);
   height: 100vh;
   min-height: 0;
-  padding: 14px 10px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -108,6 +111,7 @@ button, input, select, textarea { font: inherit; }
   transition: width 220ms ease, transform 220ms ease;
   z-index: 40;
 }
+.app-shell.collapsed .sidebar { width: var(--sidebar-collapsed); }
 .sidebar nav {
   flex: 1;
   overflow-y: auto;
@@ -117,8 +121,19 @@ button, input, select, textarea { font: inherit; }
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px 18px;
+  gap: 4px;
+  margin: -12px -8px 12px;
+  padding: 10px 6px 10px 10px;
+  background: #fff;
+  border-bottom: 1px solid rgba(36, 52, 71, 0.08);
+}
+.brand-logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: calc(100% - 32px);
+  object-fit: contain;
+  object-position: left center;
 }
 .brand-collapse {
   display: inline-grid;
@@ -130,16 +145,16 @@ button, input, select, textarea { font: inherit; }
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--color-navy);
   cursor: pointer;
 }
 .brand-collapse:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(47, 69, 88, 0.08);
+  color: var(--color-ink);
 }
 .app-shell.collapsed .brand-collapse {
   margin-left: 0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .brand-mark {
   display: inline-flex;
@@ -175,15 +190,30 @@ button, input, select, textarea { font: inherit; }
 .app-shell.collapsed .brand {
   flex-direction: column;
   justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
+  margin: 0 0 8px;
+  padding: 4px 0 8px;
+  background: transparent;
+  border-bottom: 0;
+}
+.app-shell.collapsed .brand-logo {
+  height: auto;
+  width: 48px;
+  max-width: 48px;
+  border-radius: 2px;
+}
+.app-shell.collapsed .brand-collapse {
+  color: rgba(255, 255, 255, 0.78);
+}
+.app-shell.collapsed .brand-collapse:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 8px 12px;
+  gap: 9px;
+  padding: 7px 10px;
   margin-bottom: 1px;
   border-radius: 10px;
   color: rgba(255, 255, 255, 0.78);
@@ -204,9 +234,9 @@ button, input, select, textarea { font: inherit; }
 .nav-category {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 9px;
   width: 100%;
-  padding: 8px 6px 8px 12px;
+  padding: 7px 4px 7px 10px;
   margin-bottom: 2px;
   border: 0;
   border-radius: 10px;
@@ -234,6 +264,9 @@ button, input, select, textarea { font: inherit; }
 .nav-category-copy {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nav-category-arrow {
   display: inline-grid;
@@ -3961,11 +3994,12 @@ button, input, select, textarea { font: inherit; }
   .plan-alloc-summary { grid-template-columns: 1fr 1fr; }
   .plan-alloc-grid, .plan-alloc-material { grid-template-columns: 1fr; }
   .app-shell, .app-shell.collapsed { grid-template-columns: 1fr; }
-  .sidebar {
+  .sidebar,
+  .app-shell.collapsed .sidebar {
     position: fixed;
     left: 0;
     top: 0;
-    width: min(272px, 86vw);
+    width: min(var(--sidebar-width), 86vw);
     height: 100vh;
     transform: translateX(-110%);
     z-index: 40;
