@@ -291,7 +291,14 @@ export interface Task {
   dueLabel?: string;
   clientEditable: boolean;
   estimateHours: number;
+  estimateMinutes?: number;
   budgetAmount?: number;
+  budgetMode?: "calculated" | "fixed";
+  timeMode?: "calculated" | "fixed";
+  serviceItem?: string;
+  rateName?: string;
+  hourlyRate?: number;
+  materials?: MaterialLine[];
   dependsOn?: string;
   parentTaskId?: string;
   sortOrder?: number;

@@ -1820,11 +1820,13 @@ button, input, select, textarea { font: inherit; }
 }
 .modal-panel {
   width: min(520px, 100%);
-  background: var(--color-surface);
+  background: #fff;
   border-radius: 18px;
   padding: 20px;
   box-shadow: var(--shadow-lift);
   border: 1px solid var(--color-border);
+  position: relative;
+  z-index: 1;
 }
 .modal-wide { width: min(720px, 100%); }
 .modal-xl {
@@ -3628,7 +3630,7 @@ button, input, select, textarea { font: inherit; }
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
 }
 .plan-head-line { gap: 12px; }
 .plan-toolbar-search,
@@ -3636,6 +3638,88 @@ button, input, select, textarea { font: inherit; }
   min-width: 160px;
   max-width: 220px;
   margin-left: auto;
+}
+.plan-pdf-wrap { position: relative; flex-shrink: 0; z-index: 6; }
+.plan-pdf-menu { left: 0; right: auto; min-width: 180px; z-index: 30; }
+.plan-alloc-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+}
+.plan-alloc-summary div { min-width: 0; }
+.plan-alloc-summary span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.plan-alloc-summary strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-navy);
+  font-variant-numeric: tabular-nums;
+}
+.plan-alloc-summary .is-over strong { color: var(--color-danger); }
+.plan-alloc-meter {
+  grid-column: span 1;
+  align-self: center;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--color-fog);
+  overflow: hidden;
+}
+.plan-alloc-meter span {
+  display: block;
+  height: 100%;
+  background: var(--color-navy);
+  text-transform: none;
+}
+.plan-alloc-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.plan-alloc-edit .wbs-pct-input { width: 88px; }
+.plan-alloc-open {
+  border: 0;
+  background: transparent;
+  color: var(--color-navy);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.plan-alloc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.plan-alloc-calc {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: var(--text);
+}
+.plan-alloc-material {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 72px 96px auto;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.plan-alloc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 .overview-plan-toolbar .field-input { min-width: 140px; width: auto; }
 .overview-plan-toggle {
@@ -3708,7 +3792,11 @@ button, input, select, textarea { font: inherit; }
 }
 .plan-board.is-split .plan-gantt { border-left: 1px solid var(--color-border); background: #fbfcfe; }
 .plan-table { min-width: 980px; }
-.plan-table.is-compact { min-width: 420px; }
+.plan-table.is-compact { min-width: 640px; }
+.plan-table.is-compact .wbs-date { width: 1%; white-space: nowrap; }
+.plan-table.is-compact .wbs-num { width: 1%; white-space: nowrap; }
+.plan-table.is-compact .plan-alloc-edit .wbs-pct-input { width: 76px; }
+.plan-table .plan-cap-input { width: 92px; }
 .plan-table.is-compact .wbs-date-input,
 .plan-table.is-compact .wbs-name-input {
   height: 28px;
@@ -3805,9 +3893,10 @@ button, input, select, textarea { font: inherit; }
   border-radius: 999px;
   color: #fff;
   cursor: grab;
-  overflow: hidden;
+  overflow: visible;
   min-width: 12px;
   z-index: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 .plan-gantt-bar.is-selected { outline: 2px solid var(--color-navy); outline-offset: 1px; }
 .plan-gantt-caption {
@@ -3836,17 +3925,41 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0 auto 0 0;
   background: rgba(255,255,255,0.22);
+  border-radius: inherit;
+  overflow: hidden;
 }
 .plan-gantt-handle {
   position: absolute;
-  top: 0;
-  width: 8px;
-  height: 100%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 99px;
+  background: #fff;
+  border: 2px solid #4aa3d0;
+  box-sizing: border-box;
+  transform: translateY(-50%);
   cursor: ew-resize;
+  z-index: 4;
 }
-.plan-gantt-handle.is-start { left: 0; }
-.plan-gantt-handle.is-end { right: 0; }
+.plan-gantt-handle.is-start { left: -6px; }
+.plan-gantt-handle.is-end { right: -6px; }
+.plan-gantt-bar.is-project .plan-gantt-handle,
+.plan-gantt-bar.is-milestone .plan-gantt-handle {
+  width: 8px;
+  height: 8px;
+  border-color: #243447;
+}
+.plan-gantt-deps {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: visible;
+}
 @media (max-width: 1100px) {
+  .plan-alloc-summary { grid-template-columns: 1fr 1fr; }
+  .plan-alloc-grid, .plan-alloc-material { grid-template-columns: 1fr; }
   .app-shell, .app-shell.collapsed { grid-template-columns: 1fr; }
   .sidebar {
     position: fixed;

@@ -44,6 +44,7 @@ function task(
   start: string,
   due: string,
   sortOrder: number,
+  dependsOn?: string,
 ): Task {
   return {
     id,
@@ -60,6 +61,7 @@ function task(
     due,
     clientEditable: false,
     estimateHours: durationHours(start, due),
+    dependsOn,
     sortOrder,
     links: [],
   };
@@ -216,7 +218,7 @@ export function withDmcInternalExample(input: Collections): Collections | null {
       milestone: phase("ms-dmc-hire", project.id, "Hire Full Stack Developer", "2025-06-03", "2025-06-04", 0),
       tasks: [
         task("tk-dmc-int1", project, "ms-dmc-hire", "Interview - 1", "2025-06-03", "2025-06-03", 0),
-        task("tk-dmc-int2", project, "ms-dmc-hire", "Interview - 2", "2025-06-04", "2025-06-04", 1),
+        task("tk-dmc-int2", project, "ms-dmc-hire", "Interview - 2", "2025-06-04", "2025-06-04", 1, "tk-dmc-int1"),
       ],
     },
     {

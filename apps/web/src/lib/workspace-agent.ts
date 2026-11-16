@@ -182,7 +182,7 @@ export interface WorkspaceRunner {
   createMilestone: (projectId: string, name: string, due: string) => string;
   updateMilestone: (id: string, patch: { name?: string; due?: string }) => void;
   deleteMilestone: (id: string) => void;
-  createTask: (input: { name: string; projectId: string; assignee: string; due: string; milestoneId?: string }) => string;
+  createTask: (input: { name: string; projectId: string; assignee: string; due: string; start?: string; milestoneId?: string }) => string;
   updateTask: (id: string, patch: { status?: TaskStatus; assignee?: string; name?: string }) => void;
   deleteTask: (id: string) => void;
   addProjectNote: (projectId: string, note: { author: string; body: string; visibility: "internal" | "client" }) => void;
@@ -1512,7 +1512,7 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
 
     if (intent.type === "add_milestone" && project) {
       const name = intent.name?.trim() || "New milestone";
-      const due = intent.due ?? addDays(todayIso(), 14);
+      const due = intent.due ?? "";
       const id = runner.createMilestone(project.id, name, due);
       if (id) {
         createdMilestones.push({ id, name, projectId: project.id });
@@ -1555,7 +1555,7 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
 
     if (intent.type === "add_task" && project) {
       const name = intent.name?.trim() || "New task";
-      const due = intent.due ?? addDays(todayIso(), 7);
+      const due = intent.due ?? "";
       const parent =
         intent.milestoneId
           ? createdMilestones.find((row) => row.id === intent.milestoneId)

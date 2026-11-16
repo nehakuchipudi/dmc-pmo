@@ -31,6 +31,7 @@ assert.ok(empty.milestones.some((row) => row.name === "AWS Environment Setup"));
 assert.ok(empty.milestones.some((row) => row.name === "Design UI/UX + Wireframes"));
 assert.ok(empty.milestones.some((row) => row.name === "Implement Authentication & Login"));
 assert.ok(empty.tasks.some((row) => row.name === "Interview - 1"));
+assert.equal(empty.tasks.find((row) => row.name === "Interview - 2")?.dependsOn, "tk-dmc-int1");
 assert.ok(empty.tasks.some((row) => row.name === "Provision S3, Lambda, DynamoDB, API Gateway"));
 assert.ok(empty.tasks.some((row) => row.name === "Set up Cognito user pool"));
 assert.equal(empty.tasks.length, 11);

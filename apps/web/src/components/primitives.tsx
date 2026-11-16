@@ -224,6 +224,29 @@ export function ConfirmModal({
   );
 }
 
+export function AlertModal({
+  open,
+  title,
+  body,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open={open} title={title} onClose={onClose}>
+      <p className="modal-copy">{body}</p>
+      <div className="confirm-actions">
+        <button type="button" className="btn btn-primary" onClick={onClose}>
+          OK
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function Drawer({
   open,
   title,
@@ -269,19 +292,29 @@ export function Drawer({
 export function ToastHost() {
   const toasts = useAppStore((s) => s.toasts);
   const dismiss = useAppStore((s) => s.dismissToast);
+  const planError = useAppStore((s) => s.planError);
+  const clearPlanError = useAppStore((s) => s.clearPlanError);
   return (
-    <div className="toast-host">
-      {toasts.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          className={clsx("toast", t.tone === "danger" && "toast-danger", t.tone === "info" && "toast-info")}
-          onClick={() => dismiss(t.id)}
-        >
-          {t.message}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="toast-host">
+        {toasts.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={clsx("toast", t.tone === "danger" && "toast-danger", t.tone === "info" && "toast-info")}
+            onClick={() => dismiss(t.id)}
+          >
+            {t.message}
+          </button>
+        ))}
+      </div>
+      <AlertModal
+        open={Boolean(planError)}
+        title={planError?.title ?? ""}
+        body={planError?.body ?? ""}
+        onClose={clearPlanError}
+      />
+    </>
   );
 }
 

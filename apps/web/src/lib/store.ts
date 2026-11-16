@@ -69,6 +69,19 @@ import {
   seedRisks,
 } from "./ppm-seed";
 import { EMPTY_WORKSPACE_GENERATION } from "./workspace-snapshot";
+import {
+  childTasksOutsideMilestone,
+  childTasksOutsideTask,
+  defaultDatesInWindow,
+  outsideParentMessage,
+  projectDateConflict,
+  validateMilestoneDates,
+  validateTaskDates,
+  windowForTask,
+  type TimelineError,
+} from "./plan-timeline";
+import { validateProjectCaps, validateTaskAllocation } from "./plan-allocation";
+import { memberRate } from "./project-workspace";
 import { ideaCanConvert, ideaComposite, nextProjectNumber, normalizeIdeaStage, projectTemplateById } from "./ppm";
 import {
   buildDnsRecords,
@@ -299,6 +312,7 @@ type AppState = {
   gates: GovernanceGate[];
   allocations: ResourceAllocation[];
   toasts: Toast[];
+  planError: TimelineError | null;
   seedGeneration: string;
   demoWorkspaceGeneration?: string;
   recentlyViewed: { type: string; id: string; label: string }[];
@@ -314,6 +328,8 @@ type AppState = {
   promotionalTrial: PromotionalTrial;
 
   pushToast: (message: string, tone?: Toast["tone"]) => void;
+  setPlanError: (error: TimelineError | null) => void;
+  clearPlanError: () => void;
   setFocusCompanyId: (id: string | null) => void;
   dismissToast: (id: string) => void;
   markNotificationRead: (id: string) => void;
@@ -347,7 +363,7 @@ type AppState = {
   linkContactProject: (contactId: string, projectId: string) => void;
   unlinkContactProject: (contactId: string, projectId: string) => void;
   createProject: (input: CreateProjectInput) => string;
-  updateProject: (id: string, patch: Partial<Project>) => void;
+  updateProject: (id: string, patch: Partial<Project>) => boolean;
   setProjectStatus: (projectId: string, next: ProjectStatus) => boolean;
   setProjectWorkflowTransition: (from: ProjectStatus, to: ProjectStatus, allowed: boolean) => void;
   setProjectWorkflowRoles: (roles: Role[]) => void;
@@ -900,6 +916,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   gates: seedGates,
   allocations: seedAllocations,
   toasts: [],
+  planError: null,
   seedGeneration: EMPTY_WORKSPACE_GENERATION,
   demoWorkspaceGeneration: undefined,
   recentlyViewed: [],
@@ -913,6 +930,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ toasts: [...s.toasts, { id, message, tone }] }));
     window.setTimeout(() => get().dismissToast(id), 3200);
   },
+  setPlanError: (error) => set({ planError: error }),
+  clearPlanError: () => set({ planError: null }),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setFocusCompanyId: (id) => {
     if (typeof window !== "undefined") {
@@ -1502,12 +1521,43 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateProject: (id, patch) => {
-    if (!requireCap(get, "edit_project")) return;
+    if (!requireCap(get, "edit_project")) return false;
     const prev = get().projects.find((p) => p.id === id);
     const { status: nextStatus, ...rest } = patch;
     if (nextStatus && prev && normalizeProjectStatus(nextStatus) !== normalizeProjectStatus(prev.status)) {
       if (!get().setProjectStatus(id, nextStatus)) {
-        if (!Object.keys(rest).length) return;
+        if (!Object.keys(rest).length) return false;
+      }
+    }
+    if (prev && (rest.start !== undefined || rest.due !== undefined)) {
+      const nextStart = rest.start ?? prev.start;
+      const nextDue = rest.due ?? prev.due;
+      const conflict = projectDateConflict(
+        nextStart,
+        nextDue,
+        get().milestones.filter((row) => row.projectId === id),
+        get().tasks.filter((row) => row.projectId === id),
+      );
+      if (conflict) {
+        set({ planError: conflict });
+        delete rest.start;
+        delete rest.due;
+        if (!Object.keys(rest).length) return false;
+      }
+    }
+    if (prev && (rest.budgetAmount !== undefined || rest.budgetHours !== undefined)) {
+      const projectTasks = get().tasks.filter((row) => row.projectId === id);
+      const capError = validateProjectCaps(
+        rest.budgetAmount ?? prev.budgetAmount,
+        rest.budgetHours ?? prev.budgetHours,
+        projectTasks,
+        (task) => memberRate(task.assignee, { ...prev, ...rest }, get().team),
+      );
+      if (capError) {
+        set({ planError: capError });
+        delete rest.budgetAmount;
+        delete rest.budgetHours;
+        if (!Object.keys(rest).length) return false;
       }
     }
     set((s) => ({
@@ -1566,11 +1616,12 @@ export const useAppStore = create<AppState>((set, get) => ({
             href: `/app/projects/view/?id=${id}`,
           });
           get().pushToast(`Project updated. Owner notified at ${owner.email}`);
-          return;
+          return true;
         }
       }
     }
     get().pushToast("Project updated");
+    return true;
   },
 
   deleteProject: (id) => {
@@ -1701,8 +1752,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       status: input.status ?? "Not Started",
       priority: input.priority ?? "Med",
       progress: input.status === "Done" ? 100 : 0,
-      due: input.due,
-      start: input.start ?? todayIso(),
+      due: input.due || defaultDatesInWindow(
+        windowForTask(
+          { milestoneId: input.milestoneId, parentTaskId: input.parentTaskId },
+          project,
+          get().milestones,
+          get().tasks,
+        ).window,
+        { start: project.start, end: project.due },
+      ).due,
+      start: input.start ?? defaultDatesInWindow(
+        windowForTask(
+          { milestoneId: input.milestoneId, parentTaskId: input.parentTaskId },
+          project,
+          get().milestones,
+          get().tasks,
+        ).window,
+        { start: project.start, end: project.due },
+      ).start,
       clientEditable: false,
       estimateHours: input.estimateHours ?? 4,
       budgetAmount: input.budgetAmount,
@@ -1714,6 +1781,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       ).length,
       links: [],
     };
+    const timelineError = validateTaskDates(task, project, get().milestones, get().tasks);
+    if (timelineError) {
+      set({ planError: timelineError });
+      return "";
+    }
+    const allocationError = validateTaskAllocation(
+      task,
+      project,
+      get().tasks.filter((row) => row.projectId === project.id),
+      (row) => memberRate(row.assignee, project, get().team),
+    );
+    if (allocationError) {
+      set({ planError: allocationError });
+      return "";
+    }
     set((s) => ({ tasks: [task, ...s.tasks] }));
     get().logActivity({
       type: "task",
@@ -1735,6 +1817,51 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!prev || !canMutateTask(prev)) {
       get().pushToast("Your role cannot do that.", "danger");
       return;
+    }
+    const next = { ...prev, ...patch };
+    const project = get().projects.find((p) => p.id === next.projectId);
+    if (
+      project &&
+      (patch.start !== undefined ||
+        patch.due !== undefined ||
+        patch.milestoneId !== undefined ||
+        patch.parentTaskId !== undefined)
+    ) {
+      const timelineError = validateTaskDates(next, project, get().milestones, get().tasks);
+      if (timelineError) {
+        set({ planError: timelineError });
+        return;
+      }
+      const stuckChildren = childTasksOutsideTask(next, get().tasks);
+      if (stuckChildren.length) {
+        const mapped = get().tasks.map((row) => (row.id === next.id ? next : row));
+        set({
+          planError:
+            validateTaskDates(stuckChildren[0], project, get().milestones, mapped) ??
+            outsideParentMessage(next.name, { start: next.start, end: next.due }),
+        });
+        return;
+      }
+    }
+    if (
+      project &&
+      (patch.budgetAmount !== undefined ||
+        patch.estimateHours !== undefined ||
+        patch.estimateMinutes !== undefined ||
+        patch.hourlyRate !== undefined ||
+        patch.budgetMode !== undefined ||
+        patch.materials !== undefined)
+    ) {
+      const allocationError = validateTaskAllocation(
+        next,
+        project,
+        get().tasks.filter((row) => row.projectId === next.projectId),
+        (task) => memberRate(task.assignee, project, get().team),
+      );
+      if (allocationError) {
+        set({ planError: allocationError });
+        return;
+      }
     }
     set((s) => {
       const tasks = s.tasks.map((t) => {
@@ -1815,10 +1942,24 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createMilestone: (projectId, name, due, opts) => {
     if (!requireCap(get, "manage_plan")) return "";
+    const project = get().projects.find((p) => p.id === projectId);
     const id = uid("m");
     const kind = opts?.kind ?? (opts?.parentId ? "group" : "phase");
+    const parentId = opts?.parentId;
+    const start = opts?.start ?? project?.start ?? todayIso();
+    const nextDue = due || project?.due || start;
+    if (project) {
+      const timelineError = validateMilestoneDates(
+        { name, start, due: nextDue, parentId },
+        project,
+        get().milestones,
+      );
+      if (timelineError) {
+        set({ planError: timelineError });
+        return "";
+      }
+    }
     set((s) => {
-      const parentId = opts?.parentId;
       const siblings = s.milestones.filter(
         (row) => row.projectId === projectId && (row.parentId ?? "") === (parentId ?? ""),
       );
@@ -1830,8 +1971,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             id,
             projectId,
             name,
-            due,
-            start: opts?.start ?? todayIso(),
+            due: nextDue,
+            start,
             status: "Not Started",
             kind,
             parentId,
@@ -1840,7 +1981,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         ],
       };
     });
-    const project = get().projects.find((p) => p.id === projectId);
     get().logActivity({
       type: "milestone",
       action: kind === "phase" ? "added a phase" : "added a workstream",
@@ -1858,6 +1998,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateMilestone: (id, patch) => {
     if (!requireCap(get, "manage_plan")) return;
     const prev = get().milestones.find((m) => m.id === id);
+    if (prev && (patch.start !== undefined || patch.due !== undefined || patch.parentId !== undefined)) {
+      const next = { ...prev, ...patch };
+      const project = get().projects.find((p) => p.id === next.projectId);
+      if (project) {
+        const timelineError = validateMilestoneDates(next, project, get().milestones);
+        if (timelineError) {
+          set({ planError: timelineError });
+          return;
+        }
+        const stuck = childTasksOutsideMilestone(next, get().milestones, get().tasks);
+        if (stuck.length) {
+          const mapped = get().milestones.map((row) => (row.id === next.id ? next : row));
+          set({
+            planError:
+              validateTaskDates(stuck[0], project, mapped, get().tasks) ??
+              outsideParentMessage(next.name, { start: next.start, end: next.due }),
+          });
+          return;
+        }
+      }
+    }
     set((s) => ({
       milestones: s.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     }));

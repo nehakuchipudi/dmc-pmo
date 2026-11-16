@@ -166,19 +166,20 @@ export function CreateForms({
         <TaskForm
           projects={projects}
           defaultProjectId={defaults?.projectId}
+          defaultMilestoneId={defaults?.milestoneId}
           onSubmit={(v) => {
-            createTask(v);
-            onClose();
+            const id = createTask(v);
+            if (id) onClose();
           }}
         />
       )}
       {kind === "milestone" && (
         <MilestoneForm
-          projectId={defaults?.projectId ?? projects[0]?.id}
-          onSubmit={(name, due) => {
+          project={projects.find((row) => row.id === (defaults?.projectId ?? projects[0]?.id))}
+          onSubmit={(name, due, start) => {
             if (!defaults?.projectId && !projects[0]) return;
-            createMilestone(defaults?.projectId ?? projects[0].id, name, due);
-            onClose();
+            const id = createMilestone(defaults?.projectId ?? projects[0].id, name, due, { start });
+            if (id) onClose();
           }}
         />
       )}
@@ -508,28 +509,50 @@ function TicketForm({
 function TaskForm({
   projects,
   defaultProjectId,
+  defaultMilestoneId,
   onSubmit,
 }: {
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; start: string; due: string }[];
   defaultProjectId?: string;
-  onSubmit: (v: { name: string; projectId: string; assignee: string; due: string }) => void;
+  defaultMilestoneId?: string;
+  onSubmit: (v: { name: string; projectId: string; assignee: string; due: string; start: string; milestoneId?: string }) => void;
 }) {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "");
-  const [due, setDue] = useState("2026-08-20");
+  const project = projects.find((row) => row.id === projectId) ?? projects[0];
+  const [start, setStart] = useState(project?.start ?? "");
+  const [due, setDue] = useState(project?.due ?? "");
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onSubmit({ name: name.trim(), projectId, assignee: "J. Kim", due });
+        onSubmit({
+          name: name.trim(),
+          projectId,
+          assignee: "J. Kim",
+          start,
+          due,
+          milestoneId: defaultMilestoneId,
+        });
       }}
     >
       <Field label="Task name">
         <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
       <Field label="Project">
-        <TextSelect value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+        <TextSelect
+          value={projectId}
+          onChange={(e) => {
+            const nextId = e.target.value;
+            setProjectId(nextId);
+            const next = projects.find((row) => row.id === nextId);
+            if (next) {
+              setStart(next.start);
+              setDue(next.due);
+            }
+          }}
+        >
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -537,9 +560,14 @@ function TaskForm({
           ))}
         </TextSelect>
       </Field>
-      <Field label="Due date">
-        <TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Start date">
+          <TextInput type="date" min={project?.start} max={due || project?.due} value={start} onChange={(e) => setStart(e.target.value)} />
+        </Field>
+        <Field label="Due date">
+          <TextInput type="date" min={start || project?.start} max={project?.due} value={due} onChange={(e) => setDue(e.target.value)} />
+        </Field>
+      </div>
       <button type="submit" className="btn btn-primary">
         Create task
       </button>
@@ -548,28 +576,34 @@ function TaskForm({
 }
 
 function MilestoneForm({
-  projectId,
+  project,
   onSubmit,
 }: {
-  projectId?: string;
-  onSubmit: (name: string, due: string) => void;
+  project?: { id: string; start: string; due: string };
+  onSubmit: (name: string, due: string, start: string) => void;
 }) {
   const [name, setName] = useState("");
-  const [due, setDue] = useState("2026-08-30");
+  const [start, setStart] = useState(project?.start ?? "");
+  const [due, setDue] = useState(project?.due ?? "");
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!name.trim() || !projectId) return;
-        onSubmit(name.trim(), due);
+        if (!name.trim() || !project) return;
+        onSubmit(name.trim(), due, start);
       }}
     >
       <Field label="Milestone name">
         <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label="Due date">
-        <TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Start date">
+          <TextInput type="date" min={project?.start} max={due || project?.due} value={start} onChange={(e) => setStart(e.target.value)} />
+        </Field>
+        <Field label="Due date">
+          <TextInput type="date" min={start || project?.start} max={project?.due} value={due} onChange={(e) => setDue(e.target.value)} />
+        </Field>
+      </div>
       <button type="submit" className="btn btn-primary">
         Add milestone
       </button>
