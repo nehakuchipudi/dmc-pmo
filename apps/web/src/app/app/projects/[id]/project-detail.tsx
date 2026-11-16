@@ -429,24 +429,41 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             projectFiles={project.files.map((f) => ({ id: f.id, name: f.name }))}
             projectStart={project.start}
             projectDue={project.due}
+            projectBudget={project.budgetAmount}
+            projectHours={project.budgetHours}
+            companyName={project.companyName}
+            manager={project.manager}
+            project={project}
+            teamMembers={teamMembers}
             hoursByTaskId={hoursByTask}
             assignees={team}
             contractorCompanies={vendorCompanies(companies)}
             rateFor={(name) => memberRate(name, project, teamMembers)}
             onUpdateDates={(start, due) => updateProject(project.id, { start, due })}
-            onAddPhase={() => createMilestone(project.id, "New milestone", project.due, { kind: "phase" })}
-            onAddGroup={(phaseId) =>
-              createMilestone(project.id, "New workstream", project.due, { kind: "group", parentId: phaseId })
+            onUpdateProject={(patch) => updateProject(project.id, patch)}
+            onAddPhase={() =>
+              createMilestone(project.id, "New milestone", project.due, { kind: "phase", start: project.start })
             }
+            onAddGroup={(phaseId) => {
+              const parent = ms.find((row) => row.id === phaseId);
+              createMilestone(project.id, "New workstream", parent?.due ?? project.due, {
+                kind: "group",
+                parentId: phaseId,
+                start: parent?.start ?? project.start,
+              });
+            }}
             onAddTask={(milestoneId) => {
               const group = ms.find((row) => row.parentId === milestoneId);
+              const parent = ms.find((row) => row.id === (group?.id ?? milestoneId));
               createTask({
                 name: "New task",
                 projectId: project.id,
                 assignee: project.manager,
-                due: project.due,
-                start: project.start,
+                due: parent?.due ?? project.due,
+                start: parent?.start ?? project.start,
                 milestoneId: group?.id ?? milestoneId,
+                estimateHours: 0,
+                budgetAmount: 0,
               });
             }}
             onAddSubtask={(taskId) => {
@@ -459,7 +476,8 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                 start: parent?.start ?? project.start,
                 milestoneId: parent?.milestoneId,
                 parentTaskId: taskId,
-                estimateHours: 2,
+                estimateHours: 0,
+                budgetAmount: 0,
               });
             }}
             onUpdateTask={updateTask}
@@ -709,7 +727,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const companyId = String(fd.get("companyId") || project.companyId);
-            updateProject(project.id, {
+            const saved = updateProject(project.id, {
               name: String(fd.get("name") || project.name),
               manager: String(fd.get("manager") || project.manager),
               due: String(fd.get("due") || project.due),
@@ -726,7 +744,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
               fundingSource: String(fd.get("fundingSource") || ""),
               sponsor: String(fd.get("sponsor") || ""),
             });
-            setEditOpen(false);
+            if (saved !== false) setEditOpen(false);
           }}
         >
           <Field label="Name">

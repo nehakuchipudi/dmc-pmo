@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -9,23 +10,49 @@ import {
   type PointerEvent as ReactPointerEvent,
   type UIEvent,
 } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileDown } from "lucide-react";
+import { ScheduleAllocationModal } from "@/components/schedule/ScheduleAllocationModal";
 import { clampSplitPct } from "@/lib/mentions";
+import {
+  allocatedBudget,
+  allocatedHours,
+  allocationSummary,
+  childTaskBudget,
+  childTaskHours,
+  computedTaskBudget,
+  formatHours,
+  tasksUnderMilestone,
+} from "@/lib/plan-allocation";
+import {
+  pickerBounds,
+  projectWindow,
+  validateMilestoneDates,
+  validateTaskDates,
+  windowForMilestone,
+  windowForTask,
+} from "@/lib/plan-timeline";
+import { exportProjectGanttPdf, exportProjectPlanPdf } from "@/lib/pdf";
 import {
   addDays,
   buildPlanRows,
+  ganttConnectorPath,
   ganttDayLabel,
+  ganttDependencyLinks,
   ganttMonthBands,
   isWeekend,
   moveIdInList,
   phaseMilestones,
   type PlanRow,
 } from "@/lib/project-plan";
-import { formatShortDate, money } from "@/lib/seed";
-import type { Company, Milestone, Task, TaskLink, TaskStatus } from "@/lib/types";
+import { formatShortDate, money, moneyExact } from "@/lib/seed";
+import { useAppStore } from "@/lib/store";
+import type { Company, Milestone, Project, Task, TaskLink, TaskStatus, TeamMember } from "@/lib/types";
 
 const STATUSES: TaskStatus[] = ["Not Started", "In Progress", "Review", "Done"];
-const PHASE_COLORS = ["#8FA8BF", "#C4A574", "#7BA891", "#9AA0C4", "#9AA6B5"];
+const BAR_PROJECT = "#243447";
+const BAR_MILESTONE = "#3d556c";
+const BAR_TASK = "#8ecae8";
+const LINK_COLOR = "#4aa3d0";
 
 function statusClass(status: string) {
   const key = status.toLowerCase().replace(/\s/g, "");
@@ -35,10 +62,10 @@ function statusClass(status: string) {
   return "wbs-status wbs-status-todo";
 }
 
-function rowColor(row: PlanRow, milestoneIndex: Record<string, number>) {
-  if (row.kind === "project") return "#3d5a73";
-  const idx = milestoneIndex[row.milestoneId ?? row.id] ?? 0;
-  return PHASE_COLORS[idx % PHASE_COLORS.length];
+function rowColor(row: PlanRow) {
+  if (row.kind === "project") return BAR_PROJECT;
+  if (row.kind === "milestone") return BAR_MILESTONE;
+  return BAR_TASK;
 }
 
 export function ProjectSchedule({
@@ -50,11 +77,18 @@ export function ProjectSchedule({
   projectFiles,
   projectStart,
   projectDue,
+  projectBudget = 0,
+  projectHours = 0,
+  companyName,
+  manager,
+  project,
+  teamMembers = [],
   hoursByTaskId = {},
   assignees,
   contractorCompanies = [],
   rateFor,
   onUpdateDates,
+  onUpdateProject,
   onAddPhase,
   onAddTask,
   onAddSubtask,
@@ -75,11 +109,18 @@ export function ProjectSchedule({
   projectFiles: { id: string; name: string }[];
   projectStart?: string;
   projectDue?: string;
+  projectBudget?: number;
+  projectHours?: number;
+  companyName?: string;
+  manager?: string;
+  project?: Project;
+  teamMembers?: TeamMember[];
   hoursByTaskId?: Record<string, number>;
   assignees: string[];
   contractorCompanies?: Company[];
   rateFor: (assignee: string) => number;
   onUpdateDates?: (start: string, due: string) => void;
+  onUpdateProject?: (patch: Partial<Project>) => boolean | void;
   onAddPhase: () => void;
   onAddGroup: (phaseId: string) => void;
   onAddTask: (milestoneId: string) => void;
@@ -103,11 +144,13 @@ export function ProjectSchedule({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [scale, setScale] = useState<"Days" | "Weeks">("Days");
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [allocTaskId, setAllocTaskId] = useState<string | null>(null);
   const [paneWidth, setPaneWidth] = useState(0);
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return 46;
     const raw = Number(window.localStorage.getItem("dmc-pmo-plan-split"));
-    return Number.isFinite(raw) && raw > 0 ? clampSplitPct(raw) : 38;
+    return Number.isFinite(raw) && raw > 0 ? clampSplitPct(raw) : 64;
   });
   const [splitting, setSplitting] = useState(false);
   const zoom = 36;
@@ -124,6 +167,9 @@ export function ProjectSchedule({
     due: string;
     kind: "task" | "milestone";
   } | null>(null);
+  const dragErrorRef = useRef<ReturnType<typeof validateTaskDates>>(null);
+  const setPlanError = useAppStore((s) => s.setPlanError);
+  const pdfWrapRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo(
     () =>
@@ -146,13 +192,6 @@ export function ProjectSchedule({
   );
 
   const visibleRows = collapsed[projectId] ? rows.filter((row) => row.kind === "project") : rows;
-  const milestoneIndex = useMemo(() => {
-    const map: Record<string, number> = {};
-    milestones.filter((row) => row.kind === "phase" || !row.parentId).forEach((row, index) => {
-      map[row.id] = index;
-    });
-    return map;
-  }, [milestones]);
 
   const bounds = useMemo(() => {
     const starts = visibleRows.map((row) => row.start);
@@ -177,6 +216,102 @@ export function ProjectSchedule({
   const todayPct = todayOffset >= 0 && todayOffset <= span ? (todayOffset / span) * 100 : null;
   const compact = true;
   const phases = phaseMilestones(milestones);
+  const projectMeta = {
+    name: projectName,
+    companyName,
+    manager,
+    start: projectStart ?? "",
+    due: projectDue ?? "",
+  };
+  const summary = useMemo(
+    () =>
+      allocationSummary(
+        { budgetAmount: projectBudget, budgetHours: projectHours },
+        tasks,
+        (task) => rateFor(task.assignee),
+      ),
+    [projectBudget, projectHours, rateFor, tasks],
+  );
+  const links = useMemo(() => ganttDependencyLinks(visibleRows), [visibleRows]);
+  const laneH = 42;
+  const allocTask = tasks.find((task) => task.id === allocTaskId);
+
+  useEffect(() => {
+    if (!pdfOpen) return;
+    function onDoc(event: MouseEvent) {
+      if (!pdfWrapRef.current?.contains(event.target as Node)) setPdfOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [pdfOpen]);
+
+  function rowBudget(row: PlanRow) {
+    if (row.kind === "project") return projectBudget;
+    if (row.kind === "milestone") {
+      return allocatedBudget(
+        tasksUnderMilestone(row.id, milestones, tasks),
+        (task) => rateFor(task.assignee),
+      );
+    }
+    if (row.kind === "task" && row.task && tasks.some((task) => task.parentTaskId === row.id)) {
+      return childTaskBudget(row.id, tasks, (task) => rateFor(task.assignee));
+    }
+    return row.task ? computedTaskBudget(row.task, rateFor(row.task.assignee)) : row.budget;
+  }
+
+  function rowHours(row: PlanRow) {
+    if (row.kind === "project") return projectHours;
+    if (row.kind === "milestone") return allocatedHours(tasksUnderMilestone(row.id, milestones, tasks));
+    if (row.kind === "task" && tasks.some((task) => task.parentTaskId === row.id)) {
+      return childTaskHours(row.id, tasks);
+    }
+    return row.task ? row.task.estimateHours + (row.task.estimateMinutes ?? 0) / 60 : row.estimateHours;
+  }
+
+  function dateBoundsFor(row: PlanRow) {
+    const projectWin = projectWindow({ start: projectStart ?? "", due: projectDue ?? "" });
+    if (row.task) {
+      const ctx = windowForTask(row.task, { start: projectStart ?? "", due: projectDue ?? "" }, milestones, tasks);
+      return pickerBounds(ctx.window, ctx.project, row.start, row.due);
+    }
+    if (row.milestone) {
+      const ctx = windowForMilestone(row.milestone, { start: projectStart ?? "", due: projectDue ?? "" }, milestones);
+      return pickerBounds(ctx.window, ctx.project, row.start, row.due);
+    }
+    return pickerBounds(projectWin, projectWin, row.start, row.due);
+  }
+
+  function taskDateError(id: string, patch: Partial<Task>) {
+    const current = tasks.find((task) => task.id === id);
+    if (!current || !projectStart || !projectDue) return null;
+    return validateTaskDates({ ...current, ...patch }, { start: projectStart, due: projectDue }, milestones, tasks);
+  }
+
+  function milestoneDateError(id: string, patch: Partial<Milestone>) {
+    const current = milestones.find((row) => row.id === id);
+    if (!current || !projectStart || !projectDue) return null;
+    return validateMilestoneDates({ ...current, ...patch }, { start: projectStart, due: projectDue }, milestones);
+  }
+
+  function applyTaskDates(id: string, patch: Partial<Task>, notify = true) {
+    const error = taskDateError(id, patch);
+    if (error) {
+      if (notify) setPlanError(error);
+      return false;
+    }
+    onUpdateTask(id, patch);
+    return true;
+  }
+
+  function applyMilestoneDates(id: string, patch: Partial<Milestone>, notify = true) {
+    const error = milestoneDateError(id, patch);
+    if (error) {
+      if (notify) setPlanError(error);
+      return false;
+    }
+    onUpdateMilestone(id, patch);
+    return true;
+  }
 
   useLayoutEffect(() => {
     const pane = ganttRef.current;
@@ -286,12 +421,21 @@ export function ProjectSchedule({
             ? { due: addDays(drag.due, days) }
             : null;
     if (!patch) return;
+    const error = drag.kind === "milestone" ? milestoneDateError(drag.id, patch) : taskDateError(drag.id, patch);
+    if (error) {
+      dragErrorRef.current = error;
+      return;
+    }
+    dragErrorRef.current = null;
     if (drag.kind === "milestone") onUpdateMilestone(drag.id, patch);
     else onUpdateTask(drag.id, patch);
   }
 
   function endBarDrag() {
+    const pending = dragErrorRef.current;
     dragRef.current = null;
+    dragErrorRef.current = null;
+    if (pending) setPlanError(pending);
   }
 
   function persistSplit(next: number) {
@@ -368,14 +512,47 @@ export function ProjectSchedule({
           <>
             <label className="inline-flex items-center gap-2 text-sm">
               Planned start
-              <input type="date" className="field-input" value={projectStart} onChange={(e) => onUpdateDates(e.target.value, projectDue)} />
+              <input type="date" className="field-input" value={projectStart} max={projectDue} onChange={(e) => onUpdateDates(e.target.value, projectDue)} />
             </label>
             <label className="inline-flex items-center gap-2 text-sm">
               Deadline
-              <input type="date" className="field-input" value={projectDue} onChange={(e) => onUpdateDates(projectStart, e.target.value)} />
+              <input type="date" className="field-input" value={projectDue} min={projectStart} onChange={(e) => onUpdateDates(projectStart, e.target.value)} />
             </label>
           </>
         ) : null}
+      </div>
+
+      <div className="plan-alloc-summary">
+        <div>
+          <span>Total project budget</span>
+          <strong>{moneyExact(summary.approvedBudget)}</strong>
+        </div>
+        <div>
+          <span>Allocated budget</span>
+          <strong>{moneyExact(summary.usedBudget)}</strong>
+        </div>
+        <div className={summary.remainingBudget < 0 ? "is-over" : undefined}>
+          <span>Remaining budget</span>
+          <strong>{moneyExact(summary.remainingBudget)}</strong>
+        </div>
+        <div className="plan-alloc-meter" aria-label="Budget allocated">
+          <span style={{ width: `${Math.min(100, summary.budgetPct)}%` }} />
+        </div>
+        <div>
+          <span>Total project hours</span>
+          <strong>{formatHours(summary.approvedHours)}</strong>
+        </div>
+        <div>
+          <span>Allocated hours</span>
+          <strong>{formatHours(summary.usedHours)}</strong>
+        </div>
+        <div className={summary.remainingHours < 0 ? "is-over" : undefined}>
+          <span>Remaining hours</span>
+          <strong>{formatHours(summary.remainingHours)}</strong>
+        </div>
+        <div className="plan-alloc-meter" aria-label="Hours allocated">
+          <span style={{ width: `${Math.min(100, summary.hoursPct)}%` }} />
+        </div>
       </div>
 
       <div className="plan-toolbar">
@@ -396,6 +573,36 @@ export function ProjectSchedule({
           <ChevronDown size={14} />
           Move down
         </button>
+        <div className="plan-pdf-wrap" ref={pdfWrapRef}>
+          <button type="button" className="btn btn-ghost" onClick={() => setPdfOpen((open) => !open)}>
+            <FileDown size={14} />
+            PDF
+          </button>
+          {pdfOpen ? (
+            <div className="menu-popover plan-pdf-menu">
+              <button
+                type="button"
+                className="menu-row"
+                onClick={() => {
+                  exportProjectPlanPdf(projectMeta, visibleRows);
+                  setPdfOpen(false);
+                }}
+              >
+                Project plan
+              </button>
+              <button
+                type="button"
+                className="menu-row"
+                onClick={() => {
+                  exportProjectGanttPdf(projectMeta, visibleRows, scale);
+                  setPdfOpen(false);
+                }}
+              >
+                Gantt chart
+              </button>
+            </div>
+          ) : null}
+        </div>
         <input
           className="field-input plan-toolbar-search"
           placeholder="Search"
@@ -432,6 +639,8 @@ export function ProjectSchedule({
                     <th className="wbs-num">Dur.</th>
                     <th className="wbs-date">Start</th>
                     <th className="wbs-date">Due</th>
+                    <th className="wbs-num">Budget</th>
+                    <th className="wbs-num">Time</th>
                     {compact ? null : <th>Status</th>}
                     {compact ? null : <th className="wbs-num">Budget</th>}
                     {compact ? null : <th className="wbs-num">Estimated Hours</th>}
@@ -443,6 +652,8 @@ export function ProjectSchedule({
                 <tbody>
                   {visibleRows.map((row) => {
                     const editable = Boolean(row.task);
+                    const bounds = dateBoundsFor(row);
+                    const leafTask = Boolean(row.task) && !tasks.some((task) => task.parentTaskId === row.id);
                     return (
                       <tr
                         key={row.id}
@@ -531,20 +742,85 @@ export function ProjectSchedule({
                         <td className="wbs-num tabular-nums">{row.duration}d</td>
                         <td className="wbs-date">
                           {editable ? (
-                            <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateTask(row.id, { start: e.target.value })} />
+                            <input type="date" className="wbs-date-input" min={bounds.startMin} max={bounds.startMax} value={row.start} onChange={(e) => applyTaskDates(row.id, { start: e.target.value })} />
                           ) : row.kind === "milestone" ? (
-                            <input type="date" className="wbs-date-input" value={row.start} onChange={(e) => onUpdateMilestone(row.id, { start: e.target.value })} />
+                            <input type="date" className="wbs-date-input" min={bounds.startMin} max={bounds.startMax} value={row.start} onChange={(e) => applyMilestoneDates(row.id, { start: e.target.value })} />
                           ) : (
                             <span className="tabular-nums">{formatShortDate(row.start)}</span>
                           )}
                         </td>
                         <td className="wbs-date">
                           {editable ? (
-                            <input type="date" className="wbs-date-input" value={row.due} onChange={(e) => onUpdateTask(row.id, { due: e.target.value })} />
+                            <input type="date" className="wbs-date-input" min={bounds.dueMin} max={bounds.dueMax} value={row.due} onChange={(e) => applyTaskDates(row.id, { due: e.target.value })} />
                           ) : row.kind === "milestone" ? (
-                            <input type="date" className="wbs-date-input" value={row.due} onChange={(e) => onUpdateMilestone(row.id, { due: e.target.value })} />
+                            <input type="date" className="wbs-date-input" min={bounds.dueMin} max={bounds.dueMax} value={row.due} onChange={(e) => applyMilestoneDates(row.id, { due: e.target.value })} />
                           ) : (
                             <span className="tabular-nums">{formatShortDate(row.due)}</span>
+                          )}
+                        </td>
+                        <td className="wbs-num">
+                          {row.kind === "project" ? (
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="wbs-pct-input plan-cap-input"
+                              value={projectBudget}
+                              aria-label="Total project budget"
+                              onChange={(e) => onUpdateProject?.({ budgetAmount: Number(e.target.value) || 0 })}
+                            />
+                          ) : leafTask && row.task ? (
+                            <div className="plan-alloc-edit">
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                className="wbs-pct-input"
+                                value={rowBudget(row)}
+                                aria-label={`Budget for ${row.name}`}
+                                onChange={(e) =>
+                                  onUpdateTask(row.id, {
+                                    budgetAmount: Number(e.target.value) || 0,
+                                    budgetMode: "fixed",
+                                  })
+                                }
+                              />
+                              <button type="button" className="plan-alloc-open" onClick={() => setAllocTaskId(row.id)}>
+                                Edit
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="tabular-nums">{moneyExact(rowBudget(row))}</span>
+                          )}
+                        </td>
+                        <td className="wbs-num">
+                          {row.kind === "project" ? (
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.25"
+                              className="wbs-pct-input plan-cap-input"
+                              value={projectHours}
+                              aria-label="Total project hours"
+                              onChange={(e) => onUpdateProject?.({ budgetHours: Number(e.target.value) || 0 })}
+                            />
+                          ) : leafTask && row.task ? (
+                            <div className="plan-alloc-edit">
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.25"
+                                className="wbs-pct-input"
+                                value={row.task.estimateHours}
+                                aria-label={`Time for ${row.name}`}
+                                onChange={(e) => onUpdateTask(row.id, { estimateHours: Number(e.target.value) || 0 })}
+                              />
+                              <button type="button" className="plan-alloc-open" onClick={() => setAllocTaskId(row.id)}>
+                                Edit
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="tabular-nums">{formatHours(rowHours(row))}</span>
                           )}
                         </td>
                         {compact ? null : (
@@ -644,7 +920,7 @@ export function ProjectSchedule({
                   })}
                   {!visibleRows.length ? (
                     <tr>
-                      <td colSpan={compact ? 4 : 11} className="p-8 text-center text-[var(--color-muted)]">
+                      <td colSpan={compact ? 6 : 13} className="p-8 text-center text-[var(--color-muted)]">
                         No milestones yet. Add a milestone to start the plan.
                       </td>
                     </tr>
@@ -703,7 +979,7 @@ export function ProjectSchedule({
                     </div>
                   </div>
                   {visibleRows.map((row) => {
-                    const color = rowColor(row, milestoneIndex);
+                    const color = rowColor(row);
                     return (
                       <div key={`g-${row.id}`} className={`plan-gantt-lane is-${row.kind}`}>
                         {ticks.map((tick) =>
@@ -749,9 +1025,52 @@ export function ProjectSchedule({
                     );
                   })}
                   {todayPct != null ? <div className="plan-gantt-today" style={{ left: `${todayPct}%` }} aria-hidden /> : null}
+                  <svg
+                    className="plan-gantt-deps"
+                    width={timelineWidth}
+                    height={visibleRows.length * laneH}
+                    viewBox={`0 0 ${timelineWidth} ${visibleRows.length * laneH}`}
+                    aria-hidden
+                  >
+                    <defs>
+                      <marker id="plan-gantt-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill={LINK_COLOR} />
+                      </marker>
+                    </defs>
+                    {links.map((link) => {
+                      const from = visibleRows.findIndex((row) => row.id === link.fromId);
+                      const to = visibleRows.findIndex((row) => row.id === link.toId);
+                      if (from < 0 || to < 0) return null;
+                      const x1 = (pctLeft(link.fromDue) / 100) * timelineWidth;
+                      const x2 = (pctLeft(link.toStart) / 100) * timelineWidth;
+                      const y1 = from * laneH + laneH / 2;
+                      const y2 = to * laneH + laneH / 2;
+                      return (
+                        <path
+                          key={`${link.fromId}-${link.toId}`}
+                          d={ganttConnectorPath(x1, y1, x2, y2, Math.max(cellWidth * 0.35, 10))}
+                          fill="none"
+                          stroke={LINK_COLOR}
+                          strokeWidth="1.6"
+                          markerEnd="url(#plan-gantt-arrow)"
+                        />
+                      );
+                    })}
+                  </svg>
                 </div>
               </div>
           </div>
+
+      {allocTask && project ? (
+        <ScheduleAllocationModal
+          task={allocTask}
+          project={project}
+          team={teamMembers}
+          fallbackRate={rateFor(allocTask.assignee)}
+          onClose={() => setAllocTaskId(null)}
+          onSave={(patch) => onUpdateTask(allocTask.id, patch)}
+        />
+      ) : null}
 
       {linkTaskId ? (
         <div className="panel p-4">

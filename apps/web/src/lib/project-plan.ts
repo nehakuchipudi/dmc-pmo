@@ -261,3 +261,36 @@ export function buildPlanRows(input: {
   };
   return [projectRow, ...rows];
 }
+
+export type GanttLink = {
+  fromId: string;
+  toId: string;
+  fromStart: string;
+  fromDue: string;
+  toStart: string;
+  toDue: string;
+};
+
+export function ganttDependencyLinks(rows: PlanRow[]): GanttLink[] {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const links: GanttLink[] = [];
+  rows.forEach((row) => {
+    if ((row.kind !== "task" && row.kind !== "subtask") || !row.dependsOn) return;
+    const from = byId.get(row.dependsOn);
+    if (!from) return;
+    links.push({
+      fromId: from.id,
+      toId: row.id,
+      fromStart: from.start,
+      fromDue: from.due,
+      toStart: row.start,
+      toDue: row.due,
+    });
+  });
+  return links;
+}
+
+export function ganttConnectorPath(x1: number, y1: number, x2: number, y2: number, stub = 10) {
+  const elbow = Math.max(x1 + stub, x1 + 8);
+  return `M ${x1} ${y1} H ${elbow} V ${y2} H ${x2}`;
+}
