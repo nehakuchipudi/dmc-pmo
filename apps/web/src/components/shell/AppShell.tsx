@@ -340,19 +340,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!user || !isInternal) return null;
 
   const showHome = canAccessHref(user.role, "/app/home");
-  const navGroups = NAV_GROUP_ORDER.map((group) => ({
-    id: group,
-    label: NAV_GROUPS.find((item) => item.id === group)?.label ?? group,
-    items: NAV_MODULES.filter(
-      (item) =>
-        item.group === group &&
-        canAccessHref(user.role, item.href) &&
-        canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
-    ),
-  })).filter((group) => group.items.length);
+  const navGroups = NAV_GROUP_ORDER.map((group) => {
+    const meta = NAV_GROUPS.find((item) => item.id === group);
+    return {
+      id: group,
+      label: meta?.label ?? group,
+      shortLabel: meta?.shortLabel ?? meta?.label ?? group,
+      items: NAV_MODULES.filter(
+        (item) =>
+          item.group === group &&
+          canAccessHref(user.role, item.href) &&
+          canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
+      ),
+    };
+  }).filter((group) => group.items.length);
+  const settingsMeta = NAV_GROUPS.find((item) => item.id === "settings");
   const settingsGroup = {
     id: "settings" as const,
-    label: "Settings",
+    label: settingsMeta?.label ?? "Settings",
+    shortLabel: settingsMeta?.shortLabel ?? "Settings",
     items: NAV_MODULES.filter(
       (item) =>
         item.group === "settings" &&
@@ -473,9 +479,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       );
     }
     return (
-      <div key={group.id} className={clsx("nav-category", hasActive && "is-active", open && "is-open")}>
+      <div
+        key={group.id}
+        className={clsx("nav-category", hasActive && "is-active", open && "is-open")}
+        title={group.shortLabel === group.label ? undefined : group.label}
+      >
         <Icon size={17} />
-        <span className="nav-category-copy">{group.label}</span>
+        <span className="nav-category-copy">{group.shortLabel}</span>
         <button
           type="button"
           className="nav-category-arrow"
@@ -528,6 +538,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             className="nav-link w-full"
+            title="Feedback"
+            aria-label="Feedback"
             onClick={() => {
               useAppStore.getState().pushToast("Feedback noted. Thank you.", "info");
             }}

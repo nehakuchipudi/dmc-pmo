@@ -39,6 +39,22 @@ assert.deepEqual(
     "settings",
   ],
 );
+assert.deepEqual(
+  NAV_GROUPS.map((group) => group.label),
+  [
+    "Project Management",
+    "Resource Management",
+    "Service Operations",
+    "Business Management",
+    "Intelligence & Analytics",
+    "Administration",
+    "Settings",
+  ],
+);
+assert.deepEqual(
+  NAV_GROUPS.map((group) => group.shortLabel),
+  ["Projects", "Resources", "Services", "Business", "Analytics", "Admin", "Settings"],
+);
 
 assert.equal(homeSectionOn("work_orders", ["project_delivery"]), false);
 assert.equal(homeSectionOn("work_orders", ["service_operations"]), true);
