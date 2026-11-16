@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import { Clock3, Wallet } from "lucide-react";
 import { TonePill } from "@/components/records/RecordChrome";
+import { formatHours } from "@/lib/plan-allocation";
 import { computeProjectInsights, type InsightHealth } from "@/lib/project-insights";
 import { formatDisplayDate, money } from "@/lib/seed";
 import type { Expense, Milestone, Project, ResourceAllocation, RiskItem, Task, TeamMember, TimeEntry } from "@/lib/types";
+
+type ChartView = "bars" | "rings";
 
 function healthClass(health: InsightHealth) {
   if (health === "Healthy") return "is-healthy";
@@ -11,79 +16,48 @@ function healthClass(health: InsightHealth) {
   return "is-critical";
 }
 
-function HealthCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: InsightHealth;
-  hint: string;
-}) {
-  return (
-    <div className={`insight-kpi ${healthClass(value)}`}>
-      <div className="insight-kpi-label">{label}</div>
-      <div className="insight-kpi-value">
-        <TonePill value={value} />
-      </div>
-      <div className="insight-kpi-hint">{hint}</div>
-    </div>
-  );
+function meterPct(used: number, approved: number) {
+  if (approved <= 0) return used > 0 ? 100 : 0;
+  return Math.min(100, Math.max(0, (used / approved) * 100));
 }
 
-function CompareChart({
-  title,
-  plannedLabel,
-  actualLabel,
-  extraLabel,
-  planned,
-  actual,
-  extra,
-  plannedText,
-  actualText,
-  extraText,
+function remainingClass(value: number) {
+  return value < 0 ? "is-over" : "is-ok";
+}
+
+function remainingMoney(value: number) {
+  return value < 0 ? `${money(Math.abs(value))} over` : `${money(value)} remaining`;
+}
+
+function remainingTime(value: number) {
+  return value < 0 ? `${formatHours(Math.abs(value))} over` : `${formatHours(value)} remaining`;
+}
+
+function Ring({
+  pct,
+  tone,
+  label,
 }: {
-  title: string;
-  plannedLabel: string;
-  actualLabel: string;
-  extraLabel?: string;
-  planned: number;
-  actual: number;
-  extra?: number;
-  plannedText: string;
-  actualText: string;
-  extraText?: string;
+  pct: number;
+  tone: "budget" | "time" | "over";
+  label: string;
 }) {
-  const max = Math.max(planned, actual, extra ?? 0, 1);
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  const fill = Math.min(100, Math.max(0, pct));
+  const dash = (fill / 100) * c;
   return (
-    <div className="panel p-4">
-      <h2 className="section-title">{title}</h2>
-      <div className="insight-compare" role="img" aria-label={title}>
-        <div className="insight-compare-row">
-          <span>{plannedLabel}</span>
-          <div className="insight-compare-track">
-            <span className="is-planned" style={{ width: `${Math.min(100, (planned / max) * 100)}%` }} />
-          </div>
-          <strong>{plannedText}</strong>
-        </div>
-        <div className="insight-compare-row">
-          <span>{actualLabel}</span>
-          <div className="insight-compare-track">
-            <span className="is-actual" style={{ width: `${Math.min(100, (actual / max) * 100)}%` }} />
-          </div>
-          <strong>{actualText}</strong>
-        </div>
-        {extraLabel && extraText !== undefined ? (
-          <div className="insight-compare-row">
-            <span>{extraLabel}</span>
-            <div className="insight-compare-track">
-              <span className="is-extra" style={{ width: `${Math.min(100, ((extra ?? 0) / max) * 100)}%` }} />
-            </div>
-            <strong>{extraText}</strong>
-          </div>
-        ) : null}
-      </div>
-    </div>
+    <svg className={`insight-ring is-${tone}`} viewBox="0 0 96 96" role="img" aria-label={label}>
+      <circle className="insight-ring-track" cx="48" cy="48" r={r} />
+      <circle
+        className="insight-ring-fill"
+        cx="48"
+        cy="48"
+        r={r}
+        strokeDasharray={`${dash} ${c}`}
+        transform="rotate(-90 48 48)"
+      />
+    </svg>
   );
 }
 
@@ -112,6 +86,7 @@ export function ProjectInsights({
   onOpenTasks: () => void;
   onOpenSchedule: () => void;
 }) {
+  const [chartView, setChartView] = useState<ChartView>("bars");
   const insights = computeProjectInsights({
     project,
     tasks,
@@ -123,117 +98,135 @@ export function ProjectInsights({
     risks,
     memberNames,
   });
+  const approvedPhases = insights.milestoneRows.filter((row) => row.status === "Approved").length;
+  const doneTasks = tasks.filter((task) => task.status === "Done").length;
+  const statusItems: { label: string; value: InsightHealth }[] = [
+    { label: "Overall", value: insights.overall },
+    { label: "Schedule", value: insights.schedule },
+    { label: "Budget", value: insights.budget },
+    { label: "Resources", value: insights.resource },
+    { label: "Risk", value: insights.risk },
+  ];
+  const budgetOver = insights.remainingBudget < 0;
+  const timeOver = insights.remainingHours < 0;
 
   return (
     <div className="insights-dashboard">
-      <div className="insights-health">
-        <HealthCard
-          label="Overall"
-          value={insights.overall}
-          hint={`${insights.overdueTasks.length} overdue ${insights.overdueTasks.length === 1 ? "task" : "tasks"}, ${insights.openRisks.length} open ${insights.openRisks.length === 1 ? "risk" : "risks"}`}
-        />
-        <HealthCard
-          label="Schedule"
-          value={insights.schedule}
-          hint={
-            insights.overdueTasks.length
-              ? `${insights.overdueTasks.length} overdue, deadline ${formatDisplayDate(project.due)}`
-              : `Deadline ${formatDisplayDate(project.due)}`
-          }
-        />
-        <HealthCard
-          label="Budget"
-          value={insights.budget}
-          hint={`${insights.costPct}% of ${money(insights.plannedCost)} spent`}
-        />
-        <HealthCard
-          label="Resources"
-          value={insights.resource}
-          hint={
-            insights.rosterCount
-              ? `Avg load ${insights.avgUtilization}% across ${insights.rosterCount} people`
-              : "No allocations yet"
-          }
-        />
-        <HealthCard
-          label="Risk"
-          value={insights.risk}
-          hint={insights.openRisks.length ? `${insights.openRisks.length} open or mitigating` : "No open risks"}
-        />
+      <div className="insights-status" aria-label="Project health">
+        {statusItems.map((item) => (
+          <div key={item.label} className={`insights-status-chip ${healthClass(item.value)}`}>
+            <span className="insights-status-dot" />
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
       </div>
 
-      <div className="insights-kpis">
-        <div className="insight-kpi">
-          <div className="insight-kpi-label">Progress</div>
-          <div className="insight-kpi-value">{insights.progress}%</div>
-          <div className="insight-kpi-hint">
-            {tasks.filter((task) => task.status === "Done").length} of {tasks.length} {tasks.length === 1 ? "task" : "tasks"} done
-          </div>
-          <div className="insight-meter">
-            <span style={{ width: `${Math.min(100, insights.progress)}%` }} />
-          </div>
-        </div>
-        <div className="insight-kpi">
-          <div className="insight-kpi-label">Hours</div>
-          <div className="insight-kpi-value">
-            {insights.actualHours}h / {insights.plannedHours}h
-          </div>
-          <div className="insight-kpi-hint">
-            {insights.hoursVariance >= 0 ? `${insights.hoursVariance}h remaining` : `${Math.abs(insights.hoursVariance)}h over plan`}
-          </div>
-          <div className="insight-meter">
-            <span style={{ width: `${Math.min(100, insights.hoursPct)}%` }} />
+      <section className="insight-budget-card">
+        <div className="insight-budget-head">
+          <h2 className="section-title">Project Budget & Time Summary</h2>
+          <div className="insight-chart-toggle" role="group" aria-label="Chart style">
+            <button type="button" className={chartView === "bars" ? "is-on" : undefined} onClick={() => setChartView("bars")}>
+              Bars
+            </button>
+            <button type="button" className={chartView === "rings" ? "is-on" : undefined} onClick={() => setChartView("rings")}>
+              Rings
+            </button>
           </div>
         </div>
-        <div className="insight-kpi">
-          <div className="insight-kpi-label">Spend</div>
-          <div className="insight-kpi-value">{money(insights.actualCost)}</div>
-          <div className="insight-kpi-hint">
-            {insights.costVariance >= 0
-              ? `${money(insights.costVariance)} under budget`
-              : `${money(Math.abs(insights.costVariance))} over budget`}
-          </div>
-          <div className="insight-meter">
-            <span style={{ width: `${Math.min(100, insights.costPct)}%` }} />
-          </div>
-        </div>
-        <div className="insight-kpi">
-          <div className="insight-kpi-label">Milestones</div>
-          <div className="insight-kpi-value">{insights.milestonePct}%</div>
-          <div className="insight-kpi-hint">
-            {insights.milestoneRows.filter((row) => row.status === "Approved").length} of {insights.milestoneRows.length} phases approved
-          </div>
-          <div className="insight-meter">
-            <span style={{ width: `${Math.min(100, insights.milestonePct)}%` }} />
-          </div>
-        </div>
-      </div>
 
-      <div className="insights-split">
-        <CompareChart
-          title="Planned vs actual hours"
-          plannedLabel="Planned"
-          actualLabel="Actual"
-          extraLabel="Task estimates"
-          planned={insights.plannedHours}
-          actual={insights.actualHours}
-          extra={insights.estimateHours}
-          plannedText={`${insights.plannedHours}h`}
-          actualText={`${insights.actualHours}h`}
-          extraText={`${insights.estimateHours}h`}
-        />
-        <CompareChart
-          title="Budget vs actual"
-          plannedLabel="Budget"
-          actualLabel="Actual"
-          extraLabel="Earned"
-          planned={insights.plannedCost}
-          actual={insights.actualCost}
-          extra={insights.earned}
-          plannedText={money(insights.plannedCost)}
-          actualText={money(insights.actualCost)}
-          extraText={money(insights.earned)}
-        />
+        <div className={chartView === "rings" ? "insight-budget-grid is-rings" : "insight-budget-grid"}>
+          <div className="insight-budget-col">
+            {chartView === "rings" ? (
+              <div className="insight-ring-wrap">
+                <Ring
+                  pct={insights.allocatedBudgetPct}
+                  tone={budgetOver ? "over" : "budget"}
+                  label={`Allocated ${money(insights.allocatedBudget)} of ${money(insights.plannedCost)}`}
+                />
+                <div>
+                  <div className="insight-budget-label">Approved Budget</div>
+                  <div className="insight-budget-value">{money(insights.plannedCost)}</div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="insight-budget-label">Approved Budget</div>
+                <div className="insight-budget-value">{money(insights.plannedCost)}</div>
+              </>
+            )}
+            <div className="insight-budget-used">
+              <Wallet size={14} />
+              {money(insights.allocatedBudget)} allocated
+            </div>
+            {chartView === "bars" ? (
+              <div className="insight-budget-bar" aria-hidden>
+                <span
+                  className={budgetOver ? "is-over" : "is-budget"}
+                  style={{ width: `${meterPct(insights.allocatedBudget, insights.plannedCost)}%` }}
+                />
+              </div>
+            ) : null}
+            <div className={`insight-budget-remain ${remainingClass(insights.remainingBudget)}`}>
+              {remainingMoney(insights.remainingBudget)}
+            </div>
+            <div className="insight-budget-note">Spent {money(insights.actualCost)}</div>
+          </div>
+
+          <div className="insight-budget-col">
+            {chartView === "rings" ? (
+              <div className="insight-ring-wrap">
+                <Ring
+                  pct={insights.allocatedHoursPct}
+                  tone={timeOver ? "over" : "time"}
+                  label={`Allocated ${formatHours(insights.allocatedHours)} of ${formatHours(insights.plannedHours)}`}
+                />
+                <div>
+                  <div className="insight-budget-label">Approved Time</div>
+                  <div className="insight-budget-value">{formatHours(insights.plannedHours)}</div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="insight-budget-label">Approved Time</div>
+                <div className="insight-budget-value">{formatHours(insights.plannedHours)}</div>
+              </>
+            )}
+            <div className="insight-budget-used">
+              <Clock3 size={14} />
+              {formatHours(insights.allocatedHours)} allocated
+            </div>
+            {chartView === "bars" ? (
+              <div className="insight-budget-bar" aria-hidden>
+                <span
+                  className={timeOver ? "is-over" : "is-time"}
+                  style={{ width: `${meterPct(insights.allocatedHours, insights.plannedHours)}%` }}
+                />
+              </div>
+            ) : null}
+            <div className={`insight-budget-remain ${remainingClass(insights.remainingHours)}`}>
+              {remainingTime(insights.remainingHours)}
+            </div>
+            <div className="insight-budget-note">Logged {formatHours(insights.actualHours)}</div>
+          </div>
+        </div>
+      </section>
+
+      <div className="insights-facts">
+        <div>
+          <span>Progress</span>
+          <strong>{insights.progress}%</strong>
+          <em>
+            {doneTasks} of {tasks.length} {tasks.length === 1 ? "task" : "tasks"} done
+          </em>
+        </div>
+        <div>
+          <span>Milestones</span>
+          <strong>{insights.milestonePct}%</strong>
+          <em>
+            {approvedPhases} of {insights.milestoneRows.length} phases approved
+          </em>
+        </div>
       </div>
 
       <div className="insights-split">
