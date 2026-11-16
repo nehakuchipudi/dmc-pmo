@@ -507,13 +507,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {navOpen ? <button type="button" className="shell-scrim" aria-label="Close navigation" onClick={() => setNavOpen(false)} /> : null}
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">DMC</div>
-          {!collapsed ? (
-            <div className="brand-copy">
-              <div className="brand-title">Dillon Morgan</div>
-              <div className="brand-sub">PMO / PPM</div>
-            </div>
-          ) : null}
+          <img
+            className="brand-logo"
+            src={collapsed ? "/brand/dmc-mark.png" : "/brand/dmc-logo.png"}
+            alt="Dillon Morgan Consulting"
+            title="Dillon Morgan Consulting"
+          />
           <button
             type="button"
             className="brand-collapse"

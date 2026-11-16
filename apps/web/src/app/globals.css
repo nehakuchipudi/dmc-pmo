@@ -121,8 +121,19 @@ button, input, select, textarea { font: inherit; }
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 6px 14px;
+  gap: 4px;
+  margin: -12px -8px 12px;
+  padding: 10px 6px 10px 10px;
+  background: #fff;
+  border-bottom: 1px solid rgba(36, 52, 71, 0.08);
+}
+.brand-logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: calc(100% - 32px);
+  object-fit: contain;
+  object-position: left center;
 }
 .brand-collapse {
   display: inline-grid;
@@ -134,16 +145,16 @@ button, input, select, textarea { font: inherit; }
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--color-navy);
   cursor: pointer;
 }
 .brand-collapse:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(47, 69, 88, 0.08);
+  color: var(--color-ink);
 }
 .app-shell.collapsed .brand-collapse {
   margin-left: 0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .brand-mark {
   display: inline-flex;
@@ -179,8 +190,23 @@ button, input, select, textarea { font: inherit; }
 .app-shell.collapsed .brand {
   flex-direction: column;
   justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
+  margin: 0 0 8px;
+  padding: 4px 0 8px;
+  background: transparent;
+  border-bottom: 0;
+}
+.app-shell.collapsed .brand-logo {
+  height: auto;
+  width: 48px;
+  max-width: 48px;
+  border-radius: 2px;
+}
+.app-shell.collapsed .brand-collapse {
+  color: rgba(255, 255, 255, 0.78);
+}
+.app-shell.collapsed .brand-collapse:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .nav-link {
