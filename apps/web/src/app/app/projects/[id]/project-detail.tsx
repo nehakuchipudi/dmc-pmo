@@ -32,7 +32,7 @@ import { useAuth } from "@/lib/auth";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
 import { vendorCompanies } from "@/lib/company-kinds";
 import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
-import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
+import { formatDisplayDate, formatShortDate, initialsFromName, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
 
@@ -138,13 +138,17 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   );
   const team = useMemo(() => {
     const names = new Set<string>();
+    teamMembers.filter((member) => member.active).forEach((member) => names.add(member.name));
     projectTasks.forEach((t) => names.add(t.assignee));
+    ms.forEach((row) => {
+      if (row.assignee) names.add(row.assignee);
+    });
     allocations.filter((a) => a.projectId === project?.id).forEach((a) => names.add(a.memberName));
     projectTime.forEach((t) => names.add(t.userName));
     project?.rates?.forEach((r) => names.add(r.memberName));
     if (project?.manager) names.add(project.manager);
-    return [...names];
-  }, [projectTasks, allocations, project?.id, project?.manager, project?.rates, projectTime]);
+    return [...names].filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }, [allocations, ms, project?.id, project?.manager, project?.rates, projectTasks, projectTime, teamMembers]);
   const hoursByTask = useMemo(() => {
     const map: Record<string, number> = {};
     for (const row of projectTime) {
@@ -395,6 +399,10 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
               setCreateDefaults({ projectId: project.id, companyId: project.companyId });
               setCreateKind("task");
             }}
+            onAssignMilestone={(id, assignee) => updateMilestone(id, { assignee })}
+            onAssignTask={(id, assignee) =>
+              updateTask(id, { assignee, assigneeInitials: assignee ? initialsFromName(assignee) : "" })
+            }
           />
         ) : null}
 

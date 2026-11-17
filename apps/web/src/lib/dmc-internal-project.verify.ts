@@ -27,6 +27,7 @@ assert.equal(empty.projects[0]?.manager, DMC_MANAGER_NAME);
 assert.equal(empty.projects[0]?.companyId, empty.companies[0]?.id);
 assert.equal(empty.milestones.length, 4);
 assert.ok(empty.milestones.some((row) => row.name === "Hire Full Stack Developer"));
+assert.ok(empty.milestones.every((row) => row.assignee === DMC_MANAGER_NAME));
 assert.ok(empty.milestones.some((row) => row.name === "AWS Environment Setup"));
 assert.ok(empty.milestones.some((row) => row.name === "Design UI/UX + Wireframes"));
 assert.ok(empty.milestones.some((row) => row.name === "Implement Authentication & Login"));

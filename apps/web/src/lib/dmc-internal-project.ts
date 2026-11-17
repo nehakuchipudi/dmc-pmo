@@ -77,6 +77,7 @@ function phase(id: string, projectId: string, name: string, start: string, due: 
     status: "In Progress",
     kind: "phase",
     sortOrder,
+    assignee: DMC_MANAGER_NAME,
   };
 }
 
