@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import { ProjectOverviewBoard } from "@/components/projects/ProjectOverviewBoard";
 import { ActivityStream } from "@/components/records/ActivityStream";
@@ -62,7 +63,6 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const deleteTask = useAppStore((s) => s.deleteTask);
   const deleteMilestone = useAppStore((s) => s.deleteMilestone);
   const trackView = useAppStore((s) => s.trackView);
-  const generateProjectInvoice = useAppStore((s) => s.generateProjectInvoice);
   const pushToast = useAppStore((s) => s.pushToast);
   const addProjectFile = useAppStore((s) => s.addProjectFile);
   const deleteProjectFile = useAppStore((s) => s.deleteProjectFile);
@@ -82,6 +82,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const [createKind, setCreateKind] = useState<CreateKind>(null);
   const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
   const [editOpen, setEditOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [assigneeFilter, setAssigneeFilter] = useState("All");
@@ -671,15 +672,8 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                   <dd className="tabular-nums font-bold text-[var(--color-navy)]">{money(project.budgetAmount)}</dd>
                 </div>
               </dl>
-              <button
-                type="button"
-                className="btn btn-primary mt-4"
-                onClick={() => {
-                  const inv = generateProjectInvoice(project.id);
-                  if (inv) router.push(`/app/billing/view/?id=${inv}`);
-                }}
-              >
-                Generate invoice
+              <button type="button" className="btn btn-primary mt-4" onClick={() => setInvoiceOpen(true)}>
+                New invoice
               </button>
             </div>
           </div>
@@ -696,6 +690,17 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
         }}
       />
 
+      <Modal open={invoiceOpen} title="Create invoice" onClose={() => setInvoiceOpen(false)} xl>
+        <InvoiceCreateForm
+          defaultCompanyId={project.companyId}
+          defaultProjectId={project.id}
+          onCancel={() => setInvoiceOpen(false)}
+          onCreated={(id) => {
+            setInvoiceOpen(false);
+            router.push(`/app/billing/view/?id=${id}`);
+          }}
+        />
+      </Modal>
       <Modal open={editOpen} title="Edit project" onClose={() => setEditOpen(false)}>
         <form
           onSubmit={(e) => {

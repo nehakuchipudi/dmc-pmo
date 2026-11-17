@@ -10,7 +10,7 @@ import {
   extraFieldsForExpenseType,
   parseBelongValue,
 } from "./billing-items";
-import { invoiceTotals } from "./invoice";
+import { billedSourceIds, invoiceForFromTemplate, invoiceTotals, phaseChildIds } from "./invoice";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -20,6 +20,10 @@ assert.deepEqual(parseBelongValue("company:c1"), { kind: "company", id: "c1" });
 assert.equal(expenseAmountForType("Mileage", 0, 100, DEFAULT_MILE_RATE), 67);
 assert.equal(extraFieldsForExpenseType("Travel")[0]?.label, "Vendor");
 assert.equal(invoiceTotals([]).purchase, 0);
+assert.equal(invoiceForFromTemplate({ invoiceFor: "Work completed" } as never), "Work done");
+assert.equal(invoiceForFromTemplate({ invoiceFor: "Milestone" } as never), "Milestone");
+assert.deepEqual([...phaseChildIds([{ id: "p", projectId: "x", name: "P", due: "", start: "", status: "In Progress", kind: "phase" }, { id: "g", projectId: "x", name: "G", due: "", start: "", status: "In Progress", kind: "group", parentId: "p" }], "p")].sort(), ["g", "p"]);
+assert.equal(billedSourceIds([{ projectId: "p", lineItems: [{ sourceId: "m1" }] }] as never, "p").has("m1"), true);
 assert.equal(
   invoiceTotals([{ id: "1", kind: "purchase", description: "PO", amount: 50 }]).purchase,
   50,
@@ -61,6 +65,25 @@ assert.match(invoice, /Add purchase/);
 assert.match(invoice, /Add material/);
 assert.match(invoice, /Add selected/);
 assert.match(invoice, /defaultLines: \[\]/);
+assert.match(invoice, /Select from existing templates/);
+assert.match(invoice, /Invoice Template/);
+assert.match(invoice, /Invoice For/);
+assert.match(invoice, /Invoice Detail/);
+assert.match(invoice, /Load selected work/);
+assert.match(invoice, /Bill selected milestones instead of the whole project/);
+assert.match(invoice, /Preview & Edit PDF/);
+assert.match(invoice, /Save as Draft/);
+assert.match(invoice, /Save & Send PDF/);
+assert.match(invoice, /Add new Service line item/);
+
+const projectBilling = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
+assert.match(projectBilling, /New invoice/);
+assert.match(projectBilling, /InvoiceCreateForm/);
+
+const invoiceLib = readFileSync(join(root, "invoice.ts"), "utf8");
+assert.match(invoiceLib, /INVOICE_FOR_OPTIONS/);
+assert.match(invoiceLib, /phaseChildIds/);
+assert.match(invoiceLib, /timeMatchesWork/);
 
 const seed = readFileSync(join(root, "seed.ts"), "utf8");
 assert.match(seed, /id: "tpl-tm"/);
