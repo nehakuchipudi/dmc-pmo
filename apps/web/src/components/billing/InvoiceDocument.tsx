@@ -1,6 +1,6 @@
 "use client";
 
-import { FIRM_LETTERHEAD, invoiceBillToLines, invoiceHeading, invoiceTotals } from "@/lib/invoice";
+import { FIRM_LETTERHEAD, invoiceDocumentModel } from "@/lib/invoice";
 import { formatLongMonthDay, formatShortDate, moneyExact } from "@/lib/seed";
 import type { Invoice } from "@/lib/types";
 
@@ -21,12 +21,7 @@ export function InvoiceDocument({
   companyAddress?: string;
   projectName?: string;
 }) {
-  const lines = invoice.lineItems.filter((line) => line.includeInPdf !== false);
-  const totals = invoiceTotals(invoice.lineItems);
-  const billTo = invoiceBillToLines(invoice, companyAddress);
-  const heading = invoiceHeading(invoice);
-  const manager = invoice.manager || invoice.owner;
-  const payments = invoice.payments ?? [];
+  const model = invoiceDocumentModel(invoice, companyAddress);
 
   return (
     <article className="invoice-paper">
@@ -42,25 +37,25 @@ export function InvoiceDocument({
 
       <div className="invoice-meta-row">
         <div className="invoice-bill-to">
-          {billTo.map((line) => (
+          {model.billTo.map((line) => (
             <span key={line}>{line}</span>
           ))}
         </div>
         <div className="invoice-meta-block">
           <strong>INVOICE</strong>
           <span>
-            INVOICE DATE: {invoice.raised ? formatShortDate(invoice.raised) : "Not set"}
+            INVOICE DATE: {model.raised ? formatShortDate(model.raised) : "Not set"}
           </span>
-          <span>INVOICE NO: {invoice.number}</span>
+          <span>INVOICE NO: {model.number}</span>
           <span>
-            BILLING THROUGH: {invoice.billingThrough ? formatLongMonthDay(invoice.billingThrough) : "Not set"}
+            BILLING THROUGH: {model.billingThrough ? formatLongMonthDay(model.billingThrough) : "Not set"}
           </span>
         </div>
       </div>
 
       <div className="invoice-title-row">
-        <p>{heading}</p>
-        {manager ? <span>Managed by: {manager}</span> : null}
+        <p>{model.heading}</p>
+        {model.manager ? <span>Managed by: {model.manager}</span> : null}
       </div>
 
       <section className="invoice-section">
@@ -77,7 +72,7 @@ export function InvoiceDocument({
             </tr>
           </thead>
           <tbody>
-            {lines.map((line) => (
+            {model.lines.map((line) => (
               <tr key={line.id}>
                 <td>{line.description}</td>
                 <td className="tabular-nums">{moneyExact(line.amount)}</td>
@@ -88,18 +83,24 @@ export function InvoiceDocument({
         <div className="invoice-totals">
           <div>
             <span>SUBTOTAL</span>
-            <strong className="tabular-nums">{moneyExact(totals.subtotal)}</strong>
+            <strong className="tabular-nums">{moneyExact(model.totals.subtotal)}</strong>
           </div>
+          {model.totals.tax > 0 ? (
+            <div>
+              <span>TAX</span>
+              <strong className="tabular-nums">{moneyExact(model.totals.tax)}</strong>
+            </div>
+          ) : null}
           <div className="is-due">
             <span>AMOUNT DUE THIS INVOICE</span>
-            <strong className="tabular-nums">{moneyExact(invoice.amount)}</strong>
+            <strong className="tabular-nums">{moneyExact(model.amountDue)}</strong>
           </div>
         </div>
       </section>
 
       <section className="invoice-section">
         <h3>Payments</h3>
-        {payments.length ? (
+        {model.payments.length ? (
           <table className="invoice-doc-table">
             <colgroup>
               <col className="invoice-date-col" />
@@ -114,7 +115,7 @@ export function InvoiceDocument({
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment) => (
+              {model.payments.map((payment) => (
                 <tr key={payment.id}>
                   <td>{formatShortDate(payment.date)}</td>
                   <td>{payment.description}</td>
@@ -126,7 +127,7 @@ export function InvoiceDocument({
         ) : (
           <p className="invoice-empty-pay">No payments recorded.</p>
         )}
-        <p className="invoice-due-note">This invoice is due on {formatShortDate(invoice.due)}</p>
+        <p className="invoice-due-note">This invoice is due on {formatShortDate(model.due)}</p>
       </section>
       {projectName ? <p className="sr-only">Project {projectName}</p> : null}
     </article>

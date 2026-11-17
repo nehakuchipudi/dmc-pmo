@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
@@ -8,16 +9,20 @@ import { StatusPill, statusTone } from "@/components/ui";
 import { invoicePdfName } from "@/lib/invoice";
 import { formatShortDate, moneyExact } from "@/lib/seed";
 import { exportInvoicePdf } from "@/lib/pdf";
+import { createQuickBooksInvoice, quickbooksInvoicePatch, quickbooksSettingsHref } from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
 
 export function InvoiceDetail({ id }: { id: string }) {
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
+  const contacts = useAppStore((s) => s.contacts);
   const projects = useAppStore((s) => s.projects);
   const sendInvoice = useAppStore((s) => s.sendInvoice);
   const payInvoice = useAppStore((s) => s.payInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
+  const updateInvoice = useAppStore((s) => s.updateInvoice);
   const pushToast = useAppStore((s) => s.pushToast);
+  const [qbBusy, setQbBusy] = useState(false);
   const invoice = invoices.find((item) => item.id === id);
 
   if (!invoice) {
@@ -32,12 +37,27 @@ export function InvoiceDetail({ id }: { id: string }) {
   }
 
   const company = companies.find((item) => item.id === invoice.companyId);
+  const contact = contacts.find((item) => item.id === invoice.billToContactId);
   const project = projects.find((item) => item.id === invoice.projectId);
   const pdfName = invoicePdfName(invoice);
   const record = invoice;
 
   function downloadPdf() {
     exportInvoicePdf(record, company?.address);
+  }
+
+  async function sendToQuickBooks() {
+    if (qbBusy) return;
+    setQbBusy(true);
+    const result = await createQuickBooksInvoice(record, { email: contact?.email || company?.email });
+    if (result.ok) {
+      updateInvoice(record.id, quickbooksInvoicePatch(result));
+      pushToast(`${record.number} created in QuickBooks`, "success");
+    } else {
+      updateInvoice(record.id, { quickbooksError: result.error });
+      pushToast(result.error, "danger");
+    }
+    setQbBusy(false);
   }
 
   return (
@@ -119,6 +139,34 @@ export function InvoiceDetail({ id }: { id: string }) {
               </button>
             </IfCan>
           </div>
+        </div>
+        <div className="invoice-qb-box">
+          <h3>QuickBooks</h3>
+          {invoice.quickbooksId ? (
+            <>
+              <p>
+                {invoice.quickbooksDocNumber || invoice.number} is in QuickBooks
+                {invoice.quickbooksSyncedAt ? ` as of ${formatShortDate(invoice.quickbooksSyncedAt)}` : ""}.
+              </p>
+              {invoice.quickbooksHref ? (
+                <a className="btn btn-ghost" href={invoice.quickbooksHref} target="_blank" rel="noreferrer">
+                  Open in QuickBooks
+                </a>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p>{invoice.quickbooksError || "Create this invoice in the connected QuickBooks company."}</p>
+              <IfCan cap="create_invoice">
+                <button type="button" className="btn btn-primary" onClick={() => void sendToQuickBooks()} disabled={qbBusy}>
+                  Send to QuickBooks
+                </button>
+              </IfCan>
+              <Link href={quickbooksSettingsHref()} className="invoice-qb-setup">
+                Connect in Invoice & Pricing
+              </Link>
+            </>
+          )}
         </div>
         <div className="invoice-rail-actions">
           {invoice.status === "Sent" || invoice.status === "Overdue" ? (

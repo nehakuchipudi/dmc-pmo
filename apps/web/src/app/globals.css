@@ -2555,7 +2555,8 @@ button, input, select, textarea { font: inherit; }
   line-height: 1.45;
 }
 .user-invite-option input { margin-top: 3px; }
-.outlook-mail-card {
+.outlook-mail-card,
+.qb-card {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -2566,14 +2567,54 @@ button, input, select, textarea { font: inherit; }
   border-radius: 12px;
   background: var(--color-fog);
 }
-.outlook-mail-card p { margin: 0; color: var(--color-muted); font-size: var(--text); line-height: 1.45; }
-.outlook-mail-kicker {
+.outlook-mail-card p,
+.qb-card p { margin: 0; color: var(--color-muted); font-size: var(--text); line-height: 1.45; }
+.outlook-mail-kicker,
+.qb-kicker {
   margin: 0 0 4px !important;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-navy) !important;
+}
+.invoice-qb-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-fog);
+  font-size: var(--text);
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+.invoice-qb-check input { margin-top: 3px; }
+.invoice-qb-check strong { color: var(--color-navy); }
+.invoice-qb-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-fog);
+  display: grid;
+  gap: 10px;
+}
+.invoice-qb-box h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-navy);
+}
+.invoice-qb-box p { margin: 0; color: var(--color-muted); font-size: var(--text); line-height: 1.45; }
+.invoice-qb-setup {
+  font-size: 13px;
+  color: var(--color-navy);
+  font-weight: 600;
 }
 .email-setup-steps {
   display: grid;
@@ -2594,6 +2635,15 @@ button, input, select, textarea { font: inherit; }
   justify-content: space-between;
   gap: 12px;
   align-items: start;
+}
+.invoice-create-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.invoice-create-preview .invoice-paper {
+  box-shadow: none;
 }
 .invoice-create-crumb {
   margin: 0 0 4px;

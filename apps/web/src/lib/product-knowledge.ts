@@ -163,14 +163,15 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     title: "Billing",
     href: "/app/billing",
     viewCap: "view_billing",
-    keywords: ["invoice", "billing", "payment", "draft invoice", "generate invoice"],
-    summary: "Billing is invoices: Draft, Sent, Paid, Overdue. PM and Admin can generate a project invoice. Finance records payment.",
+    keywords: ["invoice", "billing", "payment", "draft invoice", "generate invoice", "quickbooks"],
+    summary: "Billing is invoices: Draft, Sent, Paid, Overdue. PM and Admin can generate a project invoice. Finance records payment. Connected QuickBooks companies receive those invoices.",
     howTo: [
       "Open Billing. Use New Expense, New Purchase, or New Material on those tabs.",
       "Create invoice, then select created expenses, purchases, and materials, or add them there.",
       "Send puts it on the client portal. Pay records collection.",
+      "Connect QuickBooks in Settings, Invoice & Pricing, then Send to QuickBooks on the invoice.",
     ],
-    canDo: ["Create, send, pay, rename, or generate an invoice", "Add expenses, purchases, and materials"],
+    canDo: ["Create, send, pay, rename, or generate an invoice", "Add expenses, purchases, and materials", "Send an invoice to QuickBooks"],
   },
   {
     id: "retainers",

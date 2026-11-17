@@ -455,6 +455,11 @@ export interface Invoice {
   modifiedBy?: string;
   modifiedAt?: string;
   payments?: InvoicePayment[];
+  quickbooksId?: string;
+  quickbooksDocNumber?: string;
+  quickbooksHref?: string;
+  quickbooksSyncedAt?: string;
+  quickbooksError?: string;
 }
 
 export type TimesheetWorkKind = "project" | "phase" | "task" | "subtask";

@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { FIRM_LETTERHEAD, invoiceBillToLines, invoiceHeading, invoicePdfName } from "./invoice";
+import { FIRM_LETTERHEAD, invoiceDocumentModel, invoicePdfName } from "./invoice";
 import { formatHours } from "./plan-allocation";
 import { addDays, ganttDayLabel, ganttDependencyLinks, ganttMonthBands, type PlanRow } from "./project-plan";
 import { formatDisplayDate, formatLongMonthDay, formatShortDate, moneyExact } from "./seed";
@@ -32,90 +32,128 @@ function drawDmcMark(doc: jsPDF, x: number, y: number, size: number) {
   doc.text(FIRM_LETTERHEAD.mark, x + size / 2, y + size * 0.62, { align: "center" });
 }
 
-export function exportInvoicePdf(invoice: Invoice, companyAddress?: string) {
+function lastTableY(doc: jsPDF, fallback: number) {
+  return (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? fallback;
+}
+
+function drawSectionBar(doc: jsPDF, y: number, title: string, pageWidth: number) {
+  doc.setFillColor(238, 241, 244);
+  doc.rect(14, y, pageWidth - 28, 8, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(58, 70, 82);
+  doc.text(title, 17, y + 5.4);
+  return y + 8;
+}
+
+export function buildInvoicePdf(invoice: Invoice, companyAddress?: string) {
   const doc = new jsPDF({ unit: "mm", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const model = invoiceDocumentModel(invoice, companyAddress);
   drawDmcMark(doc, 14, 14, 28);
 
-  doc.setTextColor(40, 48, 56);
+  doc.setTextColor(36, 52, 71);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text(FIRM_LETTERHEAD.name, pageWidth - 14, 18, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
+  doc.setTextColor(58, 70, 82);
   FIRM_LETTERHEAD.lines.forEach((line, index) => {
     doc.text(line, pageWidth - 14, 23 + index * 4.2, { align: "right" });
   });
 
-  const billTo = invoiceBillToLines(invoice, companyAddress);
+  const metaTop = 52;
+  doc.setTextColor(58, 70, 82);
   doc.setFontSize(10);
-  billTo.forEach((line, index) => {
-    doc.text(line, 14, 52 + index * 5);
+  model.billTo.forEach((line, index) => {
+    doc.text(line, 14, metaTop + index * 5);
   });
 
+  doc.setTextColor(36, 52, 71);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.text("INVOICE", pageWidth - 14, 52, { align: "right" });
+  doc.text("INVOICE", pageWidth - 14, metaTop, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`INVOICE DATE: ${invoice.raised ? formatShortDate(invoice.raised) : "Not set"}`, pageWidth - 14, 58, {
+  doc.setFontSize(9);
+  doc.text(`INVOICE DATE: ${model.raised ? formatShortDate(model.raised) : "Not set"}`, pageWidth - 14, metaTop + 6, {
     align: "right",
   });
-  doc.text(`INVOICE NO: ${invoice.number}`, pageWidth - 14, 63, { align: "right" });
+  doc.text(`INVOICE NO: ${model.number}`, pageWidth - 14, metaTop + 11, { align: "right" });
   doc.text(
-    `BILLING THROUGH: ${invoice.billingThrough ? formatLongMonthDay(invoice.billingThrough) : "Not set"}`,
+    `BILLING THROUGH: ${model.billingThrough ? formatLongMonthDay(model.billingThrough) : "Not set"}`,
     pageWidth - 14,
-    68,
+    metaTop + 16,
     { align: "right" },
   );
 
-  const headingY = 78;
+  const headingY = Math.max(metaTop + 24, metaTop + model.billTo.length * 5 + 8);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  const heading = invoiceHeading(invoice);
-  doc.text(heading, 14, headingY);
-  const manager = invoice.manager || invoice.owner;
-  if (manager) {
+  doc.setTextColor(36, 52, 71);
+  doc.text(model.heading, 14, headingY);
+  if (model.manager) {
     doc.setFont("helvetica", "normal");
-    doc.text(`Managed by: ${manager}`, pageWidth - 14, headingY, { align: "right" });
+    doc.setTextColor(58, 70, 82);
+    doc.text(`Managed by: ${model.manager}`, pageWidth - 14, headingY, { align: "right" });
   }
 
-  const pdfLines = invoice.lineItems.filter((line) => line.includeInPdf !== false);
+  const itemsStart = drawSectionBar(doc, headingY + 6, "Invoice Items", pageWidth);
   autoTable(doc, {
-    startY: headingY + 8,
+    startY: itemsStart,
     head: [["Activity", "AMOUNT"]],
-    body: pdfLines.map((line) => [line.description, moneyExact(line.amount)]),
-    foot: [
-      ["SUBTOTAL", moneyExact(invoice.amount)],
-      ["AMOUNT DUE THIS INVOICE", moneyExact(invoice.amount)],
-    ],
+    body: model.lines.length ? model.lines.map((line) => [line.description, moneyExact(line.amount)]) : [["", ""]],
     theme: "plain",
-    styles: { fontSize: 10, cellPadding: 2.4, textColor: [40, 48, 56] },
+    styles: { fontSize: 10, cellPadding: { top: 2.4, bottom: 2.4, left: 3, right: 3 }, textColor: [40, 48, 56] },
     headStyles: { textColor: [43, 123, 185], fontStyle: "bold", fillColor: [255, 255, 255] },
-    footStyles: { fontStyle: "bold", fillColor: [255, 255, 255] },
     columnStyles: { 1: { halign: "right", cellWidth: 40 } },
+    margin: { left: 14, right: 14 },
   });
 
-  const afterItems = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? headingY + 20;
-  const payments = invoice.payments ?? [];
-  autoTable(doc, {
-    startY: afterItems + 10,
-    head: [["Date", "Description", "Amount"]],
-    body: payments.length
-      ? payments.map((payment) => [formatShortDate(payment.date), payment.description, moneyExact(payment.amount)])
-      : [["", "No payments recorded.", ""]],
-    theme: "plain",
-    styles: { fontSize: 10, cellPadding: 2.4, textColor: [40, 48, 56] },
-    headStyles: { fontStyle: "bold", fillColor: [255, 255, 255] },
-    columnStyles: { 2: { halign: "right", cellWidth: 40 } },
-  });
+  let y = lastTableY(doc, itemsStart + 12) + 8;
+  const writeTotal = (label: string, value: string, due = false) => {
+    doc.setFont("helvetica", due ? "bold" : "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(due ? 43 : 36, due ? 123 : 52, due ? 185 : 71);
+    doc.text(label, pageWidth - 54, y, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.text(value, pageWidth - 14, y, { align: "right" });
+    y += 6;
+  };
+  writeTotal("SUBTOTAL", moneyExact(model.totals.subtotal));
+  if (model.totals.tax > 0) writeTotal("TAX", moneyExact(model.totals.tax));
+  writeTotal("AMOUNT DUE THIS INVOICE", moneyExact(model.amountDue), true);
 
-  const afterPay = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? afterItems + 24;
+  y = drawSectionBar(doc, y + 6, "Payments", pageWidth);
+  if (model.payments.length) {
+    autoTable(doc, {
+      startY: y,
+      head: [["Date", "Description", "Amount"]],
+      body: model.payments.map((payment) => [formatShortDate(payment.date), payment.description, moneyExact(payment.amount)]),
+      theme: "plain",
+      styles: { fontSize: 10, cellPadding: { top: 2.4, bottom: 2.4, left: 3, right: 3 }, textColor: [40, 48, 56] },
+      headStyles: { fontStyle: "bold", fillColor: [255, 255, 255], textColor: [43, 123, 185] },
+      columnStyles: { 2: { halign: "right", cellWidth: 40 } },
+      margin: { left: 14, right: 14 },
+    });
+    y = lastTableY(doc, y) + 8;
+  } else {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(90, 102, 114);
+    doc.text("No payments recorded.", 17, y + 7);
+    y += 14;
+  }
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(`This invoice is due on ${formatShortDate(invoice.due)}`, pageWidth - 14, afterPay + 8, { align: "right" });
+  doc.setTextColor(58, 70, 82);
+  doc.text(`This invoice is due on ${formatShortDate(model.due)}`, pageWidth - 14, y + 4, { align: "right" });
+  return doc;
+}
 
-  doc.save(invoicePdfName(invoice));
+export function exportInvoicePdf(invoice: Invoice, companyAddress?: string) {
+  buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));
 }
 
 export function buildProjectPlanPdf(project: PlanPdfProject, rows: PlanRow[]) {

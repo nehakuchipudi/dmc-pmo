@@ -65,6 +65,30 @@ export function invoiceHeading(invoice: Invoice) {
   return `${invoice.companyName}${po}`;
 }
 
+export function invoiceManagerName(invoice: Invoice) {
+  const name = (invoice.manager || invoice.owner || "").trim();
+  if (!name || name.toLowerCase() === "unassigned") return "";
+  return name;
+}
+
+export function invoiceDocumentModel(invoice: Invoice, companyAddress?: string) {
+  const lines = invoice.lineItems.filter((line) => line.includeInPdf !== false);
+  const totals = invoiceTotals(invoice.lineItems);
+  return {
+    billTo: invoiceBillToLines(invoice, companyAddress),
+    heading: invoiceHeading(invoice),
+    manager: invoiceManagerName(invoice),
+    lines,
+    totals,
+    amountDue: invoice.amount,
+    payments: invoice.payments ?? [],
+    due: invoice.due,
+    number: invoice.number,
+    raised: invoice.raised,
+    billingThrough: invoice.billingThrough,
+  };
+}
+
 export function roundMoney(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }

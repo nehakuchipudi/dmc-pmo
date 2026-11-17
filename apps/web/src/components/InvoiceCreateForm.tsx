@@ -5,6 +5,7 @@ import { AlertTriangle, FileText, Plus, Trash2 } from "lucide-react";
 import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
 import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
+import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
   billedSourceIds,
@@ -34,6 +35,12 @@ import {
 import { exportInvoicePdf } from "@/lib/pdf";
 import { memberRate } from "@/lib/project-workspace";
 import { money, moneyExact } from "@/lib/seed";
+import {
+  createQuickBooksInvoice,
+  peekQuickBooks,
+  quickbooksInvoicePatch,
+  type QuickBooksStatus,
+} from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
 import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "@/lib/types";
 
@@ -77,6 +84,7 @@ export function InvoiceCreateForm({
   const invoices = useAppStore((s) => s.invoices);
   const templates = useAppStore((s) => s.invoiceTemplates);
   const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
+  const updateInvoice = useAppStore((s) => s.updateInvoice);
   const createInvoiceTemplate = useAppStore((s) => s.createInvoiceTemplate);
   const updateInvoiceTemplate = useAppStore((s) => s.updateInvoiceTemplate);
   const pushToast = useAppStore((s) => s.pushToast);
@@ -117,6 +125,10 @@ export function InvoiceCreateForm({
   const [milestonePct, setMilestonePct] = useState("100");
   const [expenseStatus, setExpenseStatus] = useState("All expenses");
   const [issues, setIssues] = useState<InvoiceDraftIssue[]>([]);
+  const [pushToQuickBooks, setPushToQuickBooks] = useState(false);
+  const [qbStatus, setQbStatus] = useState<QuickBooksStatus | null>(null);
+  const [qbBusy, setQbBusy] = useState(false);
+  const [preview, setPreview] = useState<Invoice | null>(null);
 
   const company = companies.find((c) => c.id === companyId);
   const project = projects.find((p) => p.id === projectId);
@@ -155,6 +167,13 @@ export function InvoiceCreateForm({
     setInvoiceFor(nextFor);
     setInvoiceDetail(nextFor === "Milestone" ? "Milestone" : "Project");
   }
+
+  useEffect(() => {
+    void peekQuickBooks().then((status) => {
+      setQbStatus(status);
+      if (status.connected) setPushToQuickBooks(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (!company) return;
@@ -474,14 +493,37 @@ export function InvoiceCreateForm({
     });
   }
 
-  function submit(send: boolean) {
+  function openPreview() {
     const draft = buildInvoice();
-    if (!company || !draft) return;
+    if (!draft) return;
+    setPreview(draft);
+  }
+
+  async function submit(send: boolean) {
+    const draft = buildInvoice();
+    if (!company || !draft || qbBusy) return;
     const id = createInvoiceDraft(company.id, {
       ...draft,
       send,
     });
-    if (id) onCreated(id);
+    if (!id) return;
+    if (pushToQuickBooks) {
+      const created = useAppStore.getState().invoices.find((row) => row.id === id);
+      const contact = companyContacts.find((row) => row.id === billToContactId);
+      if (created) {
+        setQbBusy(true);
+        const result = await createQuickBooksInvoice(created, { email: contact?.email || company.email });
+        if (result.ok) {
+          updateInvoice(id, quickbooksInvoicePatch(result));
+          pushToast(`${created.number} created in QuickBooks`, "success");
+        } else {
+          updateInvoice(id, { quickbooksError: result.error });
+          pushToast(result.error, "danger");
+        }
+        setQbBusy(false);
+      }
+    }
+    onCreated(id);
   }
 
   function saveTemplate(asNew: boolean) {
@@ -512,12 +554,34 @@ export function InvoiceCreateForm({
   const expenseLines = lines.filter((l) => l.kind === "expense");
   const purchaseLines = lines.filter((l) => l.kind === "purchase");
 
+  if (preview) {
+    return (
+      <div className="invoice-create invoice-create-preview">
+        <div className="invoice-create-hero">
+          <div>
+            <p className="invoice-create-crumb">Billing / {preview.number}</p>
+            <h2 className="invoice-create-title">Invoice preview</h2>
+          </div>
+          <div className="invoice-create-hero-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setPreview(null)}>
+              Back to invoice
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => exportInvoicePdf(preview, company?.address)}>
+              <FileText size={16} /> Download PDF
+            </button>
+          </div>
+        </div>
+        <InvoiceDocument invoice={preview} companyAddress={company?.address} projectName={project?.name} />
+      </div>
+    );
+  }
+
   return (
     <form
       className="invoice-create"
       onSubmit={(e) => {
         e.preventDefault();
-        submit(false);
+        void submit(false);
       }}
     >
       <div className="invoice-create-hero">
@@ -1027,6 +1091,20 @@ export function InvoiceCreateForm({
               </div>
             </dl>
           </div>
+          <label className="invoice-qb-check">
+            <input
+              type="checkbox"
+              checked={pushToQuickBooks}
+              disabled={!qbStatus?.connected}
+              onChange={(e) => setPushToQuickBooks(e.target.checked)}
+            />
+            <span>
+              <strong>Create in QuickBooks</strong>
+              {qbStatus?.connected
+                ? ` Sends this invoice to ${qbStatus.companyName || "QuickBooks"} when you save.`
+                : " Connect QuickBooks in Settings, Invoice & Pricing."}
+            </span>
+          </label>
           <div className="invoice-create-template">
             <h3>Template</h3>
             <p>{template?.name || "Select a template to start from Time and materials, Progress, Fixed fee milestone, or Expense recovery."}</p>
@@ -1060,21 +1138,13 @@ export function InvoiceCreateForm({
       <div className="invoice-create-actions">
         <div className="invoice-create-actions-total">{moneyExact(totals.total)}</div>
         <div className="invoice-create-actions-end">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              const draft = buildInvoice();
-              if (!draft) return;
-              exportInvoicePdf(draft, company?.address);
-            }}
-          >
-            <FileText size={16} /> Preview & Edit PDF
+          <button type="button" className="btn btn-ghost" onClick={openPreview}>
+            <FileText size={16} /> Preview PDF
           </button>
-          <button type="submit" className="btn btn-ghost">
+          <button type="submit" className="btn btn-ghost" disabled={qbBusy}>
             Save as Draft
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => submit(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => void submit(true)} disabled={qbBusy}>
             Save & Send PDF
           </button>
         </div>
