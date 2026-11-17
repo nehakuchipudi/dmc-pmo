@@ -2024,6 +2024,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             kind,
             parentId,
             sortOrder,
+            assignee: project?.manager,
           },
         ],
       };

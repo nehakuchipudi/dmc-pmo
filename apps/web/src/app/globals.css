@@ -4425,6 +4425,67 @@ button, input, select, textarea { font: inherit; }
   text-align: left;
 }
 .overview-plan-task { padding-left: 28px; }
+.overview-plan-table-wrap { overflow: visible; }
+.overview-plan-table tr { position: relative; }
+.overview-plan-table tr:hover,
+.overview-plan-table tr:focus-within { z-index: 3; }
+.overview-assign {
+  position: relative;
+  white-space: nowrap;
+}
+.overview-assign-trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-navy);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.overview-assign-trigger:disabled {
+  color: var(--color-muted);
+  cursor: default;
+}
+.overview-assign-trigger:not(:disabled):hover,
+.overview-assign:focus-within .overview-assign-trigger {
+  text-decoration: underline;
+}
+.overview-assign-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% - 2px);
+  z-index: 24;
+  min-width: 220px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px 0;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lift);
+}
+.overview-assign:hover .overview-assign-menu,
+.overview-assign:focus-within .overview-assign-menu {
+  display: grid;
+}
+.overview-assign-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-navy);
+  text-align: left;
+  cursor: pointer;
+}
+.overview-assign-menu button:hover,
+.overview-assign-menu button.is-active {
+  background: var(--color-fog);
+}
 .overview-rail-metric { display: grid; gap: 8px; }
 .overview-rail-value { font-weight: 650; color: var(--color-navy); }
 .overview-rail-stat { font-size: var(--text-display); font-weight: 650; color: var(--color-navy); }

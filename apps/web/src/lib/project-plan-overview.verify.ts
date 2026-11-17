@@ -85,7 +85,15 @@ assert.match(overview, /Milestones and tasks/);
 assert.match(overview, />Status</);
 assert.match(overview, />Start</);
 assert.match(overview, />Due</);
-assert.match(overview, />Actions</);
+assert.match(overview, />Assigned to</);
+assert.match(overview, /overview-assign-menu/);
+assert.match(overview, /onAssignMilestone/);
+assert.match(overview, /onAssignTask/);
+assert.doesNotMatch(overview, />Actions</);
+
+const teamPanel = readFileSync(join(root, "../components/records/ProjectTeamPanel.tsx"), "utf8");
+assert.doesNotMatch(teamPanel, /Phase contractors/);
+assert.doesNotMatch(teamPanel, /Consultants and contractors are assigned to a phase/);
 assert.doesNotMatch(overview, /Earned value/);
 assert.doesNotMatch(overview, /Usage \/ budget/);
 assert.doesNotMatch(overview, /hoursByTaskId/);

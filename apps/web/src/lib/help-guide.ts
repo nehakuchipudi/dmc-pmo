@@ -144,7 +144,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Select a milestone or task and press Delete, or use the row Delete control.",
       "Drag the arrow between the table and Gantt to give either side more room.",
       "Drag bars or edit dates on the table. Switch Days and Weeks on the same toolbar.",
-      "Assign a consultant or contractor to a phase from Schedule or Team. Vendors can only hold work on the phases they are assigned.",
+      "Assign a consultant or contractor to a phase from Schedule. Vendors can only hold work on the phases they are assigned.",
     ],
     tips: ["Finance cannot edit the plan. Staff can update assigned tasks only."],
   },

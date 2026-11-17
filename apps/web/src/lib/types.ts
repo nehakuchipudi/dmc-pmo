@@ -249,6 +249,7 @@ export interface Milestone {
   contractNumber?: string;
   phaseRole?: PhaseRole;
   awardAmount?: number;
+  assignee?: string;
 }
 
 export interface Ticket {
