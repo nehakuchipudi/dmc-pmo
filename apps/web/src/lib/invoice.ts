@@ -155,6 +155,25 @@ export function emptyInvoiceLine(kind: InvoiceLineKind, extras?: Partial<Invoice
   };
 }
 
+export function applyPickedSourceLines(
+  lines: InvoiceLineItem[],
+  selectedIds: string[],
+  makeLine: (id: string) => InvoiceLineItem | null,
+): InvoiceLineItem[] {
+  const selected = new Set(selectedIds);
+  const kept = lines.filter((line) => {
+    if (!line.sourceId) return true;
+    if (!makeLine(line.sourceId)) return true;
+    return selected.has(line.sourceId);
+  });
+  const have = new Set(kept.map((line) => line.sourceId).filter(Boolean) as string[]);
+  const added = selectedIds
+    .filter((id) => !have.has(id))
+    .map((id) => makeLine(id))
+    .filter((line): line is InvoiceLineItem => Boolean(line));
+  return [...kept, ...added];
+}
+
 export function computeLineAmount(line: Pick<InvoiceLineItem, "kind" | "hours" | "rate" | "quantity" | "amount">) {
   if (line.kind === "service" && line.hours != null && line.rate != null) {
     return roundMoney(line.hours * line.rate);

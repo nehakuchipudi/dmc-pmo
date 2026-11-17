@@ -8,6 +8,7 @@ import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
+  applyPickedSourceLines,
   billedSourceIds,
   computeLineAmount,
   dueFromTerms,
@@ -370,72 +371,90 @@ export function InvoiceCreateForm({
     return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
   }
 
+  function materialLineFromId(id: string) {
+    const row = visibleMaterials.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("material", {
+      description: row.title,
+      quantity: row.qty,
+      rate: row.salePrice,
+      amount: row.qty * row.salePrice,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function expenseLineFromId(id: string) {
+    const row = visibleExpenses.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("expense", {
+      description: `${row.title || row.vendor}: ${row.note || row.belongLabel || row.projectName}`,
+      amount: row.amount,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function purchaseLineFromId(id: string) {
+    const row = visiblePurchases.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("purchase", {
+      description: `${row.title} (${row.vendor})`,
+      amount: row.amount,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function toggleMaterials(id: string) {
+    const next = toggleId(pickedMaterials, id);
+    setPickedMaterials(next);
+    setLines((current) => applyPickedSourceLines(current, next, materialLineFromId));
+  }
+
+  function toggleExpenses(id: string) {
+    const next = toggleId(pickedExpenses, id);
+    setPickedExpenses(next);
+    setLines((current) => applyPickedSourceLines(current, next, expenseLineFromId));
+  }
+
+  function togglePurchases(id: string) {
+    const next = toggleId(pickedPurchases, id);
+    setPickedPurchases(next);
+    setLines((current) => applyPickedSourceLines(current, next, purchaseLineFromId));
+  }
+
   function addSelectedExpenses() {
-    const rows = visibleExpenses.filter((row) => pickedExpenses.includes(row.id));
-    if (!rows.length) {
+    if (!pickedExpenses.length) {
       pushToast("Select at least one expense", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("expense", {
-            description: `${row.title || row.vendor}: ${row.note || row.belongLabel || row.projectName}`,
-            amount: row.amount,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected expenses");
+    setLines((current) => applyPickedSourceLines(current, pickedExpenses, expenseLineFromId));
   }
 
   function addSelectedPurchases() {
-    const rows = visiblePurchases.filter((row) => pickedPurchases.includes(row.id));
-    if (!rows.length) {
+    if (!pickedPurchases.length) {
       pushToast("Select at least one purchase", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("purchase", {
-            description: `${row.title} (${row.vendor})`,
-            amount: row.amount,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected purchases");
+    setLines((current) => applyPickedSourceLines(current, pickedPurchases, purchaseLineFromId));
   }
 
   function addSelectedMaterials() {
-    const rows = visibleMaterials.filter((row) => pickedMaterials.includes(row.id));
-    if (!rows.length) {
+    if (!pickedMaterials.length) {
       pushToast("Select at least one material", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("material", {
-            description: row.title,
-            quantity: row.qty,
-            rate: row.salePrice,
-            amount: row.qty * row.salePrice,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected materials");
+    setLines((current) => applyPickedSourceLines(current, pickedMaterials, materialLineFromId));
+  }
+
+  function removeLine(id: string) {
+    const line = lines.find((row) => row.id === id);
+    setLines((current) => current.filter((row) => row.id !== id));
+    if (!line?.sourceId) return;
+    setPickedMaterials((current) => current.filter((item) => item !== line.sourceId));
+    setPickedExpenses((current) => current.filter((item) => item !== line.sourceId));
+    setPickedPurchases((current) => current.filter((item) => item !== line.sourceId));
   }
 
   function clearIssue(id: InvoiceDraftIssue) {
@@ -923,7 +942,7 @@ export function InvoiceCreateForm({
                 label: `${row.title} · ${row.qty} × ${money(row.salePrice)}`,
               }))}
               selected={pickedMaterials}
-              onToggle={(id) => setPickedMaterials((current) => toggleId(current, id))}
+              onToggle={toggleMaterials}
               onAddSelected={addSelectedMaterials}
               onCreate={() => setAddKind((current) => (current === "material" ? null : "material"))}
               createLabel="Add material"
@@ -954,7 +973,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {materialLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
             <button type="button" className="invoice-lines-add" onClick={() => addLine("material")}>
               <Plus size={14} /> Add new Material line item
@@ -989,7 +1008,7 @@ export function InvoiceCreateForm({
                 label: `${row.title || row.vendor} · ${money(row.amount)}`,
               }))}
               selected={pickedExpenses}
-              onToggle={(id) => setPickedExpenses((current) => toggleId(current, id))}
+              onToggle={toggleExpenses}
               onAddSelected={addSelectedExpenses}
               onCreate={() => setAddKind((current) => (current === "expense" ? null : "expense"))}
               createLabel="Add expense"
@@ -1018,7 +1037,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {expenseLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
             <RecordPicker
               title="Purchases"
@@ -1028,7 +1047,7 @@ export function InvoiceCreateForm({
                 label: `${row.title} · ${money(row.amount)}`,
               }))}
               selected={pickedPurchases}
-              onToggle={(id) => setPickedPurchases((current) => toggleId(current, id))}
+              onToggle={togglePurchases}
               onAddSelected={addSelectedPurchases}
               onCreate={() => setAddKind((current) => (current === "purchase" ? null : "purchase"))}
               createLabel="Add purchase"
@@ -1057,7 +1076,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {purchaseLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
           </section>
         </div>

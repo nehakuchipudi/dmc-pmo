@@ -11,8 +11,10 @@ import {
   parseBelongValue,
 } from "./billing-items";
 import {
+  applyPickedSourceLines,
   billedSourceIds,
   dueFromTerms,
+  emptyInvoiceLine,
   INVOICE_TERMS,
   invoiceDocumentModel,
   invoiceDraftIssueMessage,
@@ -41,6 +43,29 @@ assert.equal(
   invoiceTotals([{ id: "1", kind: "purchase", description: "PO", amount: 50 }]).purchase,
   50,
 );
+
+const serviceLine = emptyInvoiceLine("service", { description: "Work", hours: 1, rate: 400, amount: 400 });
+const afterPick = applyPickedSourceLines(
+  [serviceLine],
+  ["mat-badges", "exp-aws"],
+  (id) => {
+    if (id === "mat-badges") {
+      return emptyInvoiceLine("material", { description: "Access badges", quantity: 12, rate: 18, amount: 216, sourceId: id });
+    }
+    if (id === "exp-aws") {
+      return emptyInvoiceLine("expense", { description: "AWS sandbox", amount: 186, sourceId: id });
+    }
+    return null;
+  },
+);
+const pickedTotals = invoiceTotals(afterPick);
+assert.equal(pickedTotals.service, 400);
+assert.equal(pickedTotals.material, 216);
+assert.equal(pickedTotals.expense, 186);
+assert.equal(pickedTotals.subtotal, 802);
+assert.equal(pickedTotals.total, 802);
+const afterClear = applyPickedSourceLines(afterPick, [], (id) => (id === "mat-badges" || id === "exp-aws" ? emptyInvoiceLine("expense", { sourceId: id }) : null));
+assert.equal(invoiceTotals(afterClear).subtotal, 400);
 
 const expenseForm = readFileSync(join(root, "../components/billing/ExpenseCreateForm.tsx"), "utf8");
 assert.match(expenseForm, /Field label="Title"/);
@@ -77,6 +102,10 @@ assert.match(invoice, /Add expense/);
 assert.match(invoice, /Add purchase/);
 assert.match(invoice, /Add material/);
 assert.match(invoice, /Add selected/);
+assert.match(invoice, /toggleMaterials/);
+assert.match(invoice, /toggleExpenses/);
+assert.match(invoice, /togglePurchases/);
+assert.match(invoice, /applyPickedSourceLines/);
 assert.match(invoice, /defaultLines: \[\]/);
 assert.match(invoice, /Select from existing templates/);
 assert.match(invoice, /Invoice Template/);
