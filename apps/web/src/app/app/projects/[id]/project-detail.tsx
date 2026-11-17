@@ -6,7 +6,6 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import { ProjectOverviewBoard } from "@/components/projects/ProjectOverviewBoard";
-import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityStream } from "@/components/records/ActivityStream";
 import { composeActivityFeed } from "@/lib/activity";
 import { ProjectSchedule } from "@/components/schedule/ProjectSchedule";
@@ -38,14 +37,6 @@ import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
 
 const TABS = [...PROJECT_WORKSPACE_TABS];
 const PROJECT_TYPES = ["Internal", "Client Work", "Retainer", "Fixed Fee", "Capital / PMO"];
-
-function activityDate(when: string) {
-  if (/today|yesterday/i.test(when)) return "2026-08-05";
-  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-  const idx = months.findIndex((m) => when.toLowerCase().includes(m));
-  if (idx >= 0) return `2026-${String(idx + 1).padStart(2, "0")}-15`;
-  return "2026-08-01";
-}
 
 export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: string }) {
   const router = useRouter();
@@ -173,14 +164,6 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
           })
         : null,
     [project, teamMembers, projectTime, projectExpenses, team],
-  );
-  const chartPoints = useMemo(
-    () =>
-      monthSeries([
-        ...projectTime.map((t) => ({ date: t.date, hours: t.hours })),
-        ...projectActivity.map((a) => ({ date: a.at ? a.at.slice(0, 10) : activityDate(a.when), activity: true })),
-      ]),
-    [projectTime, projectActivity],
   );
   useEffect(() => {
     setTab(resolveProjectTab(initialTab));
@@ -491,25 +474,18 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
         ) : null}
 
         {tab === "Insights" ? (
-          <div className="space-y-4">
-            <ProjectInsights
-              project={project}
-              tasks={projectTasks}
-              milestones={ms}
-              timeEntries={projectTime}
-              expenses={projectExpenses}
-              allocations={allocations}
-              team={teamMembers}
-              risks={risks}
-              memberNames={team}
-              onOpenTasks={() => goTab("Schedule")}
-              onOpenSchedule={() => goTab("Schedule")}
-            />
-            <div className="panel p-4">
-              <h2 className="section-title">Activity vs hours</h2>
-              <ActivityHoursChart points={chartPoints} />
-            </div>
-          </div>
+          <ProjectInsights
+            project={project}
+            tasks={projectTasks}
+            milestones={ms}
+            timeEntries={projectTime}
+            expenses={projectExpenses}
+            allocations={allocations}
+            team={teamMembers}
+            risks={risks}
+            memberNames={team}
+            onOpenSchedule={() => goTab("Schedule")}
+          />
         ) : null}
 
         {tab === "Activity" ? (

@@ -1,5 +1,7 @@
+import { roundMoney } from "./invoice";
 import { allocationByMember, riskScore } from "./ppm";
-import { allocationSummary } from "./plan-allocation";
+import { allocationSummary, roundHours } from "./plan-allocation";
+import { scheduleWindow } from "./project-plan";
 import { computeProjectMetrics, memberRate } from "./project-workspace";
 import { utilizationLevel } from "./project-team";
 import type {
@@ -36,6 +38,111 @@ export type MilestoneInsight = {
 
 function todayIso(asOf?: string) {
   return asOf ?? new Date().toISOString().slice(0, 10);
+}
+
+function monthKey(iso: string) {
+  return (iso || "").slice(0, 7);
+}
+
+function nextMonth(key: string) {
+  const [year, month] = key.split("-").map(Number);
+  const next = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return `${nextYear}-${String(next).padStart(2, "0")}`;
+}
+
+export type InsightTrendPoint = {
+  key: string;
+  label: string;
+  hours: number;
+  spend: number;
+  hoursPct: number;
+  spendPct: number;
+};
+
+export function budgetTimeTrend(input: {
+  start: string;
+  due: string;
+  asOf: string;
+  approvedHours: number;
+  approvedBudget: number;
+  timeEntries: TimeEntry[];
+  expenses: Expense[];
+  rateFor: (name: string) => number;
+  extraHours?: number;
+  extraSpend?: number;
+}): InsightTrendPoint[] {
+  const dates = [
+    input.start,
+    input.due,
+    input.asOf,
+    ...input.timeEntries.map((row) => row.date),
+    ...input.expenses.map((row) => row.date),
+  ].filter(Boolean);
+  const startKey = monthKey(dates.slice().sort()[0] || input.asOf);
+  const endKey = monthKey(dates.slice().sort().at(-1) || input.asOf);
+  const keys: string[] = [];
+  for (let key = startKey; key && key <= endKey && keys.length < 36; key = nextMonth(key)) {
+    keys.push(key);
+  }
+  const windowKeys = (keys.length ? keys : [monthKey(input.asOf)]).slice(-12);
+
+  const hoursBy: Record<string, number> = {};
+  const spendBy: Record<string, number> = {};
+  input.timeEntries.forEach((row) => {
+    if (row.status === "Rejected") return;
+    const key = monthKey(row.date);
+    hoursBy[key] = (hoursBy[key] ?? 0) + (Number(row.hours) || 0);
+    spendBy[key] = (spendBy[key] ?? 0) + (Number(row.hours) || 0) * input.rateFor(row.userName);
+  });
+  input.expenses.forEach((row) => {
+    if (row.status === "Rejected") return;
+    const key = monthKey(row.date);
+    spendBy[key] = (spendBy[key] ?? 0) + (Number(row.amount) || 0);
+  });
+  const extraKey = windowKeys.includes(monthKey(input.asOf))
+    ? monthKey(input.asOf)
+    : (windowKeys.at(-1) || monthKey(input.asOf));
+  const countedHours = Object.values(hoursBy).reduce((sum, value) => sum + value, 0);
+  const countedSpend = Object.values(spendBy).reduce((sum, value) => sum + value, 0);
+  if (input.extraHours && countedHours > 0) {
+    const factor = (countedHours + input.extraHours) / countedHours;
+    Object.keys(hoursBy).forEach((key) => {
+      hoursBy[key] *= factor;
+    });
+  } else if (input.extraHours) {
+    hoursBy[extraKey] = (hoursBy[extraKey] ?? 0) + input.extraHours;
+  }
+  if (input.extraSpend && countedSpend > 0) {
+    const factor = (countedSpend + input.extraSpend) / countedSpend;
+    Object.keys(spendBy).forEach((key) => {
+      spendBy[key] *= factor;
+    });
+  } else if (input.extraSpend) {
+    spendBy[extraKey] = (spendBy[extraKey] ?? 0) + input.extraSpend;
+  }
+
+  let hours = 0;
+  let spend = 0;
+  keys.forEach((key) => {
+    if (windowKeys.includes(key)) return;
+    hours += hoursBy[key] ?? 0;
+    spend += spendBy[key] ?? 0;
+  });
+  return windowKeys.map((key) => {
+    hours += hoursBy[key] ?? 0;
+    spend += spendBy[key] ?? 0;
+    const [year, month] = key.split("-");
+    const label = new Date(Number(year), Number(month) - 1, 1).toLocaleString("en-US", { month: "short" });
+    return {
+      key,
+      label,
+      hours: roundHours(hours),
+      spend: roundMoney(spend),
+      hoursPct: input.approvedHours > 0 ? Math.round((hours / input.approvedHours) * 100) : 0,
+      spendPct: input.approvedBudget > 0 ? Math.round((spend / input.approvedBudget) * 100) : 0,
+    };
+  });
 }
 
 function worstHealth(values: InsightHealth[]): InsightHealth {
@@ -199,6 +306,35 @@ export function computeProjectInsights(input: {
   const estimateHours = input.tasks.reduce((sum, task) => sum + (task.estimateHours ?? 0), 0);
   const entryHours = input.timeEntries.reduce((sum, row) => sum + row.hours, 0);
   const allocation = allocationSummary(project, input.tasks, (task) => memberRate(task.assignee, project, input.team));
+  const window = scheduleWindow(project.start, project.due, asOf);
+  const teamLoad = roster
+    .map((row) => ({
+      name: row.memberName,
+      pct: capacity.find((item) => item.id === row.memberId)?.pct ?? row.allocationPct,
+    }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 5);
+  const countedHours = input.timeEntries
+    .filter((row) => row.status !== "Rejected")
+    .reduce((sum, row) => sum + (Number(row.hours) || 0), 0);
+  const countedSpend = input.timeEntries
+    .filter((row) => row.status !== "Rejected")
+    .reduce((sum, row) => sum + (Number(row.hours) || 0) * memberRate(row.userName, project, input.team), 0)
+    + input.expenses
+      .filter((row) => row.status !== "Rejected")
+      .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const trend = budgetTimeTrend({
+    start: project.start,
+    due: project.due,
+    asOf,
+    approvedHours: plannedHours,
+    approvedBudget: project.budgetAmount,
+    timeEntries: input.timeEntries,
+    expenses: input.expenses,
+    rateFor: (name) => memberRate(name, project, input.team),
+    extraHours: Math.max(0, actualHours - countedHours),
+    extraSpend: Math.max(0, metrics.actualCost - countedSpend),
+  });
 
   return {
     asOf,
@@ -226,6 +362,11 @@ export function computeProjectInsights(input: {
     remainingHours: allocation.remainingHours,
     allocatedBudgetPct: allocation.budgetPct,
     allocatedHoursPct: allocation.hoursPct,
+    trend,
+    teamLoad,
+    daysRemaining: window.remaining,
+    daysOver: window.over,
+    daysElapsed: window.elapsed,
     milestonePct,
     milestoneRows,
     overdueTasks: overdueTasks
