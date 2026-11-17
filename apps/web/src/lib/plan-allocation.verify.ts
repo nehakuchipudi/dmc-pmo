@@ -65,11 +65,16 @@ const schedule = readFileSync(join(root, "../components/schedule/ProjectSchedule
 assert.match(schedule, /plan-alloc-summary/);
 assert.match(schedule, /Total project budget/);
 assert.match(schedule, /ScheduleAllocationModal/);
+assert.match(schedule, /ScheduleProjectModal/);
+assert.match(schedule, /ScheduleGroupModal/);
+assert.match(schedule, /plan-alloc-value/);
 assert.match(schedule, />Budget</);
 assert.match(schedule, />Time</);
 assert.match(schedule, /PDF/);
 assert.match(schedule, /Project plan/);
 assert.match(schedule, /Gantt chart/);
+assert.doesNotMatch(schedule, /plan-alloc-open/);
+assert.doesNotMatch(schedule, /plan-alloc-edit/);
 const store = readFileSync(join(root, "./store.ts"), "utf8");
 assert.match(store, /validateTaskAllocation/);
 assert.match(store, /validateProjectCaps/);

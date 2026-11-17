@@ -252,3 +252,139 @@ export function ScheduleAllocationModal({
     </Modal>
   );
 }
+
+export function ScheduleProjectModal({
+  projectName,
+  budget,
+  hours,
+  onSave,
+  onClose,
+}: {
+  projectName: string;
+  budget: number;
+  hours: number;
+  onSave: (patch: { budgetAmount: number; budgetHours: number }) => boolean | void;
+  onClose: () => void;
+}) {
+  const [budgetAmount, setBudgetAmount] = useState(budget);
+  const [budgetHours, setBudgetHours] = useState(hours);
+  return (
+    <Modal open title={`${projectName} budget and time`} onClose={onClose}>
+      <div className="plan-alloc-grid">
+        <Field label="Approved budget">
+          <TextInput
+            type="number"
+            min={0}
+            step="0.01"
+            value={budgetAmount}
+            onChange={(e) => setBudgetAmount(Number(e.target.value) || 0)}
+          />
+        </Field>
+        <Field label="Approved time (hours)">
+          <TextInput
+            type="number"
+            min={0}
+            step="0.25"
+            value={budgetHours}
+            onChange={(e) => setBudgetHours(Number(e.target.value) || 0)}
+          />
+        </Field>
+      </div>
+      <div className="plan-alloc-foot">
+        <div>
+          <div className="text-sm text-[var(--color-muted)]">Project budget</div>
+          <div className="text-lg font-semibold">{moneyExact(budgetAmount)}</div>
+        </div>
+        <div className="confirm-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              if (budgetAmount === budget && budgetHours === hours) {
+                onClose();
+                return;
+              }
+              const saved = onSave({ budgetAmount, budgetHours });
+              if (saved !== false) onClose();
+            }}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+export function ScheduleGroupModal({
+  name,
+  rows,
+  onOpenTask,
+  onClose,
+}: {
+  name: string;
+  rows: { id: string; name: string; assignee: string; budget: number; hours: number }[];
+  onOpenTask: (id: string) => void;
+  onClose: () => void;
+}) {
+  const totalBudget = rows.reduce((sum, row) => sum + row.budget, 0);
+  const totalHours = rows.reduce((sum, row) => sum + row.hours, 0);
+  return (
+    <Modal open title={`${name} budget and time`} onClose={onClose} wide>
+      {rows.length ? (
+        <div className="table-wrap plan-group-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Assignee</th>
+                <th>Budget</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <button type="button" className="plan-alloc-value" onClick={() => onOpenTask(row.id)}>
+                      {row.name}
+                    </button>
+                  </td>
+                  <td>{row.assignee || "Unassigned"}</td>
+                  <td>
+                    <button type="button" className="plan-alloc-value" onClick={() => onOpenTask(row.id)}>
+                      {moneyExact(row.budget)}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" className="plan-alloc-value" onClick={() => onOpenTask(row.id)}>
+                      {formatHours(row.hours)}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--color-muted)]">No tasks to allocate yet.</p>
+      )}
+      <div className="plan-alloc-foot">
+        <div>
+          <div className="text-sm text-[var(--color-muted)]">Allocated total</div>
+          <div className="text-lg font-semibold">
+            {moneyExact(totalBudget)} / {formatHours(totalHours)}
+          </div>
+        </div>
+        <div className="confirm-actions">
+          <button type="button" className="btn btn-primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
