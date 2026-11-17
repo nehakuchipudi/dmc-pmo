@@ -1,5 +1,25 @@
 import { uid } from "./seed";
-import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "./types";
+import type {
+  Invoice,
+  InvoiceLineItem,
+  InvoiceLineItemize,
+  InvoiceLineKind,
+  InvoiceTemplate,
+  Milestone,
+  TimeEntry,
+} from "./types";
+
+export const INVOICE_FOR_OPTIONS = ["Work done", "Milestone", "Retainer period", "Expenses"] as const;
+export type InvoiceForOption = (typeof INVOICE_FOR_OPTIONS)[number];
+export const INVOICE_DETAIL_OPTIONS = ["Project", "Milestone"] as const;
+export type InvoiceDetailOption = (typeof INVOICE_DETAIL_OPTIONS)[number];
+export const INVOICE_ITEMIZE_OPTIONS: InvoiceLineItemize[] = ["None", "Staff", "Task"];
+export const INVOICE_CURRENCIES = [
+  { value: "USD", label: "USD - United States Dollar" },
+  { value: "CAD", label: "CAD - Canadian Dollar" },
+  { value: "EUR", label: "EUR - Euro" },
+  { value: "GBP", label: "GBP - British Pound" },
+];
 
 export const FIRM_LETTERHEAD = {
   name: "Dillon Morgan Consulting",
@@ -63,6 +83,8 @@ export function emptyInvoiceLine(kind: InvoiceLineKind, extras?: Partial<Invoice
     taxPct: extras?.taxPct ?? 0,
     includeInPdf: extras?.includeInPdf ?? true,
     sourceId: extras?.sourceId,
+    itemize: extras?.itemize ?? "None",
+    milestoneId: extras?.milestoneId,
   };
 }
 
@@ -140,4 +162,45 @@ export function invoiceFromDraft(partial: Invoice): Invoice {
     amount: totals.total,
     taxAmount: totals.tax,
   };
+}
+
+export function invoiceForFromTemplate(template?: InvoiceTemplate): InvoiceForOption {
+  if (!template) return "Work done";
+  if (template.invoiceFor === "Work completed") return "Work done";
+  return template.invoiceFor;
+}
+
+export function templateInvoiceFor(value: InvoiceForOption): InvoiceTemplate["invoiceFor"] {
+  if (value === "Work done") return "Work completed";
+  return value;
+}
+
+export function billedSourceIds(invoices: Invoice[], projectId?: string) {
+  return new Set(
+    invoices
+      .filter((invoice) => !projectId || invoice.projectId === projectId)
+      .flatMap((invoice) => invoice.lineItems.map((line) => line.sourceId).filter(Boolean) as string[]),
+  );
+}
+
+export function phaseChildIds(milestones: Milestone[], phaseId: string) {
+  return new Set([phaseId, ...milestones.filter((row) => row.parentId === phaseId).map((row) => row.id)]);
+}
+
+export function timeMatchesWork(input: {
+  entry: TimeEntry;
+  projectId?: string;
+  childIds?: Set<string>;
+  workStatus: "All" | "Approved";
+  loggedBefore: string;
+  includeNonBillable: boolean;
+}) {
+  if (input.projectId && input.entry.projectId !== input.projectId) return false;
+  if (!input.includeNonBillable && !input.entry.billable) return false;
+  if (input.workStatus === "Approved" && input.entry.status !== "Approved") return false;
+  if (input.entry.status === "Rejected") return false;
+  if (input.loggedBefore && input.entry.date > input.loggedBefore) return false;
+  if (input.childIds && input.entry.milestoneId && !input.childIds.has(input.entry.milestoneId)) return false;
+  if (input.childIds && !input.entry.milestoneId) return false;
+  return true;
 }

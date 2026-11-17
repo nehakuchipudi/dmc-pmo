@@ -340,6 +340,8 @@ export interface ProjectRate {
 
 export type InvoiceLineKind = "service" | "material" | "expense" | "purchase";
 
+export type InvoiceLineItemize = "None" | "Staff" | "Task";
+
 export interface InvoiceLineItem {
   id: string;
   kind: InvoiceLineKind;
@@ -351,6 +353,8 @@ export interface InvoiceLineItem {
   taxPct?: number;
   includeInPdf?: boolean;
   sourceId?: string;
+  itemize?: InvoiceLineItemize;
+  milestoneId?: string;
 }
 
 export type InvoiceTemplateKind = "time_materials" | "progress" | "retainer" | "fixed_fee" | "expense";
@@ -403,6 +407,8 @@ export interface Invoice {
   description?: string;
   internalDescription?: string;
   templateId?: string;
+  milestoneId?: string;
+  invoiceFor?: InvoiceTemplate["invoiceFor"];
   taxAmount?: number;
   reference?: string;
   modifiedBy?: string;

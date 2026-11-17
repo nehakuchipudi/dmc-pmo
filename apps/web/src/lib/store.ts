@@ -269,6 +269,8 @@ export type CreateInvoiceInput = {
   poNumber?: string;
   internalDescription?: string;
   templateId?: string;
+  milestoneId?: string;
+  invoiceFor?: Invoice["invoiceFor"];
   terms?: string;
   number?: string;
   lineItems?: InvoiceLineItem[];
@@ -2891,6 +2893,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       description: opts?.description,
       internalDescription: opts?.internalDescription,
       templateId: opts?.templateId,
+      milestoneId: opts?.milestoneId,
+      invoiceFor: opts?.invoiceFor,
       taxAmount: totals.tax,
     };
     set((s) => ({ invoices: [invoice, ...s.invoices] }));
