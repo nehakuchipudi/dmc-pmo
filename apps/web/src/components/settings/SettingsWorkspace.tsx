@@ -10,9 +10,10 @@ import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
 import { OutlookMailCard } from "@/components/settings/OutlookMailCard";
-import { SettingsBilling } from "@/components/settings/SettingsBilling";
+import { SettingsInvoicePricing } from "@/components/settings/SettingsInvoicePricing";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
+import { isPricingPanel, PRICING_PANELS, type PricingPanel } from "@/lib/invoice-pricing";
 import { PROJECT_LIFECYCLE_STATUSES } from "@/lib/project-lifecycle";
 import { NAV_MODULES, PACKS, type PackId } from "@/lib/modules";
 import { ROLE_SUMMARIES } from "@/lib/rbac";
@@ -32,7 +33,7 @@ const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?
   { id: "users", label: "Users & roles", icon: Users, needUsers: true },
   { id: "lifecycle", label: "Lifecycle", icon: Workflow, needUsers: true },
   { id: "email", label: "Email domain", icon: Globe, needUsers: true },
-  { id: "billing", label: "Billing", icon: Receipt, needBilling: true },
+  { id: "billing", label: "Invoice & Pricing", icon: Receipt, needBilling: true },
   { id: "prefs", label: "Preferences", icon: SettingsIcon },
 ];
 
@@ -56,7 +57,9 @@ export function SettingsWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requested = searchParams.get("section");
+  const requestedPanel = searchParams.get("panel");
   const [section, setSection] = useState<SettingsSection>(isSettingsSection(requested) ? requested : "capabilities");
+  const panel: PricingPanel = isPricingPanel(requestedPanel) ? requestedPanel : "settings";
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: string; el: HTMLElement } | null>(null);
@@ -68,13 +71,23 @@ export function SettingsWorkspace() {
     if (isSettingsSection(requested)) setSection(requested);
   }, [requested]);
 
-  function openSection(next: SettingsSection) {
+  function writeSettingsUrl(next: SettingsSection, nextPanel?: PricingPanel) {
     setSection(next);
     const params = new URLSearchParams(searchParams.toString());
     if (next === "capabilities") params.delete("section");
     else params.set("section", next);
+    if (next === "billing") params.set("panel", nextPanel ?? (isPricingPanel(params.get("panel")) ? (params.get("panel") as PricingPanel) : "settings"));
+    else params.delete("panel");
     const qs = params.toString();
     router.replace(qs ? `/app/settings/?${qs}` : "/app/settings/", { scroll: false });
+  }
+
+  function openSection(next: SettingsSection) {
+    writeSettingsUrl(next, next === "billing" && section === "billing" ? panel : "settings");
+  }
+
+  function openPricingPanel(next: PricingPanel) {
+    writeSettingsUrl("billing", next);
   }
 
   const items = RAIL.filter((item) => (!item.needUsers || canViewUsers) && (!item.needBilling || can("view_billing")));
@@ -99,15 +112,28 @@ export function SettingsWorkspace() {
           const Icon = item.icon;
           const active = section === item.id;
           return (
-            <button
-              key={item.id}
-              type="button"
-              className={clsx("settings-rail-item", active && "is-active")}
-              onClick={() => openSection(item.id)}
-            >
-              <Icon size={16} />
-              <span>{item.label}</span>
-            </button>
+            <div key={item.id} className="settings-rail-group">
+              <button
+                type="button"
+                className={clsx("settings-rail-item", active && "is-active")}
+                onClick={() => openSection(item.id)}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </button>
+              {item.id === "billing" && active
+                ? PRICING_PANELS.map((child) => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className={clsx("settings-rail-child", panel === child.id && "is-active")}
+                      onClick={() => openPricingPanel(child.id)}
+                    >
+                      {child.label}
+                    </button>
+                  ))
+                : null}
+            </div>
           );
         })}
         {can("view_automations") ? (
@@ -409,7 +435,7 @@ export function SettingsWorkspace() {
           </div>
         ) : null}
 
-        {section === "billing" ? <SettingsBilling /> : null}
+        {section === "billing" ? <SettingsInvoicePricing panel={panel} /> : null}
 
         {section === "email" ? (
           <>

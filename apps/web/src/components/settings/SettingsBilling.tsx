@@ -90,10 +90,10 @@ export function SettingsBilling() {
   }
 
   return (
-    <>
+    <section className="pricing-sheet">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Billing</h1>
+          <h1 className="page-title">Settings</h1>
           <p className="page-sub">
             Invoice templates live here. They hold names, terms, and title patterns only. Amounts stay off the template
             and are entered on each invoice.
@@ -259,6 +259,6 @@ export function SettingsBilling() {
           )}
         </form>
       </div>
-    </>
+    </section>
   );
 }

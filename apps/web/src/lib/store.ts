@@ -81,6 +81,14 @@ import {
   type TimelineError,
 } from "./plan-timeline";
 import { validateProjectCaps, validateTaskAllocation } from "./plan-allocation";
+import {
+  PRICING_SEED_GENERATION,
+  seedBillingRates,
+  seedCatalogItems,
+  seedInvoiceLedgers,
+  seedPaymentMethods,
+  seedTaxCodes,
+} from "./invoice-pricing";
 import { memberRate } from "./project-workspace";
 import { ideaCanConvert, ideaComposite, nextProjectNumber, normalizeIdeaStage, projectTemplateById } from "./ppm";
 import {
@@ -111,9 +119,14 @@ import type {
   GovernanceGate,
   Idea,
   IdeaStage,
+  BillingRate,
+  CatalogItem,
   Invoice,
+  InvoiceLedger,
   InvoiceLineItem,
   InvoiceTemplate,
+  PaymentMethod,
+  TaxCode,
   IssueItem,
   Milestone,
   NotificationItem,
@@ -290,6 +303,12 @@ type AppState = {
   tasks: Task[];
   invoices: Invoice[];
   invoiceTemplates: InvoiceTemplate[];
+  billingRates: BillingRate[];
+  taxCodes: TaxCode[];
+  paymentMethods: PaymentMethod[];
+  invoiceLedgers: InvoiceLedger[];
+  catalogItems: CatalogItem[];
+  pricingSeedGeneration: string;
   timeEntries: TimeEntry[];
   timeTimers: TimeTimer[];
   showTimeTimers: boolean;
@@ -515,6 +534,26 @@ type AppState = {
   createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
   updateInvoiceTemplate: (id: string, patch: Partial<InvoiceTemplate>) => void;
   deleteInvoiceTemplate: (id: string) => void;
+  createBillingRate: (input: Omit<BillingRate, "id">) => string;
+  updateBillingRate: (id: string, patch: Partial<BillingRate>) => void;
+  setBillingRateActive: (id: string, active: boolean) => void;
+  deleteBillingRate: (id: string) => void;
+  createTaxCode: (input: Omit<TaxCode, "id">) => string;
+  updateTaxCode: (id: string, patch: Partial<TaxCode>) => void;
+  setTaxCodeActive: (id: string, active: boolean) => void;
+  deleteTaxCode: (id: string) => void;
+  createPaymentMethod: (input: Omit<PaymentMethod, "id">) => string;
+  updatePaymentMethod: (id: string, patch: Partial<PaymentMethod>) => void;
+  setPaymentMethodActive: (id: string, active: boolean) => void;
+  deletePaymentMethod: (id: string) => void;
+  createInvoiceLedger: (input: Omit<InvoiceLedger, "id">) => string;
+  updateInvoiceLedger: (id: string, patch: Partial<InvoiceLedger>) => void;
+  setInvoiceLedgerActive: (id: string, active: boolean) => void;
+  deleteInvoiceLedger: (id: string) => void;
+  createCatalogItem: (input: Omit<CatalogItem, "id">) => string;
+  updateCatalogItem: (id: string, patch: Partial<CatalogItem>) => void;
+  setCatalogItemActive: (id: string, active: boolean) => void;
+  deleteCatalogItem: (id: string) => void;
   generateProjectInvoice: (projectId: string) => string;
   generatePeriodInvoice: (periodId: string) => string;
   addProjectFile: (projectId: string, file: Omit<ProjectFile, "id">) => void;
@@ -894,6 +933,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   team: mergeTeam(),
   invoices: seedInvoices,
   invoiceTemplates: seedInvoiceTemplates,
+  billingRates: seedBillingRates.map((row) => ({ ...row })),
+  taxCodes: seedTaxCodes.map((row) => ({ ...row })),
+  paymentMethods: seedPaymentMethods.map((row) => ({ ...row })),
+  invoiceLedgers: seedInvoiceLedgers.map((row) => ({ ...row })),
+  catalogItems: seedCatalogItems.map((row) => ({ ...row })),
+  pricingSeedGeneration: PRICING_SEED_GENERATION,
   timeEntries: seedTimeEntries,
   timeTimers: [],
   showTimeTimers: true,
@@ -2943,6 +2988,154 @@ export const useAppStore = create<AppState>((set, get) => ({
     const template = get().invoiceTemplates.find((row) => row.id === id);
     set((s) => ({ invoiceTemplates: s.invoiceTemplates.filter((row) => row.id !== id) }));
     if (template) get().pushToast(`${template.name} removed`);
+  },
+
+  createBillingRate: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
+    const id = uid("rate");
+    const row: BillingRate = { ...input, id, title: input.title.trim() || "Untitled rate" };
+    set((s) => ({ billingRates: [...s.billingRates, row] }));
+    get().pushToast(`${row.title} saved`);
+    return id;
+  },
+  updateBillingRate: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({
+      billingRates: s.billingRates.map((row) => (row.id === id ? { ...row, ...patch, title: (patch.title ?? row.title).trim() || row.title } : row)),
+    }));
+    get().pushToast("Rate updated");
+  },
+  setBillingRateActive: (id, active) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().billingRates.find((item) => item.id === id);
+    set((s) => ({ billingRates: s.billingRates.map((item) => (item.id === id ? { ...item, active } : item)) }));
+    if (row) get().pushToast(active ? `${row.title} is active` : `${row.title} is inactive`);
+  },
+  deleteBillingRate: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().billingRates.find((item) => item.id === id);
+    set((s) => ({ billingRates: s.billingRates.filter((item) => item.id !== id) }));
+    if (row) get().pushToast(`${row.title} removed`);
+  },
+
+  createTaxCode: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
+    const id = uid("tax");
+    const row: TaxCode = { ...input, id, title: input.title.trim() || "Untitled tax" };
+    set((s) => ({ taxCodes: [...s.taxCodes, row] }));
+    get().pushToast(`${row.title} saved`);
+    return id;
+  },
+  updateTaxCode: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({
+      taxCodes: s.taxCodes.map((row) => (row.id === id ? { ...row, ...patch, title: (patch.title ?? row.title).trim() || row.title } : row)),
+    }));
+    get().pushToast("Tax code updated");
+  },
+  setTaxCodeActive: (id, active) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().taxCodes.find((item) => item.id === id);
+    set((s) => ({ taxCodes: s.taxCodes.map((item) => (item.id === id ? { ...item, active } : item)) }));
+    if (row) get().pushToast(active ? `${row.title} is active` : `${row.title} is inactive`);
+  },
+  deleteTaxCode: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().taxCodes.find((item) => item.id === id);
+    set((s) => ({ taxCodes: s.taxCodes.filter((item) => item.id !== id) }));
+    if (row) get().pushToast(`${row.title} removed`);
+  },
+
+  createPaymentMethod: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
+    const id = uid("pay");
+    const row: PaymentMethod = { ...input, id, title: input.title.trim() || "Untitled payment" };
+    set((s) => ({ paymentMethods: [...s.paymentMethods, row] }));
+    get().pushToast(`${row.title} saved`);
+    return id;
+  },
+  updatePaymentMethod: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({
+      paymentMethods: s.paymentMethods.map((row) => (row.id === id ? { ...row, ...patch, title: (patch.title ?? row.title).trim() || row.title } : row)),
+    }));
+    get().pushToast("Payment method updated");
+  },
+  setPaymentMethodActive: (id, active) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().paymentMethods.find((item) => item.id === id);
+    set((s) => ({ paymentMethods: s.paymentMethods.map((item) => (item.id === id ? { ...item, active } : item)) }));
+    if (row) get().pushToast(active ? `${row.title} is active` : `${row.title} is inactive`);
+  },
+  deletePaymentMethod: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().paymentMethods.find((item) => item.id === id);
+    set((s) => ({ paymentMethods: s.paymentMethods.filter((item) => item.id !== id) }));
+    if (row) get().pushToast(`${row.title} removed`);
+  },
+
+  createInvoiceLedger: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
+    const id = uid("led");
+    const row: InvoiceLedger = { ...input, id, title: input.title.trim() || "Untitled ledger", code: input.code.trim() };
+    set((s) => ({ invoiceLedgers: [...s.invoiceLedgers, row] }));
+    get().pushToast(`${row.title} saved`);
+    return id;
+  },
+  updateInvoiceLedger: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({
+      invoiceLedgers: s.invoiceLedgers.map((row) =>
+        row.id === id
+          ? { ...row, ...patch, title: (patch.title ?? row.title).trim() || row.title, code: (patch.code ?? row.code).trim() }
+          : row,
+      ),
+    }));
+    get().pushToast("Invoice ledger updated");
+  },
+  setInvoiceLedgerActive: (id, active) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().invoiceLedgers.find((item) => item.id === id);
+    set((s) => ({ invoiceLedgers: s.invoiceLedgers.map((item) => (item.id === id ? { ...item, active } : item)) }));
+    if (row) get().pushToast(active ? `${row.title} is active` : `${row.title} is inactive`);
+  },
+  deleteInvoiceLedger: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().invoiceLedgers.find((item) => item.id === id);
+    set((s) => ({ invoiceLedgers: s.invoiceLedgers.filter((item) => item.id !== id) }));
+    if (row) get().pushToast(`${row.title} removed`);
+  },
+
+  createCatalogItem: (input) => {
+    if (!requireCap(get, "manage_invoice")) return "";
+    const id = uid("cat");
+    const row: CatalogItem = { ...input, id, title: input.title.trim() || "Untitled item", code: input.code.trim() };
+    set((s) => ({ catalogItems: [...s.catalogItems, row] }));
+    get().pushToast(`${row.title} saved`);
+    return id;
+  },
+  updateCatalogItem: (id, patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({
+      catalogItems: s.catalogItems.map((row) =>
+        row.id === id
+          ? { ...row, ...patch, title: (patch.title ?? row.title).trim() || row.title, code: (patch.code ?? row.code).trim() }
+          : row,
+      ),
+    }));
+    get().pushToast("Catalog item updated");
+  },
+  setCatalogItemActive: (id, active) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().catalogItems.find((item) => item.id === id);
+    set((s) => ({ catalogItems: s.catalogItems.map((item) => (item.id === id ? { ...item, active } : item)) }));
+    if (row) get().pushToast(active ? `${row.title} is active` : `${row.title} is inactive`);
+  },
+  deleteCatalogItem: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const row = get().catalogItems.find((item) => item.id === id);
+    set((s) => ({ catalogItems: s.catalogItems.filter((item) => item.id !== id) }));
+    if (row) get().pushToast(`${row.title} removed`);
   },
 
   generateProjectInvoice: (projectId) => {

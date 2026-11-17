@@ -338,6 +338,46 @@ export interface ProjectRate {
   hourlyRate: number;
 }
 
+export type BillingRateKind = "Billable Rate" | "Cost Rate";
+
+export interface BillingRate {
+  id: string;
+  title: string;
+  rate: number;
+  kind: BillingRateKind;
+  active: boolean;
+}
+
+export interface TaxCode {
+  id: string;
+  title: string;
+  rate: number;
+  invoices: boolean;
+  purchases: boolean;
+  active: boolean;
+}
+
+export interface PaymentMethod {
+  id: string;
+  title: string;
+  active: boolean;
+}
+
+export interface InvoiceLedger {
+  id: string;
+  title: string;
+  code: string;
+  active: boolean;
+}
+
+export interface CatalogItem {
+  id: string;
+  title: string;
+  kind: "Service" | "Material";
+  code: string;
+  active: boolean;
+}
+
 export type InvoiceLineKind = "service" | "material" | "expense" | "purchase";
 
 export type InvoiceLineItemize = "None" | "Staff" | "Task";

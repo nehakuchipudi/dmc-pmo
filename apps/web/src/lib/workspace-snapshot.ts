@@ -1,4 +1,12 @@
 import { blankInvoiceTemplate } from "./invoice";
+import {
+  PRICING_SEED_GENERATION,
+  seedBillingRates,
+  seedCatalogItems,
+  seedInvoiceLedgers,
+  seedPaymentMethods,
+  seedTaxCodes,
+} from "./invoice-pricing";
 import { seedInvoiceTemplates } from "./seed";
 import type { InvoiceTemplate } from "./types";
 
@@ -16,6 +24,12 @@ export const WORKSPACE_KEYS = [
   "tasks",
   "invoices",
   "invoiceTemplates",
+  "billingRates",
+  "taxCodes",
+  "paymentMethods",
+  "invoiceLedgers",
+  "catalogItems",
+  "pricingSeedGeneration",
   "timeEntries",
   "notifications",
   "activities",
@@ -53,6 +67,7 @@ export const WORKSPACE_KEYS = [
 
 export const EMPTY_WORKSPACE_GENERATION = "empty-v1";
 export const TEMPLATES_BLANK_GENERATION = "blank-v1";
+export { PRICING_SEED_GENERATION } from "./invoice-pricing";
 export const DEMO_WORKSPACE_GENERATION = "dmc-only-v1";
 export const LOCAL_WORKSPACE_KEY = "dmc-pmo-workspace";
 
@@ -106,7 +121,13 @@ export function emptyWorkspaceData(): Record<string, unknown> {
   const data: Record<string, unknown> = {
     seedGeneration: EMPTY_WORKSPACE_GENERATION,
     templatesBlankGeneration: TEMPLATES_BLANK_GENERATION,
+    pricingSeedGeneration: PRICING_SEED_GENERATION,
     focusCompanyId: null,
+    billingRates: seedBillingRates.map((row) => ({ ...row })),
+    taxCodes: seedTaxCodes.map((row) => ({ ...row })),
+    paymentMethods: seedPaymentMethods.map((row) => ({ ...row })),
+    invoiceLedgers: seedInvoiceLedgers.map((row) => ({ ...row })),
+    catalogItems: seedCatalogItems.map((row) => ({ ...row })),
   };
   for (const key of RECORD_KEYS) data[key] = [];
   return data;
@@ -132,6 +153,7 @@ export function extractWorkspace(state: Record<string, unknown>): WorkspaceSnaps
   }
   data.seedGeneration = EMPTY_WORKSPACE_GENERATION;
   data.templatesBlankGeneration = TEMPLATES_BLANK_GENERATION;
+  data.pricingSeedGeneration = PRICING_SEED_GENERATION;
   return { version: 1, data };
 }
 
@@ -151,6 +173,24 @@ export function workspacePatch(snapshot: WorkspaceSnapshot | null | undefined) {
     patch.invoiceTemplates = sanitizeInvoiceTemplates(rows, resetSeedTemplates);
   }
   patch.templatesBlankGeneration = TEMPLATES_BLANK_GENERATION;
+  if (source.pricingSeedGeneration !== PRICING_SEED_GENERATION) {
+    if (!Array.isArray(patch.billingRates) || !(patch.billingRates as unknown[]).length) {
+      patch.billingRates = seedBillingRates.map((row) => ({ ...row }));
+    }
+    if (!Array.isArray(patch.taxCodes) || !(patch.taxCodes as unknown[]).length) {
+      patch.taxCodes = seedTaxCodes.map((row) => ({ ...row }));
+    }
+    if (!Array.isArray(patch.paymentMethods) || !(patch.paymentMethods as unknown[]).length) {
+      patch.paymentMethods = seedPaymentMethods.map((row) => ({ ...row }));
+    }
+    if (!Array.isArray(patch.invoiceLedgers) || !(patch.invoiceLedgers as unknown[]).length) {
+      patch.invoiceLedgers = seedInvoiceLedgers.map((row) => ({ ...row }));
+    }
+    if (!Array.isArray(patch.catalogItems) || !(patch.catalogItems as unknown[]).length) {
+      patch.catalogItems = seedCatalogItems.map((row) => ({ ...row }));
+    }
+  }
+  patch.pricingSeedGeneration = PRICING_SEED_GENERATION;
   return patch;
 }
 
