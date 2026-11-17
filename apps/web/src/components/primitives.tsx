@@ -322,13 +322,15 @@ export function Field({
   label,
   children,
   required,
+  invalid,
 }: {
   label: string;
   children: ReactNode;
   required?: boolean;
+  invalid?: boolean;
 }) {
   return (
-    <label className="mb-3 block text-sm">
+    <label className={clsx("mb-3 block text-sm field-wrap", invalid && "is-invalid")}>
       <span className="mb-1 flex items-center justify-between gap-2 text-[var(--color-muted)]">
         <span>{label}</span>
         {required ? <span className="field-required">Required</span> : null}
@@ -338,14 +340,14 @@ export function Field({
   );
 }
 
-export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className="field-input" {...props} />;
+export function TextInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={clsx("field-input", className)} {...props} />;
 }
 
-export function TextSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className="field-input" {...props} />;
+export function TextSelect({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={clsx("field-input", className)} {...props} />;
 }
 
-export function TextTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className="field-input min-h-24" {...props} />;
+export function TextTextarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={clsx("field-input min-h-24", className)} {...props} />;
 }

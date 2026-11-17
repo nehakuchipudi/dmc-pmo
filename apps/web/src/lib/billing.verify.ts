@@ -10,7 +10,16 @@ import {
   extraFieldsForExpenseType,
   parseBelongValue,
 } from "./billing-items";
-import { billedSourceIds, invoiceForFromTemplate, invoiceTotals, phaseChildIds } from "./invoice";
+import {
+  billedSourceIds,
+  dueFromTerms,
+  INVOICE_TERMS,
+  invoiceDraftIssueMessage,
+  invoiceDraftIssues,
+  invoiceForFromTemplate,
+  invoiceTotals,
+  phaseChildIds,
+} from "./invoice";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -75,6 +84,12 @@ assert.match(invoice, /Preview & Edit PDF/);
 assert.match(invoice, /Save as Draft/);
 assert.match(invoice, /Save & Send PDF/);
 assert.match(invoice, /Add new Service line item/);
+assert.match(invoice, /INVOICE_TERMS/);
+assert.match(invoice, /invalid=\{issues.includes\("company"\)\}/);
+assert.match(invoice, /invalid=\{issues.includes\("title"\)\}/);
+assert.match(invoice, /invalid=\{issues.includes\("lines"\)/);
+assert.match(invoice, /invoiceDraftIssueMessage/);
+assert.doesNotMatch(invoice, /Add a company and at least one line item/);
 
 const projectBilling = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(projectBilling, /New invoice/);
@@ -84,6 +99,22 @@ const invoiceLib = readFileSync(join(root, "invoice.ts"), "utf8");
 assert.match(invoiceLib, /INVOICE_FOR_OPTIONS/);
 assert.match(invoiceLib, /phaseChildIds/);
 assert.match(invoiceLib, /timeMatchesWork/);
+assert.deepEqual([...INVOICE_TERMS], ["Immediately", "Due on receipt", "Net 15", "Net 30", "Net 45", "Net 60"]);
+assert.equal(dueFromTerms("2026-11-17", "Immediately"), "2026-11-17");
+assert.equal(dueFromTerms("2026-11-17", "Due on receipt"), "2026-11-17");
+assert.equal(dueFromTerms("2026-11-17", "Net 30"), "2026-12-17");
+assert.deepEqual(
+  invoiceDraftIssues({
+    companyId: "c-dmc",
+    title: "Invoice for DMC Internal Project",
+    billingThrough: "2026-11-17",
+    number: "INV-2306",
+    lines: [],
+  }),
+  ["lines"],
+);
+assert.equal(invoiceDraftIssueMessage(["lines"]), "Add at least one line item.");
+assert.equal(invoiceDraftIssueMessage(["company", "lines"]), "Add a company and at least one line item.");
 
 const seed = readFileSync(join(root, "seed.ts"), "utf8");
 assert.match(seed, /id: "tpl-tm"/);

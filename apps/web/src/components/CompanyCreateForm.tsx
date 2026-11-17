@@ -299,6 +299,7 @@ export function CompanyCreateForm({
           </Field>
           <Field label="Billing terms">
             <TextSelect value={billingTerms} onChange={(e) => setBillingTerms(e.target.value)}>
+              <option>Immediately</option>
               <option>Net 15</option>
               <option>Net 30</option>
               <option>Net 45</option>

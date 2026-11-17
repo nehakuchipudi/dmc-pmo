@@ -20,6 +20,16 @@ export const INVOICE_CURRENCIES = [
   { value: "EUR", label: "EUR - Euro" },
   { value: "GBP", label: "GBP - British Pound" },
 ];
+export const INVOICE_TERMS = ["Immediately", "Due on receipt", "Net 15", "Net 30", "Net 45", "Net 60"] as const;
+
+function daysFromTerms(terms: string) {
+  const key = terms.trim().toLowerCase();
+  if (key === "immediately" || key === "due on receipt" || key === "upon receipt") return 0;
+  const match = terms.match(/\d+/);
+  if (!match) return 30;
+  const days = Number(match[0]);
+  return Number.isFinite(days) ? days : 30;
+}
 
 export const FIRM_LETTERHEAD = {
   name: "Dillon Morgan Consulting",
@@ -60,11 +70,44 @@ export function roundMoney(n: number) {
 }
 
 export function dueFromTerms(raised: string, terms: string) {
-  const days = Number((terms.match(/\d+/) || ["30"])[0]);
   const date = new Date(`${raised}T12:00:00`);
   if (Number.isNaN(date.getTime())) return raised;
-  date.setDate(date.getDate() + (Number.isFinite(days) ? days : 30));
+  date.setDate(date.getDate() + daysFromTerms(terms));
   return date.toISOString().slice(0, 10);
+}
+
+export const INVOICE_DRAFT_ISSUES = ["company", "title", "billingThrough", "number", "lines"] as const;
+export type InvoiceDraftIssue = (typeof INVOICE_DRAFT_ISSUES)[number];
+
+export function invoiceDraftIssues(input: {
+  companyId?: string;
+  title?: string;
+  billingThrough?: string;
+  number?: string;
+  lines?: { description?: string }[];
+}): InvoiceDraftIssue[] {
+  const issues: InvoiceDraftIssue[] = [];
+  if (!input.companyId?.trim()) issues.push("company");
+  if (!input.title?.trim()) issues.push("title");
+  if (!input.billingThrough?.trim()) issues.push("billingThrough");
+  if (!input.number?.trim()) issues.push("number");
+  if (!(input.lines ?? []).some((line) => (line.description ?? "").trim())) issues.push("lines");
+  return issues;
+}
+
+export function invoiceDraftIssueMessage(issues: InvoiceDraftIssue[]) {
+  const labels: Record<InvoiceDraftIssue, string> = {
+    company: "a company",
+    title: "an invoice title",
+    billingThrough: "a billing through date",
+    number: "an invoice number",
+    lines: "at least one line item",
+  };
+  const parts = issues.map((id) => labels[id]);
+  if (!parts.length) return "";
+  if (parts.length === 1) return `Add ${parts[0]}.`;
+  if (parts.length === 2) return `Add ${parts[0]} and ${parts[1]}.`;
+  return `Add ${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}.`;
 }
 
 export function nextInvoiceNumber(existingCount: number) {

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { IfCan } from "@/components/auth/IfCan";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import { useAuth } from "@/lib/auth";
-import { blankTemplateLine } from "@/lib/invoice";
+import { blankTemplateLine, INVOICE_TERMS } from "@/lib/invoice";
 import { useAppStore } from "@/lib/store";
 import type { InvoiceTemplate, InvoiceTemplateKind } from "@/lib/types";
 
@@ -16,7 +16,7 @@ const KINDS: { id: InvoiceTemplateKind; label: string }[] = [
   { id: "expense", label: "Expense recovery" },
 ];
 
-const TERMS = ["Due on receipt", "Net 15", "Net 30", "Net 45", "Net 60"];
+const TERMS = INVOICE_TERMS as readonly string[];
 const CURRENCIES = ["USD", "CAD", "EUR", "GBP"];
 const INVOICE_FOR: InvoiceTemplate["invoiceFor"][] = ["Work completed", "Retainer period", "Milestone", "Expenses"];
 

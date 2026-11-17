@@ -3585,6 +3585,25 @@ button, input, select, textarea { font: inherit; }
   border-color: var(--color-gold);
   box-shadow: 0 0 0 3px rgba(107, 138, 171, 0.16);
 }
+.field-wrap.is-invalid > span:first-child {
+  color: var(--color-danger);
+}
+.field-wrap.is-invalid .field-input {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  box-shadow: 0 0 0 3px rgba(181, 107, 107, 0.18);
+}
+.invoice-block.is-invalid,
+.invoice-line.is-invalid .field-input {
+  border-color: var(--color-danger);
+}
+.invoice-block.is-invalid {
+  background: #fff8f8;
+  box-shadow: 0 0 0 1px var(--color-danger);
+}
+.invoice-block.is-invalid .invoice-empty-note {
+  color: var(--color-danger);
+}
 
 .toast-host {
   position: fixed;
