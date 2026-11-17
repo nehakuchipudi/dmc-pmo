@@ -4134,20 +4134,26 @@ button, input, select, textarea { font: inherit; }
   background: var(--color-navy);
   text-transform: none;
 }
-.plan-alloc-edit {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.plan-alloc-edit .wbs-pct-input { width: 88px; }
-.plan-alloc-open {
+.plan-alloc-value {
+  display: inline;
+  margin: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-navy);
-  font-size: 11px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
   font-weight: 650;
   cursor: pointer;
-  padding: 0 2px;
+  text-align: inherit;
+}
+.plan-alloc-value:hover,
+.plan-alloc-value:focus-visible {
+  text-decoration: underline;
+}
+.plan-group-wrap {
+  max-height: min(50vh, 360px);
+  overflow: auto;
 }
 .plan-alloc-grid {
   display: grid;
@@ -4249,7 +4255,6 @@ button, input, select, textarea { font: inherit; }
 .plan-table.is-compact { min-width: 640px; }
 .plan-table.is-compact .wbs-date { width: 1%; white-space: nowrap; }
 .plan-table.is-compact .wbs-num { width: 1%; white-space: nowrap; }
-.plan-table.is-compact .plan-alloc-edit .wbs-pct-input { width: 76px; }
 .plan-table .plan-cap-input { width: 92px; }
 .plan-table.is-compact .wbs-date-input,
 .plan-table.is-compact .wbs-name-input {

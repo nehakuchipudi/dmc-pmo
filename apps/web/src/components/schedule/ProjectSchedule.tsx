@@ -8,10 +8,15 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type UIEvent,
 } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileDown } from "lucide-react";
-import { ScheduleAllocationModal } from "@/components/schedule/ScheduleAllocationModal";
+import {
+  ScheduleAllocationModal,
+  ScheduleGroupModal,
+  ScheduleProjectModal,
+} from "@/components/schedule/ScheduleAllocationModal";
 import { clampSplitPct } from "@/lib/mentions";
 import {
   allocatedBudget,
@@ -21,6 +26,8 @@ import {
   childTaskHours,
   computedTaskBudget,
   formatHours,
+  leafTasks,
+  taskHours,
   tasksUnderMilestone,
 } from "@/lib/plan-allocation";
 import {
@@ -66,6 +73,30 @@ function rowColor(row: PlanRow) {
   if (row.kind === "project") return BAR_PROJECT;
   if (row.kind === "milestone") return BAR_MILESTONE;
   return BAR_TASK;
+}
+
+function AllocValue({
+  label,
+  children,
+  onOpen,
+}: {
+  label: string;
+  children: ReactNode;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="plan-alloc-value"
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function ProjectSchedule({
@@ -146,6 +177,8 @@ export function ProjectSchedule({
   const [scale, setScale] = useState<"Days" | "Weeks">("Days");
   const [pdfOpen, setPdfOpen] = useState(false);
   const [allocTaskId, setAllocTaskId] = useState<string | null>(null);
+  const [allocGroupId, setAllocGroupId] = useState<string | null>(null);
+  const [allocProject, setAllocProject] = useState(false);
   const [paneWidth, setPaneWidth] = useState(0);
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return 46;
@@ -235,6 +268,45 @@ export function ProjectSchedule({
   const links = useMemo(() => ganttDependencyLinks(visibleRows), [visibleRows]);
   const laneH = 42;
   const allocTask = tasks.find((task) => task.id === allocTaskId);
+  const allocGroupRow = allocGroupId ? rows.find((row) => row.id === allocGroupId) : undefined;
+
+  function isParentTask(id: string) {
+    return tasks.some((task) => task.parentTaskId === id);
+  }
+
+  function openBudgetTime(row: PlanRow) {
+    setSelectedId(row.id);
+    if (row.kind === "project") {
+      setAllocProject(true);
+      setAllocGroupId(null);
+      setAllocTaskId(null);
+      return;
+    }
+    if (row.kind === "milestone" || isParentTask(row.id)) {
+      setAllocProject(false);
+      setAllocGroupId(row.id);
+      setAllocTaskId(null);
+      return;
+    }
+    if (row.task) {
+      setAllocProject(false);
+      setAllocTaskId(row.id);
+    }
+  }
+
+  function groupAllocRows(id: string) {
+    const underMilestone = tasksUnderMilestone(id, milestones, tasks);
+    const source = underMilestone.length
+      ? underMilestone
+      : tasks.filter((task) => task.parentTaskId === id || task.id === id);
+    return leafTasks(source).map((task) => ({
+      id: task.id,
+      name: task.name,
+      assignee: task.assignee,
+      budget: computedTaskBudget(task, rateFor(task.assignee)),
+      hours: taskHours(task),
+    }));
+  }
 
   useEffect(() => {
     if (!pdfOpen) return;
@@ -653,7 +725,6 @@ export function ProjectSchedule({
                   {visibleRows.map((row) => {
                     const editable = Boolean(row.task);
                     const bounds = dateBoundsFor(row);
-                    const leafTask = Boolean(row.task) && !tasks.some((task) => task.parentTaskId === row.id);
                     return (
                       <tr
                         key={row.id}
@@ -759,69 +830,14 @@ export function ProjectSchedule({
                           )}
                         </td>
                         <td className="wbs-num">
-                          {row.kind === "project" ? (
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              className="wbs-pct-input plan-cap-input"
-                              value={projectBudget}
-                              aria-label="Total project budget"
-                              onChange={(e) => onUpdateProject?.({ budgetAmount: Number(e.target.value) || 0 })}
-                            />
-                          ) : leafTask && row.task ? (
-                            <div className="plan-alloc-edit">
-                              <input
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                className="wbs-pct-input"
-                                value={rowBudget(row)}
-                                aria-label={`Budget for ${row.name}`}
-                                onChange={(e) =>
-                                  onUpdateTask(row.id, {
-                                    budgetAmount: Number(e.target.value) || 0,
-                                    budgetMode: "fixed",
-                                  })
-                                }
-                              />
-                              <button type="button" className="plan-alloc-open" onClick={() => setAllocTaskId(row.id)}>
-                                Edit
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="tabular-nums">{moneyExact(rowBudget(row))}</span>
-                          )}
+                          <AllocValue label={`Budget for ${row.name}`} onOpen={() => openBudgetTime(row)}>
+                            {moneyExact(rowBudget(row))}
+                          </AllocValue>
                         </td>
                         <td className="wbs-num">
-                          {row.kind === "project" ? (
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.25"
-                              className="wbs-pct-input plan-cap-input"
-                              value={projectHours}
-                              aria-label="Total project hours"
-                              onChange={(e) => onUpdateProject?.({ budgetHours: Number(e.target.value) || 0 })}
-                            />
-                          ) : leafTask && row.task ? (
-                            <div className="plan-alloc-edit">
-                              <input
-                                type="number"
-                                min={0}
-                                step="0.25"
-                                className="wbs-pct-input"
-                                value={row.task.estimateHours}
-                                aria-label={`Time for ${row.name}`}
-                                onChange={(e) => onUpdateTask(row.id, { estimateHours: Number(e.target.value) || 0 })}
-                              />
-                              <button type="button" className="plan-alloc-open" onClick={() => setAllocTaskId(row.id)}>
-                                Edit
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="tabular-nums">{formatHours(rowHours(row))}</span>
-                          )}
+                          <AllocValue label={`Time for ${row.name}`} onOpen={() => openBudgetTime(row)}>
+                            {formatHours(rowHours(row))}
+                          </AllocValue>
                         </td>
                         {compact ? null : (
                         <td>
@@ -1069,6 +1085,21 @@ export function ProjectSchedule({
           fallbackRate={rateFor(allocTask.assignee)}
           onClose={() => setAllocTaskId(null)}
           onSave={(patch) => onUpdateTask(allocTask.id, patch)}
+        />
+      ) : allocProject ? (
+        <ScheduleProjectModal
+          projectName={projectName}
+          budget={projectBudget}
+          hours={projectHours}
+          onClose={() => setAllocProject(false)}
+          onSave={(patch) => onUpdateProject?.(patch) ?? true}
+        />
+      ) : allocGroupRow ? (
+        <ScheduleGroupModal
+          name={allocGroupRow.name}
+          rows={groupAllocRows(allocGroupRow.id)}
+          onOpenTask={(id) => setAllocTaskId(id)}
+          onClose={() => setAllocGroupId(null)}
         />
       ) : null}
 
