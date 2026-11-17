@@ -399,7 +399,6 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             phases={phases}
             milestones={ms}
             tasks={projectTasks}
-            hoursByTaskId={hoursByTask}
             team={team}
             statusFilter={statusFilter}
             assigneeFilter={assigneeFilter}

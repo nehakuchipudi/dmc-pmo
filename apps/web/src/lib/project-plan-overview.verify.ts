@@ -81,6 +81,14 @@ const overview = readFileSync(join(root, "../components/projects/ProjectOverview
 assert.match(overview, /overview-plan-toolbar/);
 assert.match(overview, /Edit plan/);
 assert.match(overview, /Add task/);
+assert.match(overview, /Milestones and tasks/);
+assert.match(overview, />Status</);
+assert.match(overview, />Start</);
+assert.match(overview, />Due</);
+assert.match(overview, />Actions</);
+assert.doesNotMatch(overview, /Earned value/);
+assert.doesNotMatch(overview, /Usage \/ budget/);
+assert.doesNotMatch(overview, /hoursByTaskId/);
 
 const css = readFileSync(join(root, "../app/globals.css"), "utf8");
 assert.match(css, /\.overview-plan \{[^}]*gap:\s*14px/);
