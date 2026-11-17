@@ -113,6 +113,8 @@ export function ensureDemoWorkspace() {
     fieldClocks: state.fieldClocks,
     workspaceInstances: state.workspaceInstances,
     promotionalTrial: state.promotionalTrial,
+    recentlyViewed: state.recentlyViewed,
+    focusCompanyId: state.focusCompanyId,
   });
   if (!next) return;
   useAppStore.setState(next);
