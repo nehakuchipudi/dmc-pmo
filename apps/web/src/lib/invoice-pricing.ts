@@ -7,6 +7,7 @@ export const CATALOG_ITEM_KINDS: CatalogItem["kind"][] = ["Service", "Material"]
 
 export const PRICING_PANELS = [
   { id: "settings", label: "Settings" },
+  { id: "quickbooks", label: "QuickBooks" },
   { id: "payments", label: "Payments" },
   { id: "tax", label: "Tax Codes" },
   { id: "ledgers", label: "Invoice Ledgers" },

@@ -167,6 +167,7 @@ import {
   invoiceTotals,
   nextInvoiceNumber,
 } from "./invoice";
+import { mergeImportedTaxCodes } from "./quickbooks";
 import {
   DEFAULT_RETAINER_INVOICE_LINE,
   DEFAULT_RETAINER_RATE,
@@ -542,6 +543,10 @@ type AppState = {
   updateTaxCode: (id: string, patch: Partial<TaxCode>) => void;
   setTaxCodeActive: (id: string, active: boolean) => void;
   deleteTaxCode: (id: string) => void;
+  importTaxCodes: (rows: { title: string; rate: number; invoices: boolean; purchases: boolean; active: boolean }[]) => {
+    created: number;
+    updated: number;
+  };
   createPaymentMethod: (input: Omit<PaymentMethod, "id">) => string;
   updatePaymentMethod: (id: string, patch: Partial<PaymentMethod>) => void;
   setPaymentMethodActive: (id: string, active: boolean) => void;
@@ -3026,6 +3031,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ taxCodes: [...s.taxCodes, row] }));
     get().pushToast(`${row.title} saved`);
     return id;
+  },
+  importTaxCodes: (rows) => {
+    if (!requireCap(get, "manage_invoice")) return { created: 0, updated: 0 };
+    const plan = mergeImportedTaxCodes(get().taxCodes, rows);
+    set((s) => {
+      let taxCodes = s.taxCodes;
+      for (const row of plan.update) {
+        taxCodes = taxCodes.map((item) => (item.id === row.id ? { ...item, ...row.patch } : item));
+      }
+      const created = plan.create.map((row) => ({ ...row, id: uid("tax") }));
+      return { taxCodes: [...taxCodes, ...created] };
+    });
+    const created = plan.create.length;
+    const updated = plan.update.length;
+    if (created || updated) get().pushToast(`Imported ${created + updated} tax codes from QuickBooks`);
+    else get().pushToast("QuickBooks had no new tax codes", "info");
+    return { created, updated };
   },
   updateTaxCode: (id, patch) => {
     if (!requireCap(get, "manage_invoice")) return;

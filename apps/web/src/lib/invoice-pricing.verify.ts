@@ -22,7 +22,7 @@ assert.equal(formatTaxRate(0), "0%");
 assert.equal(PRICING_SEED_GENERATION, "pricing-v1");
 assert.deepEqual(
   PRICING_PANELS.map((row) => row.id),
-  ["settings", "payments", "tax", "ledgers", "items", "rates"],
+  ["settings", "quickbooks", "payments", "tax", "ledgers", "items", "rates"],
 );
 assert.equal(isPricingPanel("rates"), true);
 assert.equal(isPricingPanel("billing"), false);
@@ -54,6 +54,7 @@ const src = [
   readFileSync(join(root, "invoice-pricing.ts"), "utf8"),
   readFileSync(join(root, "../components/settings/SettingsRates.tsx"), "utf8"),
   readFileSync(join(root, "../components/settings/SettingsTaxCodes.tsx"), "utf8"),
+  readFileSync(join(root, "../components/settings/SettingsQuickBooks.tsx"), "utf8"),
 ].join("\n");
 assert.doesNotMatch(src, /Brogan/);
 assert.doesNotMatch(src, /TX-Plano-3057994/);

@@ -11,15 +11,21 @@ import {
   parseBelongValue,
 } from "./billing-items";
 import {
+  applyPickedSourceLines,
   billedSourceIds,
   dueFromTerms,
+  emptyInvoiceLine,
   INVOICE_TERMS,
+  invoiceDocumentModel,
   invoiceDraftIssueMessage,
   invoiceDraftIssues,
   invoiceForFromTemplate,
+  invoiceManagerName,
   invoiceTotals,
   phaseChildIds,
 } from "./invoice";
+import { buildInvoicePdf } from "./pdf";
+import type { Invoice } from "./types";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +43,29 @@ assert.equal(
   invoiceTotals([{ id: "1", kind: "purchase", description: "PO", amount: 50 }]).purchase,
   50,
 );
+
+const serviceLine = emptyInvoiceLine("service", { description: "Work", hours: 1, rate: 400, amount: 400 });
+const afterPick = applyPickedSourceLines(
+  [serviceLine],
+  ["mat-badges", "exp-aws"],
+  (id) => {
+    if (id === "mat-badges") {
+      return emptyInvoiceLine("material", { description: "Access badges", quantity: 12, rate: 18, amount: 216, sourceId: id });
+    }
+    if (id === "exp-aws") {
+      return emptyInvoiceLine("expense", { description: "AWS sandbox", amount: 186, sourceId: id });
+    }
+    return null;
+  },
+);
+const pickedTotals = invoiceTotals(afterPick);
+assert.equal(pickedTotals.service, 400);
+assert.equal(pickedTotals.material, 216);
+assert.equal(pickedTotals.expense, 186);
+assert.equal(pickedTotals.subtotal, 802);
+assert.equal(pickedTotals.total, 802);
+const afterClear = applyPickedSourceLines(afterPick, [], (id) => (id === "mat-badges" || id === "exp-aws" ? emptyInvoiceLine("expense", { sourceId: id }) : null));
+assert.equal(invoiceTotals(afterClear).subtotal, 400);
 
 const expenseForm = readFileSync(join(root, "../components/billing/ExpenseCreateForm.tsx"), "utf8");
 assert.match(expenseForm, /Field label="Title"/);
@@ -73,6 +102,10 @@ assert.match(invoice, /Add expense/);
 assert.match(invoice, /Add purchase/);
 assert.match(invoice, /Add material/);
 assert.match(invoice, /Add selected/);
+assert.match(invoice, /toggleMaterials/);
+assert.match(invoice, /toggleExpenses/);
+assert.match(invoice, /togglePurchases/);
+assert.match(invoice, /applyPickedSourceLines/);
 assert.match(invoice, /defaultLines: \[\]/);
 assert.match(invoice, /Select from existing templates/);
 assert.match(invoice, /Invoice Template/);
@@ -80,7 +113,12 @@ assert.match(invoice, /Invoice For/);
 assert.match(invoice, /Invoice Detail/);
 assert.match(invoice, /Load selected work/);
 assert.match(invoice, /Bill selected milestones instead of the whole project/);
-assert.match(invoice, /Preview & Edit PDF/);
+assert.match(invoice, /Preview PDF/);
+assert.doesNotMatch(invoice, /Preview & Edit PDF/);
+assert.match(invoice, /Invoice preview/);
+assert.match(invoice, /InvoiceDocument/);
+assert.match(invoice, /setPreview/);
+assert.doesNotMatch(invoice, /exportInvoicePdf\(draft/);
 assert.match(invoice, /Save as Draft/);
 assert.match(invoice, /Save & Send PDF/);
 assert.match(invoice, /Add new Service line item/);
@@ -140,6 +178,7 @@ assert.match(pricing, /SettingsTaxCodes/);
 assert.match(pricing, /SettingsPayments/);
 assert.match(pricing, /SettingsInvoiceLedgers/);
 assert.match(pricing, /SettingsCatalogItems/);
+assert.match(pricing, /SettingsQuickBooks/);
 
 const ratesUi = readFileSync(join(root, "../components/settings/SettingsRates.tsx"), "utf8");
 assert.match(ratesUi, /Add Rate/);
@@ -154,7 +193,8 @@ assert.match(taxUi, /Import QuickBooks Tax Codes/);
 assert.match(taxUi, /Edit Account Tax/);
 assert.match(taxUi, /Use tax code for Purchases/);
 assert.match(taxUi, /Use tax code for Invoices/);
-assert.match(taxUi, /QuickBooks is not connected/);
+assert.match(taxUi, /importQuickBooksTaxCodes/);
+assert.doesNotMatch(taxUi, /QuickBooks is not connected/);
 
 const billingSettings = readFileSync(join(root, "../components/settings/SettingsBilling.tsx"), "utf8");
 assert.match(billingSettings, /Invoice templates live here/);
@@ -170,11 +210,47 @@ assert.doesNotMatch(invoice, /Field label="Summary"/);
 const letterhead = readFileSync(join(root, "invoice.ts"), "utf8");
 assert.match(letterhead, /5 Cowboys Way Suite 300/);
 assert.match(letterhead, /mzee.dillon@dillonmorgan.com/);
+assert.match(letterhead, /invoiceDocumentModel/);
+
+const previewInvoice: Invoice = {
+  id: "inv-preview",
+  number: "INV-2313",
+  companyId: "c-dmc",
+  companyName: "Dillon Morgan Consulting",
+  amount: 96480,
+  terms: "Net 30",
+  due: "2026-12-13",
+  status: "Draft",
+  title: "DMC Internal Project progress billing",
+  owner: "Unassigned",
+  raised: "2026-11-13",
+  billingThrough: "2026-11-13",
+  lineItems: [
+    {
+      id: "il-1",
+      kind: "service",
+      description: "DMC Internal Project progress billing",
+      amount: 96480,
+    },
+  ],
+};
+assert.equal(invoiceManagerName(previewInvoice), "");
+const previewModel = invoiceDocumentModel(previewInvoice);
+assert.equal(previewModel.heading, "DMC Internal Project progress billing");
+assert.equal(previewModel.billTo[0], "Dillon Morgan Consulting");
+assert.equal(previewModel.manager, "");
+assert.equal(previewModel.totals.subtotal, 96480);
+assert.equal(previewModel.amountDue, 96480);
+assert.equal(previewModel.payments.length, 0);
+const pdfDoc = buildInvoicePdf(previewInvoice);
+assert.equal(pdfDoc.getNumberOfPages(), 1);
 
 const detail = readFileSync(join(root, "../app/app/billing/[id]/invoice-detail.tsx"), "utf8");
 assert.match(detail, /InvoiceDocument/);
 assert.match(detail, /Email PDF/);
 assert.match(detail, /Send via Activity/);
+assert.match(detail, /Send to QuickBooks/);
+assert.match(detail, /Open in QuickBooks/);
 
 const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx"), "utf8");
 assert.match(paper, /AMOUNT DUE THIS INVOICE/);
@@ -184,6 +260,10 @@ assert.match(paper, /INVOICE DATE/);
 const pdf = readFileSync(join(root, "pdf.ts"), "utf8");
 assert.match(pdf, /FIRM_LETTERHEAD/);
 assert.match(pdf, /invoicePdfName/);
+assert.match(pdf, /invoiceDocumentModel/);
+assert.match(pdf, /AMOUNT DUE THIS INVOICE/);
+assert.match(pdf, /Invoice Items/);
+assert.match(paper, /invoiceDocumentModel/);
 
 const catalog = readFileSync(join(root, "demo-catalog.ts"), "utf8");
 assert.match(catalog, /number: "50526"/);

@@ -17,6 +17,7 @@ import {
 } from "@/components/settings/SettingsPricingChrome";
 import { useAuth } from "@/lib/auth";
 import { formatTaxRate } from "@/lib/invoice-pricing";
+import { importQuickBooksTaxCodes } from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
 import type { TaxCode } from "@/lib/types";
 
@@ -32,10 +33,27 @@ export function SettingsTaxCodes() {
   const updateTaxCode = useAppStore((s) => s.updateTaxCode);
   const setTaxCodeActive = useAppStore((s) => s.setTaxCodeActive);
   const deleteTaxCode = useAppStore((s) => s.deleteTaxCode);
+  const importTaxCodes = useAppStore((s) => s.importTaxCodes);
   const pushToast = useAppStore((s) => s.pushToast);
   const [showInactive, setShowInactive] = useState(false);
   const [editingId, setEditingId] = useState<string | null | undefined>(undefined);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [importing, setImporting] = useState(false);
+
+  async function importFromQuickBooks() {
+    if (!canEdit || importing) return;
+    setImporting(true);
+    try {
+      const result = await importQuickBooksTaxCodes();
+      if (!result.ok) {
+        pushToast(result.error, "danger");
+        return;
+      }
+      importTaxCodes(result.codes);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   const rows = useMemo(
     () => codes.filter((row) => showInactive || row.active),
@@ -126,7 +144,7 @@ export function SettingsTaxCodes() {
       <PricingToolbar>
         {canEdit ? (
           <>
-            <PricingOutlineBtn onClick={() => pushToast("QuickBooks is not connected.", "info")}>
+            <PricingOutlineBtn onClick={() => void importFromQuickBooks()} disabled={importing}>
               Import QuickBooks Tax Codes
             </PricingOutlineBtn>
             <PricingOutlineBtn onClick={startAdd}>Add Tax Code</PricingOutlineBtn>

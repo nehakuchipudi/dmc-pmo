@@ -5,8 +5,10 @@ import { AlertTriangle, FileText, Plus, Trash2 } from "lucide-react";
 import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
 import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
+import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/primitives";
 import {
+  applyPickedSourceLines,
   billedSourceIds,
   computeLineAmount,
   dueFromTerms,
@@ -34,6 +36,12 @@ import {
 import { exportInvoicePdf } from "@/lib/pdf";
 import { memberRate } from "@/lib/project-workspace";
 import { money, moneyExact } from "@/lib/seed";
+import {
+  createQuickBooksInvoice,
+  peekQuickBooks,
+  quickbooksInvoicePatch,
+  type QuickBooksStatus,
+} from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
 import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "@/lib/types";
 
@@ -77,6 +85,7 @@ export function InvoiceCreateForm({
   const invoices = useAppStore((s) => s.invoices);
   const templates = useAppStore((s) => s.invoiceTemplates);
   const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
+  const updateInvoice = useAppStore((s) => s.updateInvoice);
   const createInvoiceTemplate = useAppStore((s) => s.createInvoiceTemplate);
   const updateInvoiceTemplate = useAppStore((s) => s.updateInvoiceTemplate);
   const pushToast = useAppStore((s) => s.pushToast);
@@ -117,6 +126,10 @@ export function InvoiceCreateForm({
   const [milestonePct, setMilestonePct] = useState("100");
   const [expenseStatus, setExpenseStatus] = useState("All expenses");
   const [issues, setIssues] = useState<InvoiceDraftIssue[]>([]);
+  const [pushToQuickBooks, setPushToQuickBooks] = useState(false);
+  const [qbStatus, setQbStatus] = useState<QuickBooksStatus | null>(null);
+  const [qbBusy, setQbBusy] = useState(false);
+  const [preview, setPreview] = useState<Invoice | null>(null);
 
   const company = companies.find((c) => c.id === companyId);
   const project = projects.find((p) => p.id === projectId);
@@ -155,6 +168,13 @@ export function InvoiceCreateForm({
     setInvoiceFor(nextFor);
     setInvoiceDetail(nextFor === "Milestone" ? "Milestone" : "Project");
   }
+
+  useEffect(() => {
+    void peekQuickBooks().then((status) => {
+      setQbStatus(status);
+      if (status.connected) setPushToQuickBooks(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (!company) return;
@@ -351,72 +371,90 @@ export function InvoiceCreateForm({
     return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
   }
 
+  function materialLineFromId(id: string) {
+    const row = visibleMaterials.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("material", {
+      description: row.title,
+      quantity: row.qty,
+      rate: row.salePrice,
+      amount: row.qty * row.salePrice,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function expenseLineFromId(id: string) {
+    const row = visibleExpenses.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("expense", {
+      description: `${row.title || row.vendor}: ${row.note || row.belongLabel || row.projectName}`,
+      amount: row.amount,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function purchaseLineFromId(id: string) {
+    const row = visiblePurchases.find((item) => item.id === id);
+    if (!row) return null;
+    return emptyInvoiceLine("purchase", {
+      description: `${row.title} (${row.vendor})`,
+      amount: row.amount,
+      taxPct: Number(tplTax) || 0,
+      sourceId: row.id,
+    });
+  }
+
+  function toggleMaterials(id: string) {
+    const next = toggleId(pickedMaterials, id);
+    setPickedMaterials(next);
+    setLines((current) => applyPickedSourceLines(current, next, materialLineFromId));
+  }
+
+  function toggleExpenses(id: string) {
+    const next = toggleId(pickedExpenses, id);
+    setPickedExpenses(next);
+    setLines((current) => applyPickedSourceLines(current, next, expenseLineFromId));
+  }
+
+  function togglePurchases(id: string) {
+    const next = toggleId(pickedPurchases, id);
+    setPickedPurchases(next);
+    setLines((current) => applyPickedSourceLines(current, next, purchaseLineFromId));
+  }
+
   function addSelectedExpenses() {
-    const rows = visibleExpenses.filter((row) => pickedExpenses.includes(row.id));
-    if (!rows.length) {
+    if (!pickedExpenses.length) {
       pushToast("Select at least one expense", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("expense", {
-            description: `${row.title || row.vendor}: ${row.note || row.belongLabel || row.projectName}`,
-            amount: row.amount,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected expenses");
+    setLines((current) => applyPickedSourceLines(current, pickedExpenses, expenseLineFromId));
   }
 
   function addSelectedPurchases() {
-    const rows = visiblePurchases.filter((row) => pickedPurchases.includes(row.id));
-    if (!rows.length) {
+    if (!pickedPurchases.length) {
       pushToast("Select at least one purchase", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("purchase", {
-            description: `${row.title} (${row.vendor})`,
-            amount: row.amount,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected purchases");
+    setLines((current) => applyPickedSourceLines(current, pickedPurchases, purchaseLineFromId));
   }
 
   function addSelectedMaterials() {
-    const rows = visibleMaterials.filter((row) => pickedMaterials.includes(row.id));
-    if (!rows.length) {
+    if (!pickedMaterials.length) {
       pushToast("Select at least one material", "info");
       return;
     }
-    setLines((current) => [
-      ...current,
-      ...rows
-        .filter((row) => !current.some((line) => line.sourceId === row.id))
-        .map((row) =>
-          emptyInvoiceLine("material", {
-            description: row.title,
-            quantity: row.qty,
-            rate: row.salePrice,
-            amount: row.qty * row.salePrice,
-            taxPct: Number(tplTax) || 0,
-            sourceId: row.id,
-          }),
-        ),
-    ]);
-    pushToast("Added selected materials");
+    setLines((current) => applyPickedSourceLines(current, pickedMaterials, materialLineFromId));
+  }
+
+  function removeLine(id: string) {
+    const line = lines.find((row) => row.id === id);
+    setLines((current) => current.filter((row) => row.id !== id));
+    if (!line?.sourceId) return;
+    setPickedMaterials((current) => current.filter((item) => item !== line.sourceId));
+    setPickedExpenses((current) => current.filter((item) => item !== line.sourceId));
+    setPickedPurchases((current) => current.filter((item) => item !== line.sourceId));
   }
 
   function clearIssue(id: InvoiceDraftIssue) {
@@ -474,14 +512,37 @@ export function InvoiceCreateForm({
     });
   }
 
-  function submit(send: boolean) {
+  function openPreview() {
     const draft = buildInvoice();
-    if (!company || !draft) return;
+    if (!draft) return;
+    setPreview(draft);
+  }
+
+  async function submit(send: boolean) {
+    const draft = buildInvoice();
+    if (!company || !draft || qbBusy) return;
     const id = createInvoiceDraft(company.id, {
       ...draft,
       send,
     });
-    if (id) onCreated(id);
+    if (!id) return;
+    if (pushToQuickBooks) {
+      const created = useAppStore.getState().invoices.find((row) => row.id === id);
+      const contact = companyContacts.find((row) => row.id === billToContactId);
+      if (created) {
+        setQbBusy(true);
+        const result = await createQuickBooksInvoice(created, { email: contact?.email || company.email });
+        if (result.ok) {
+          updateInvoice(id, quickbooksInvoicePatch(result));
+          pushToast(`${created.number} created in QuickBooks`, "success");
+        } else {
+          updateInvoice(id, { quickbooksError: result.error });
+          pushToast(result.error, "danger");
+        }
+        setQbBusy(false);
+      }
+    }
+    onCreated(id);
   }
 
   function saveTemplate(asNew: boolean) {
@@ -512,12 +573,34 @@ export function InvoiceCreateForm({
   const expenseLines = lines.filter((l) => l.kind === "expense");
   const purchaseLines = lines.filter((l) => l.kind === "purchase");
 
+  if (preview) {
+    return (
+      <div className="invoice-create invoice-create-preview">
+        <div className="invoice-create-hero">
+          <div>
+            <p className="invoice-create-crumb">Billing / {preview.number}</p>
+            <h2 className="invoice-create-title">Invoice preview</h2>
+          </div>
+          <div className="invoice-create-hero-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setPreview(null)}>
+              Back to invoice
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => exportInvoicePdf(preview, company?.address)}>
+              <FileText size={16} /> Download PDF
+            </button>
+          </div>
+        </div>
+        <InvoiceDocument invoice={preview} companyAddress={company?.address} projectName={project?.name} />
+      </div>
+    );
+  }
+
   return (
     <form
       className="invoice-create"
       onSubmit={(e) => {
         e.preventDefault();
-        submit(false);
+        void submit(false);
       }}
     >
       <div className="invoice-create-hero">
@@ -859,7 +942,7 @@ export function InvoiceCreateForm({
                 label: `${row.title} · ${row.qty} × ${money(row.salePrice)}`,
               }))}
               selected={pickedMaterials}
-              onToggle={(id) => setPickedMaterials((current) => toggleId(current, id))}
+              onToggle={toggleMaterials}
               onAddSelected={addSelectedMaterials}
               onCreate={() => setAddKind((current) => (current === "material" ? null : "material"))}
               createLabel="Add material"
@@ -890,7 +973,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {materialLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
             <button type="button" className="invoice-lines-add" onClick={() => addLine("material")}>
               <Plus size={14} /> Add new Material line item
@@ -925,7 +1008,7 @@ export function InvoiceCreateForm({
                 label: `${row.title || row.vendor} · ${money(row.amount)}`,
               }))}
               selected={pickedExpenses}
-              onToggle={(id) => setPickedExpenses((current) => toggleId(current, id))}
+              onToggle={toggleExpenses}
               onAddSelected={addSelectedExpenses}
               onCreate={() => setAddKind((current) => (current === "expense" ? null : "expense"))}
               createLabel="Add expense"
@@ -954,7 +1037,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {expenseLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
             <RecordPicker
               title="Purchases"
@@ -964,7 +1047,7 @@ export function InvoiceCreateForm({
                 label: `${row.title} · ${money(row.amount)}`,
               }))}
               selected={pickedPurchases}
-              onToggle={(id) => setPickedPurchases((current) => toggleId(current, id))}
+              onToggle={togglePurchases}
               onAddSelected={addSelectedPurchases}
               onCreate={() => setAddKind((current) => (current === "purchase" ? null : "purchase"))}
               createLabel="Add purchase"
@@ -993,7 +1076,7 @@ export function InvoiceCreateForm({
               </div>
             ) : null}
             {purchaseLines.map((line) => (
-              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+              <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
           </section>
         </div>
@@ -1027,6 +1110,20 @@ export function InvoiceCreateForm({
               </div>
             </dl>
           </div>
+          <label className="invoice-qb-check">
+            <input
+              type="checkbox"
+              checked={pushToQuickBooks}
+              disabled={!qbStatus?.connected}
+              onChange={(e) => setPushToQuickBooks(e.target.checked)}
+            />
+            <span>
+              <strong>Create in QuickBooks</strong>
+              {qbStatus?.connected
+                ? ` Sends this invoice to ${qbStatus.companyName || "QuickBooks"} when you save.`
+                : " Connect QuickBooks in Settings, Invoice & Pricing."}
+            </span>
+          </label>
           <div className="invoice-create-template">
             <h3>Template</h3>
             <p>{template?.name || "Select a template to start from Time and materials, Progress, Fixed fee milestone, or Expense recovery."}</p>
@@ -1060,21 +1157,13 @@ export function InvoiceCreateForm({
       <div className="invoice-create-actions">
         <div className="invoice-create-actions-total">{moneyExact(totals.total)}</div>
         <div className="invoice-create-actions-end">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              const draft = buildInvoice();
-              if (!draft) return;
-              exportInvoicePdf(draft, company?.address);
-            }}
-          >
-            <FileText size={16} /> Preview & Edit PDF
+          <button type="button" className="btn btn-ghost" onClick={openPreview}>
+            <FileText size={16} /> Preview PDF
           </button>
-          <button type="submit" className="btn btn-ghost">
+          <button type="submit" className="btn btn-ghost" disabled={qbBusy}>
             Save as Draft
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => submit(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => void submit(true)} disabled={qbBusy}>
             Save & Send PDF
           </button>
         </div>
