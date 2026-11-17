@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clock3, Wallet } from "lucide-react";
+import { TonePill } from "@/components/records/RecordChrome";
 import { formatHours } from "@/lib/plan-allocation";
 import { computeProjectInsights, type InsightTrendPoint } from "@/lib/project-insights";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -173,9 +174,7 @@ export function ProjectInsights({
   });
   const budgetOver = insights.remainingBudget < 0;
   const timeOver = insights.remainingHours < 0;
-  const span = insights.daysElapsed + insights.daysRemaining;
-  const elapsedPct = insights.daysOver ? 100 : span ? Math.min(100, Math.round((insights.daysElapsed / span) * 100)) : 0;
-  const nextDeadline = insights.upcoming[0];
+  const overdueMax = Math.max(1, ...insights.overdueTasks.map((row) => row.daysLate));
 
   return (
     <div className="insights-dashboard">
@@ -285,31 +284,55 @@ export function ProjectInsights({
       </section>
 
       <div className="insights-widgets">
-        <section className="insight-budget-card">
+        <section className="insight-budget-card insight-overdue-card">
           <div className="insight-budget-head">
-            <h2 className="section-title">Schedule runway</h2>
+            <h2 className="section-title">
+              Overdue Tasks
+              {insights.overdueTasks.length ? (
+                <span className="insight-overdue-count">{insights.overdueTasks.length}</span>
+              ) : null}
+            </h2>
             <button type="button" className="text-sm font-semibold text-[var(--color-navy)]" onClick={onOpenSchedule}>
               Open schedule
             </button>
           </div>
-          <div className="insight-budget-value">
-            {insights.daysOver
-              ? `${insights.daysOver}d late`
-              : `${insights.daysRemaining}d remaining`}
-          </div>
-          <div className="insight-budget-used">
-            {insights.overdueTasks.length
-              ? `${insights.overdueTasks.length} overdue ${insights.overdueTasks.length === 1 ? "task" : "tasks"}`
-              : "No overdue tasks"}
-          </div>
-          <div className="insight-budget-bar" aria-label="Timeline elapsed">
-            <span className={insights.daysOver ? "is-over" : "is-budget"} style={{ width: `${elapsedPct}%` }} />
-          </div>
-          <div className="insight-budget-note">
-            {nextDeadline
-              ? `Next: ${nextDeadline.name} · ${formatDisplayDate(nextDeadline.due)}`
-              : `Deadline ${formatDisplayDate(project.due)}`}
-          </div>
+          {insights.overdueTasks.length ? (
+            <div className="table-wrap insight-overdue-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Assignee</th>
+                    <th>Status</th>
+                    <th>Due</th>
+                    <th>Late</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insights.overdueTasks.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.name}</td>
+                      <td>{row.assignee || "Unassigned"}</td>
+                      <td>
+                        <TonePill value={row.status} />
+                      </td>
+                      <td className="is-due">{formatDisplayDate(row.due)}</td>
+                      <td>
+                        <div className="insight-late">
+                          <span className="insight-late-days">{row.daysLate}d</span>
+                          <span className="insight-late-bar" aria-hidden>
+                            <span style={{ width: `${Math.min(100, (row.daysLate / overdueMax) * 100)}%` }} />
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="insight-overdue-empty">No overdue tasks</p>
+          )}
         </section>
 
         <section className="insight-budget-card">

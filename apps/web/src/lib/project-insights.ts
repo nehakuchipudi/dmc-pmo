@@ -1,7 +1,7 @@
 import { roundMoney } from "./invoice";
 import { allocationByMember, riskScore } from "./ppm";
 import { allocationSummary, roundHours } from "./plan-allocation";
-import { scheduleWindow } from "./project-plan";
+import { scheduleWindow, toTime } from "./project-plan";
 import { computeProjectMetrics, memberRate } from "./project-workspace";
 import { utilizationLevel } from "./project-team";
 import type {
@@ -378,6 +378,7 @@ export function computeProjectInsights(input: {
         due: task.due,
         status: task.status,
         assignee: task.assignee,
+        daysLate: Math.max(0, Math.round((toTime(asOf) - toTime(task.due)) / 86400000)),
       })),
     overdueMilestones,
     upcoming: upcoming.slice(0, 8),

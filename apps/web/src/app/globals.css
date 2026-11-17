@@ -1173,8 +1173,73 @@ button, input, select, textarea { font: inherit; }
 .insight-line-legend .is-cap::before { border-top: 0; height: 0; border-bottom: 2px dashed #c5d0dc; background: transparent; }
 .insights-widgets {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.7fr);
   gap: 12px;
+}
+.insight-overdue-card .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.insight-overdue-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 99px;
+  background: #fde8e8;
+  color: var(--color-danger);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.insight-overdue-wrap {
+  margin-top: 10px;
+  max-height: 248px;
+}
+.insight-overdue-wrap .table th,
+.insight-overdue-wrap .table td {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
+.insight-overdue-wrap .table td:first-child {
+  font-weight: 650;
+  color: var(--color-navy);
+}
+.insight-overdue-wrap .is-due {
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.insight-late {
+  display: grid;
+  gap: 4px;
+  min-width: 56px;
+}
+.insight-late-days {
+  font-weight: 700;
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+.insight-late-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #f3d4d4;
+}
+.insight-late-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--color-danger);
+}
+.insight-overdue-empty {
+  margin: 18px 0 6px;
+  color: var(--color-muted);
+  font-size: 0.86rem;
 }
 .insight-load-list { display: grid; gap: 8px; margin-top: 12px; }
 .insight-load-row {
