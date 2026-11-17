@@ -57,7 +57,7 @@ const revived = withDemoWorkspace({
     ...empty.projects,
     {
       id: "p-warehouse",
-      number: "P-900",
+      number: 900,
       name: "Q3 Warehouse Rollout",
       companyId: "c-cascade",
       companyName: "Cascade Ventures",
@@ -125,7 +125,7 @@ const stale = withDemoWorkspace({
     ...empty.projects,
     {
       id: "p-warehouse",
-      number: "P-900",
+      number: 900,
       name: "Q3 Warehouse Rollout",
       companyId: "c-cascade",
       companyName: "Cascade Ventures",
