@@ -96,7 +96,7 @@ export default function AutomationsPage() {
       {tab === "Email outbox" ? (
         <div className="panel overflow-hidden">
           <p className="px-4 pt-4 text-sm text-[var(--color-muted)]">
-            Outbox is the send log. Mail only reaches an inbox when you are signed in with Microsoft (Mail.Send) or the host has a mail API key. DNS records do not send the message.
+            Outbox is the send log. Mail reaches an inbox from your Outlook mailbox after you sign in with Microsoft and grant Mail.Send. DNS records do not send the message.
           </p>
           <table className="table">
             <thead>

@@ -6,6 +6,8 @@ assert.match(html, /<br\/>/);
 assert.match(html, /href="https:\/\/dmc-pmo\.vercel\.app\/invite\/\?email=a@b.com"/);
 assert.doesNotMatch(html, /[\u2013\u2014]/);
 assert.match(noSenderMessage(), /Sign in with Microsoft/);
-assert.match(noSenderMessage(), /RESEND_API_KEY/);
+assert.match(noSenderMessage(), /Outlook mailbox/);
+assert.match(noSenderMessage(), /Demo users cannot deliver mail/);
+assert.doesNotMatch(noSenderMessage(), /RESEND_API_KEY/);
 
 console.log("deliver-mail.verify ok");

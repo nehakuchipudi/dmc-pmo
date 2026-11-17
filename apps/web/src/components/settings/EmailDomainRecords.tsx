@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Copy, ShieldCheck } from "lucide-react";
 import { Field, StatusPill, TextInput, statusTone } from "@/components/ui";
+import { OutlookMailCard } from "@/components/settings/OutlookMailCard";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 
@@ -55,8 +56,8 @@ export function EmailDomainRecords() {
         <h2 className="section-title">What this means</h2>
         <p className="mb-4 text-sm text-[var(--color-muted)]">
           Email Domain / DNS Records prove that DMC PMO may send mail as your company. They do not deliver the
-          message. Invites reach an inbox only after you sign in with Microsoft and grant Mail.Send, or after the
-          host has a mail API key. You still add three DNS records so Gmail and Outlook do not treat that mail as spam.
+          message. Invites reach an inbox from your Outlook mailbox after you sign in with Microsoft and grant
+          Mail.Send. You still add three DNS records so Gmail and Outlook do not treat that mail as spam.
         </p>
         <div className="email-domain-explain">
           {EXPLAIN.map((item) => (
@@ -69,27 +70,31 @@ export function EmailDomainRecords() {
       </div>
 
       <div className="panel p-5">
-        <h2 className="section-title">Connect a mail sender</h2>
+        <h2 className="section-title">Send from Outlook</h2>
         <p className="mb-4 text-sm text-[var(--color-muted)]">
-          Pick one path. Microsoft is the default for DMC PMO. Resend is optional if you want the host to send on its
-          own.
+          DMC PMO sends invites as the signed-in Microsoft mailbox. Connect Outlook, then resend the invite. A copy
+          lands in that mailbox Sent Items.
         </p>
+        <OutlookMailCard returnTo="/app/settings/?section=email" />
         <ol className="email-setup-steps">
           <li>
-            <strong>Path A. Send from your Outlook mailbox</strong>
+            <strong>Sign in with Microsoft</strong>
             <span>
-              Sign out of a demo user, then Sign in with Microsoft. In entra.microsoft.com open the DMC PMO app
-              registration, API permissions, Add a permission, Microsoft Graph, Delegated permissions, Mail.Send.
-              Grant admin consent. The SPA redirect must be https://dmc-pmo.vercel.app/auth/callback/. Then add or
-              resend an invite and allow the consent popup.
+              Sign out of a demo user such as Dillon Admin. Use Sign in with Microsoft and a Dillon Morgan work
+              mailbox.
             </span>
           </li>
           <li>
-            <strong>Path B. Send with Resend</strong>
+            <strong>Grant Mail.Send</strong>
             <span>
-              Create an API key at resend.com, add RESEND_API_KEY on the Vercel project for Production, verify
-              dillonmorgan.com in Resend, then redeploy. Invites then leave through /api/send-mail.
+              In entra.microsoft.com open the DMC PMO app registration, API permissions, Microsoft Graph, Delegated
+              permissions, Mail.Send. Grant admin consent. The SPA redirect must be
+              https://dmc-pmo.vercel.app/auth/callback/.
             </span>
+          </li>
+          <li>
+            <strong>Resend the invite</strong>
+            <span>Allow the Mail.Send consent popup if Microsoft asks. Then check Outlook Sent Items.</span>
           </li>
         </ol>
       </div>

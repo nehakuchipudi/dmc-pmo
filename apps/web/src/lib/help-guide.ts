@@ -407,7 +407,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_automations",
     keywords: ["automation", "rules", "email", "outbox", "trigger"],
     summary:
-      "Automations are triggers, conditions, and email notifications. The Email outbox is the send log. Invites and assignment mail reach an inbox only when Microsoft Mail.Send or a host mail API key is connected.",
+      "Automations are triggers, conditions, and email notifications. The Email outbox is the send log. Invites and assignment mail reach an inbox from your Outlook mailbox after Microsoft Mail.Send is granted.",
     steps: [
       "Open Automations.",
       "Enable or run a rule if you are an Admin.",
@@ -424,7 +424,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "view_users",
     keywords: ["email domain", "dns", "spf", "dkim", "dmarc", "sending domain", "spam"],
     summary:
-      "An email domain is the part after @. DNS records prove DMC PMO may send as your company. They do not deliver mail. Sign in with Microsoft and grant Mail.Send, or add a host mail API key, to reach inboxes.",
+      "An email domain is the part after @. DNS records prove DMC PMO may send as your company. They do not deliver mail. Sign in with Microsoft and grant Mail.Send to reach inboxes from Outlook.",
     steps: [
       "Open Settings, then Email domain, or Automations then Email domain.",
       "Add the domain you send from, such as dillonmorgan.com.",
@@ -445,15 +445,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     viewCap: "manage_users",
     keywords: ["invite", "mail.send", "resend", "inbox", "entra", "outlook", "smtp"],
     summary:
-      "Invites reach an inbox only when a mail sender is connected. Use Microsoft Mail.Send from your Outlook mailbox, or add a Resend API key on Vercel.",
+      "Invites reach an inbox from your Outlook mailbox after you sign in with Microsoft and grant Mail.Send.",
     steps: [
       "Sign out of a demo user. On Sign in, use Sign in with Microsoft and your Dillon Morgan work email.",
       "Open entra.microsoft.com as an Application Administrator. Go to Identity, Applications, App registrations, then the DMC PMO app.",
       "Open API permissions, Add a permission, Microsoft Graph, Delegated permissions, then check Mail.Send. Add permissions.",
       "Select Grant admin consent for Dillon Morgan. Status should show Granted for Mail.Send.",
       "Confirm Authentication has the SPA redirect https://dmc-pmo.vercel.app/auth/callback/.",
-      "Back in DMC PMO, add or resend an invite. Allow the Mail.Send consent popup. The outbox should move to Sent, and a copy appears in your Outlook Sent Items.",
-      "Optional instead of Graph: create a Resend API key, add RESEND_API_KEY on the Vercel project for Production, verify dillonmorgan.com in Resend, then redeploy.",
+      "Back in DMC PMO, use Connect Outlook if needed, then add or resend an invite. Allow the Mail.Send consent popup. The outbox should move to Sent, and a copy appears in your Outlook Sent Items.",
     ],
     tips: [
       "Pick Delegated Mail.Send, not Application Mail.Send. The app sends as the signed-in admin.",

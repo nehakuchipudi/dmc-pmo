@@ -261,7 +261,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     howTo: [
       "Open Settings, then Users & roles. You can also open it from your profile.",
       "Add user with Send an invitation email checked.",
-      "The invite includes signup and sign-in links. Mail leaves the outbox when Microsoft Mail.Send or a host mail key is connected.",
+      "The invite includes signup and sign-in links. Mail leaves the outbox when you are signed in with Microsoft and Mail.Send is granted.",
     ],
     canDo: ["Create a user", "Explain what each role can do"],
   },
@@ -271,7 +271,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     href: "/app/automations",
     keywords: ["email", "invite", "outbox", "mail.send", "resend"],
     summary:
-      "Assignment notices and invites write to the Email outbox. They reach an inbox only when Microsoft Mail.Send or a host mail API key is connected.",
+      "Assignment notices and invites write to the Email outbox. They reach an inbox from your Outlook mailbox after Microsoft Mail.Send is granted.",
     howTo: [
       "Ask AI to draft or send an email to a teammate or contact.",
       "Check Automations, Email outbox. Sent left the workspace. Failed stayed in the log.",
