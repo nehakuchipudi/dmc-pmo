@@ -1,5 +1,6 @@
 import { allocationByMember, riskScore } from "./ppm";
-import { computeProjectMetrics } from "./project-workspace";
+import { allocationSummary } from "./plan-allocation";
+import { computeProjectMetrics, memberRate } from "./project-workspace";
 import { utilizationLevel } from "./project-team";
 import type {
   Expense,
@@ -197,6 +198,7 @@ export function computeProjectInsights(input: {
   const actualHours = project.loggedHours;
   const estimateHours = input.tasks.reduce((sum, task) => sum + (task.estimateHours ?? 0), 0);
   const entryHours = input.timeEntries.reduce((sum, row) => sum + row.hours, 0);
+  const allocation = allocationSummary(project, input.tasks, (task) => memberRate(task.assignee, project, input.team));
 
   return {
     asOf,
@@ -218,6 +220,12 @@ export function computeProjectInsights(input: {
     earned: metrics.earned,
     costVariance: metrics.variance,
     costPct: project.budgetAmount ? Math.round((metrics.actualCost / project.budgetAmount) * 100) : 0,
+    allocatedBudget: allocation.usedBudget,
+    allocatedHours: allocation.usedHours,
+    remainingBudget: allocation.remainingBudget,
+    remainingHours: allocation.remainingHours,
+    allocatedBudgetPct: allocation.budgetPct,
+    allocatedHoursPct: allocation.hoursPct,
     milestonePct,
     milestoneRows,
     overdueTasks: overdueTasks
