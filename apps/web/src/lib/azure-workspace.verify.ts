@@ -57,6 +57,9 @@ export function verifyAzureWorkspaceRoundTrip() {
   if (progress.summary) throw new Error("template summary should be blank");
   if (progress.defaultLines.length) throw new Error("seed templates should have no lines");
   if (priced.templatesBlankGeneration !== "blank-v1") throw new Error("blank generation");
+  if (!Array.isArray(priced.billingRates) || !(priced.billingRates as unknown[]).length) throw new Error("billing rates seed");
+  if (!Array.isArray(priced.taxCodes) || !(priced.taxCodes as unknown[]).length) throw new Error("tax codes seed");
+  if (priced.pricingSeedGeneration !== "pricing-v1") throw new Error("pricing generation");
   return true;
 }
 

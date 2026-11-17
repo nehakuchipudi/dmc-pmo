@@ -99,7 +99,31 @@ assert.doesNotMatch(seed, /amount: 420/);
 
 const settings = readFileSync(join(root, "../components/settings/SettingsWorkspace.tsx"), "utf8");
 assert.match(settings, /id: "billing"/);
-assert.match(settings, /SettingsBilling/);
+assert.match(settings, /Invoice & Pricing/);
+assert.match(settings, /SettingsInvoicePricing/);
+assert.match(settings, /PRICING_PANELS/);
+
+const pricing = readFileSync(join(root, "../components/settings/SettingsInvoicePricing.tsx"), "utf8");
+assert.match(pricing, /SettingsRates/);
+assert.match(pricing, /SettingsTaxCodes/);
+assert.match(pricing, /SettingsPayments/);
+assert.match(pricing, /SettingsInvoiceLedgers/);
+assert.match(pricing, /SettingsCatalogItems/);
+
+const ratesUi = readFileSync(join(root, "../components/settings/SettingsRates.tsx"), "utf8");
+assert.match(ratesUi, /Add Rate/);
+assert.match(ratesUi, /Show Inactive Rates/);
+assert.match(ratesUi, /Billable Rate/);
+assert.match(ratesUi, /BILLING_RATE_KINDS/);
+assert.match(ratesUi, /Edit Account Rate/);
+assert.match(readFileSync(join(root, "invoice-pricing.ts"), "utf8"), /Cost Rate/);
+
+const taxUi = readFileSync(join(root, "../components/settings/SettingsTaxCodes.tsx"), "utf8");
+assert.match(taxUi, /Import QuickBooks Tax Codes/);
+assert.match(taxUi, /Edit Account Tax/);
+assert.match(taxUi, /Use tax code for Purchases/);
+assert.match(taxUi, /Use tax code for Invoices/);
+assert.match(taxUi, /QuickBooks is not connected/);
 
 const billingSettings = readFileSync(join(root, "../components/settings/SettingsBilling.tsx"), "utf8");
 assert.match(billingSettings, /Invoice templates live here/);

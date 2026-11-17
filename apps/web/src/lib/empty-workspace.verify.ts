@@ -49,5 +49,8 @@ const fresh = workspacePatch({
 });
 assert.deepEqual(fresh.companies, [{ id: "c-new", name: "Acme" }]);
 assert.equal(emptyWorkspaceData().seedGeneration, EMPTY_WORKSPACE_GENERATION);
+assert.ok(Array.isArray(emptyWorkspaceData().billingRates) && (emptyWorkspaceData().billingRates as unknown[]).length > 0);
+assert.ok(Array.isArray(stale.billingRates) && (stale.billingRates as unknown[]).length > 0);
+assert.ok(Array.isArray(stale.taxCodes) && (stale.taxCodes as unknown[]).length > 0);
 
 console.log("empty-workspace.verify ok");

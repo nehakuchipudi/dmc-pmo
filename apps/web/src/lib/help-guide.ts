@@ -349,7 +349,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/app/billing",
     audience: "internal",
     viewCap: "view_billing",
-    keywords: ["billing", "invoice", "new invoice", "expense", "pay", "send invoice", "template"],
+    keywords: ["billing", "invoice", "new invoice", "create invoice", "expense", "pay", "send invoice", "template"],
     summary:
       "Billing holds invoices, expenses, purchases, and materials. Create an invoice from a template, a project, a retainer period, or New Invoice.",
     steps: [
@@ -508,21 +508,21 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
   {
     id: "invoice-templates",
-    title: "Invoice templates",
+    title: "Pricing settings",
     group: "Admin",
     href: "/app/settings/?section=billing",
     audience: "internal",
     viewCap: "view_billing",
-    keywords: ["invoice template", "billing settings", "progress billing", "time and materials"],
+    keywords: ["invoice template", "billing settings", "progress billing", "time and materials", "tax codes", "rates"],
     summary:
-      "Settings, Billing holds invoice templates. A template is a blank starting point: name, terms, and title pattern. Dollar amounts are entered on the invoice, not on the template.",
+      "Settings, Invoice & Pricing holds templates, rates, tax codes, payments, ledgers, and catalog items. A template is a blank starting point: name, terms, and title pattern. Dollar amounts are entered on the invoice, not on the template.",
     steps: [
-      "Open Settings, then Billing.",
+      "Open Settings, then Invoice & Pricing.",
       "Select Time and materials, Progress billing, Retainer period, Fixed fee milestone, or Expense recovery.",
       "Edit the name, title pattern, and terms. Leave amounts off.",
-      "Create invoice still lets you pick the same templates. Line items start empty.",
+      "Rates and Tax Codes sit in the same section. Click a title to edit. Create invoice still lets you pick the same templates. Line items start empty.",
     ],
-    tips: ["Finance and Admin can save templates. Amounts belong on the invoice."],
+    tips: ["Finance and Admin can save templates, rates, and tax codes. Amounts belong on the invoice."],
   },
   {
     id: "capabilities",
