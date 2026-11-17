@@ -16,6 +16,9 @@ import {
   INVOICE_DETAIL_OPTIONS,
   INVOICE_FOR_OPTIONS,
   INVOICE_ITEMIZE_OPTIONS,
+  INVOICE_TERMS,
+  invoiceDraftIssueMessage,
+  invoiceDraftIssues,
   invoiceForFromTemplate,
   invoiceFromDraft,
   invoiceTotals,
@@ -25,6 +28,7 @@ import {
   templateInvoiceFor,
   timeMatchesWork,
   type InvoiceDetailOption,
+  type InvoiceDraftIssue,
   type InvoiceForOption,
 } from "@/lib/invoice";
 import { exportInvoicePdf } from "@/lib/pdf";
@@ -33,7 +37,7 @@ import { money, moneyExact } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "@/lib/types";
 
-const TERMS = ["Due on receipt", "Net 15", "Net 30", "Net 45", "Net 60"];
+const TERMS = INVOICE_TERMS as readonly string[];
 
 type DraftLine = InvoiceLineItem;
 
@@ -112,6 +116,7 @@ export function InvoiceCreateForm({
   const [selectedMilestones, setSelectedMilestones] = useState<string[]>([]);
   const [milestonePct, setMilestonePct] = useState("100");
   const [expenseStatus, setExpenseStatus] = useState("All expenses");
+  const [issues, setIssues] = useState<InvoiceDraftIssue[]>([]);
 
   const company = companies.find((c) => c.id === companyId);
   const project = projects.find((p) => p.id === projectId);
@@ -175,15 +180,22 @@ export function InvoiceCreateForm({
     setSelectedMilestones([]);
   }, [projectId]);
 
+  useEffect(() => {
+    if (!issues.length) return;
+    document.querySelector(".invoice-create .is-invalid")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [issues]);
+
   function patchLine(id: string, patch: Partial<DraftLine>) {
-    setLines((current) =>
-      current.map((line) => {
+    setLines((current) => {
+      const nextLines = current.map((line) => {
         if (line.id !== id) return line;
         const next = { ...line, ...patch };
         next.amount = computeLineAmount(next);
         return next;
-      }),
-    );
+      });
+      if (nextLines.some((line) => line.description.trim())) clearIssue("lines");
+      return nextLines;
+    });
   }
 
   function addLine(kind: InvoiceLineKind) {
@@ -407,7 +419,27 @@ export function InvoiceCreateForm({
     pushToast("Added selected materials");
   }
 
+  function clearIssue(id: InvoiceDraftIssue) {
+    setIssues((current) => current.filter((item) => item !== id));
+  }
+
+  function reportIssues() {
+    const next = invoiceDraftIssues({
+      companyId,
+      title,
+      billingThrough,
+      number,
+      lines,
+    });
+    if (next.includes("billingThrough") && !showCustom) setShowCustom(true);
+    if (next.includes("lines") && !lines.length) setLines([emptyInvoiceLine("service")]);
+    setIssues(next);
+    if (next.length) pushToast(invoiceDraftIssueMessage(next), "danger");
+    return next;
+  }
+
   function buildInvoice(): Invoice | null {
+    if (reportIssues().length) return null;
     if (!company) return null;
     const contact = companyContacts.find((c) => c.id === billToContactId);
     const prepared = lines
@@ -444,10 +476,7 @@ export function InvoiceCreateForm({
 
   function submit(send: boolean) {
     const draft = buildInvoice();
-    if (!company || !draft) {
-      pushToast("Add a company and at least one line item", "danger");
-      return;
-    }
+    if (!company || !draft) return;
     const id = createInvoiceDraft(company.id, {
       ...draft,
       send,
@@ -509,8 +538,15 @@ export function InvoiceCreateForm({
         <div className="invoice-create-main">
           <section className="invoice-create-card">
             <div className="invoice-create-grid">
-              <Field label="Company" required>
-                <TextSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)} required>
+              <Field label="Company" required invalid={issues.includes("company")}>
+                <TextSelect
+                  value={companyId}
+                  onChange={(e) => {
+                    setCompanyId(e.target.value);
+                    clearIssue("company");
+                  }}
+                  required
+                >
                   {companies.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -568,8 +604,16 @@ export function InvoiceCreateForm({
               <Field label="Due">
                 <TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} />
               </Field>
-              <Field label="Invoice Title" required>
-                <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Invoice for the client" />
+              <Field label="Invoice Title" required invalid={issues.includes("title")}>
+                <TextInput
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (e.target.value.trim()) clearIssue("title");
+                  }}
+                  required
+                  placeholder="Invoice for the client"
+                />
               </Field>
               <Field label="Owner">
                 <TextSelect value={owner} onChange={(e) => setOwner(e.target.value)}>
@@ -622,14 +666,28 @@ export function InvoiceCreateForm({
             </button>
             {showCustom ? (
               <div className="invoice-create-grid">
-                <Field label="Billing Through" required>
-                  <TextInput type="date" value={billingThrough} onChange={(e) => setBillingThrough(e.target.value)} />
+                <Field label="Billing Through" required invalid={issues.includes("billingThrough")}>
+                  <TextInput
+                    type="date"
+                    value={billingThrough}
+                    onChange={(e) => {
+                      setBillingThrough(e.target.value);
+                      if (e.target.value) clearIssue("billingThrough");
+                    }}
+                  />
                 </Field>
                 <Field label="PO #">
                   <TextInput value={poNumber} onChange={(e) => setPoNumber(e.target.value)} placeholder="Client purchase order" />
                 </Field>
-                <Field label="Invoice Number" required>
-                  <TextInput value={number} onChange={(e) => setNumber(e.target.value)} required />
+                <Field label="Invoice Number" required invalid={issues.includes("number")}>
+                  <TextInput
+                    value={number}
+                    onChange={(e) => {
+                      setNumber(e.target.value);
+                      if (e.target.value.trim()) clearIssue("number");
+                    }}
+                    required
+                  />
                 </Field>
               </div>
             ) : null}
@@ -643,7 +701,7 @@ export function InvoiceCreateForm({
             </div>
           </section>
 
-          <section className="invoice-block">
+          <section className={issues.includes("lines") ? "invoice-block is-invalid" : "invoice-block"}>
             <header className="invoice-block-head">
               <h3>Service</h3>
               <div className="invoice-block-stats">
@@ -747,10 +805,20 @@ export function InvoiceCreateForm({
             <div className="invoice-lines-body">
               {serviceLines.length ? (
                 serviceLines.map((line) => (
-                  <LineRow key={line.id} line={line} onChange={patchLine} onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))} />
+                  <LineRow
+                    key={line.id}
+                    line={line}
+                    invalid={issues.includes("lines") && !line.description.trim()}
+                    onChange={patchLine}
+                    onRemove={(id) => setLines((c) => c.filter((l) => l.id !== id))}
+                  />
                 ))
               ) : (
-                <p className="invoice-empty-note">No service lines yet. Load work, pick milestones, or add a line.</p>
+                <p className="invoice-empty-note">
+                  {issues.includes("lines")
+                    ? "Add at least one line item before saving."
+                    : "No service lines yet. Load work, pick milestones, or add a line."}
+                </p>
               )}
             </div>
             <button type="button" className="invoice-lines-add" onClick={() => addLine("service")}>
@@ -997,10 +1065,7 @@ export function InvoiceCreateForm({
             className="btn btn-ghost"
             onClick={() => {
               const draft = buildInvoice();
-              if (!draft) {
-                pushToast("Add a company and at least one line item", "danger");
-                return;
-              }
+              if (!draft) return;
               exportInvoicePdf(draft, company?.address);
             }}
           >
@@ -1020,16 +1085,18 @@ export function InvoiceCreateForm({
 
 function LineRow({
   line,
+  invalid,
   onChange,
   onRemove,
 }: {
   line: DraftLine;
+  invalid?: boolean;
   onChange: (id: string, patch: Partial<DraftLine>) => void;
   onRemove: (id: string) => void;
 }) {
   const amount = computeLineAmount(line);
   return (
-    <div className="invoice-line">
+    <div className={invalid ? "invoice-line is-invalid" : "invoice-line"}>
       <TextInput
         aria-label="Description"
         value={line.description}
