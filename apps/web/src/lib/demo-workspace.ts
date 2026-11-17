@@ -1,43 +1,10 @@
 import {
-  demoActivities,
-  demoAutomations,
-  demoCompanies,
-  demoCompanyAssets,
-  demoContacts,
-  demoEmailOutbox,
-  demoExpenses,
-  demoInvoices,
-  demoMilestones,
-  demoNotifications,
-  demoOpportunities,
-  demoProjects,
-  demoRetainerPeriods,
-  demoRetainers,
-  demoTasks,
-  demoTicketMessages,
-  demoTickets,
-  demoTimeEntries,
-} from "./demo-catalog";
-import {
-  demoAllocations,
-  demoBenefits,
-  demoDependencies,
-  demoGates,
-  demoIdeas,
-  demoIssues,
-  demoObjectives,
-  demoPortfolios,
-  demoRisks,
-} from "./demo-ppm";
-import {
   DMC_CONSULTING_NAME,
   DMC_INTERNAL_PROJECT_ID,
   DMC_INTERNAL_PROJECT_NAME,
   DMC_MANAGER_NAME,
   withDmcInternalExample,
 } from "./dmc-internal-project";
-import { DEFAULT_PACKS } from "./modules";
-import { nextProjectNumber } from "./ppm";
 import { initialsFromName } from "./seed";
 import {
   addDaysIso,
@@ -83,7 +50,7 @@ import type {
   TimeEntry,
 } from "./types";
 
-export const DEMO_WORKSPACE_GENERATION = "play-v2";
+export const DEMO_WORKSPACE_GENERATION = "dmc-only-v1";
 
 export type DemoWorkspaceState = {
   demoWorkspaceGeneration?: string;
@@ -123,6 +90,8 @@ export type DemoWorkspaceState = {
   fieldClocks: FieldClock[];
   workspaceInstances: WorkspaceInstance[];
   promotionalTrial: PromotionalTrial;
+  recentlyViewed?: { type: string; id: string; label: string }[];
+  focusCompanyId?: string | null;
 };
 
 function sameName(left: string, right: string) {
@@ -149,10 +118,9 @@ function weekDates() {
   };
 }
 
-function demoServiceOps(company: Company, cascade?: Company) {
-  const { today, tue, wed, thu, fri } = weekDates();
+function demoServiceOps(company: Company) {
+  const { today, tue, wed, fri } = weekDates();
   const dmc = { id: company.id, name: company.name };
-  const other = cascade ? { id: cascade.id, name: cascade.name } : dmc;
   const workOrders: WorkOrder[] = [
     {
       id: "wo-dmc-wifi",
@@ -177,37 +145,26 @@ function demoServiceOps(company: Company, cascade?: Company) {
       notes: "Log temperatures and replace the intake filter.",
     },
     {
-      id: "wo-cascade-dock",
-      title: "Dock door sensor reset",
-      companyId: other.id,
-      companyName: other.name,
-      assignee: "S. Ahmed",
-      priority: "Critical",
-      status: "Pending approval",
-      scheduled: wed,
-      notes: "Sensor swapped. Waiting on client sign-off.",
-    },
-    {
       id: "wo-dmc-camera",
       title: "Lobby camera swap",
       companyId: dmc.id,
       companyName: dmc.name,
-      assignee: "J. Kim",
+      assignee: DMC_MANAGER_NAME,
       priority: "Low",
       status: "Completed",
       scheduled: tue,
       notes: "Old unit returned to storage.",
     },
     {
-      id: "wo-cascade-badge",
-      title: "Badge reader firmware",
-      companyId: other.id,
-      companyName: other.name,
-      assignee: "S. Cho",
-      priority: "Medium",
-      status: "Sent back",
-      scheduled: thu,
-      notes: "Firmware failed checksum. Reschedule with spare reader.",
+      id: "wo-dmc-access",
+      title: "Office access badge reset",
+      companyId: dmc.id,
+      companyName: dmc.name,
+      assignee: DMC_MANAGER_NAME,
+      priority: "High",
+      status: "Pending approval",
+      scheduled: wed,
+      notes: "Waiting on Dillon Morgan sign-off after the badge reader swap.",
     },
   ];
   const recurringServices: RecurringService[] = [
@@ -221,16 +178,6 @@ function demoServiceOps(company: Company, cascade?: Company) {
       assignee: DMC_MANAGER_NAME,
       paused: false,
     },
-    {
-      id: "rs-cascade-backup",
-      title: "Weekly warehouse backup test",
-      companyId: other.id,
-      companyName: other.name,
-      frequency: "Weekly",
-      nextOn: addDaysIso(today, 2),
-      assignee: "J. Kim",
-      paused: false,
-    },
   ];
   const serviceDocuments: ServiceDocument[] = [
     {
@@ -241,27 +188,12 @@ function demoServiceOps(company: Company, cascade?: Company) {
       kind: "PDF",
       added: tue,
     },
-    {
-      id: "sd-cascade-layout",
-      name: "Dock layout.jpg",
-      companyId: other.id,
-      companyName: other.name,
-      kind: "Image",
-      added: wed,
-    },
   ];
   const fieldClocks: FieldClock[] = [
     {
       id: "fc-live",
       memberName: DMC_MANAGER_NAME,
       startedAt: `${today}T08:15:00`,
-    },
-    {
-      id: "fc-done",
-      memberName: "J. Kim",
-      startedAt: `${tue}T09:00:00`,
-      stoppedAt: `${tue}T12:30:00`,
-      hours: 3.5,
     },
   ];
   return { workOrders, recurringServices, serviceDocuments, fieldClocks };
@@ -275,53 +207,6 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
   if (!company || !project) return state;
   const contact = state.contacts.find((row) => row.companyId === company.id);
   const { today, mon, tue, wed, thu, fri } = weekDates();
-  const cascade = state.companies.find((row) => row.id === "c-cascade");
-
-  const projects = [...state.projects];
-  if (!projects.some((row) => row.id === "p-dmc-playbook")) {
-    projects.push({
-      id: "p-dmc-playbook",
-      number: nextProjectNumber(projects),
-      name: "PMO Operating Picture",
-      companyId: company.id,
-      companyName: company.name,
-      manager: "M. Doyle",
-      progress: 42,
-      status: "Active",
-      start: "2026-10-01",
-      due: "2026-12-15",
-      budgetHours: 240,
-      loggedHours: 86,
-      marginPct: 33,
-      portalShared: true,
-      portalContacts: 1,
-      projectType: "Client Work",
-      description: "Weekly operating picture, reports, and briefing pack for DMC leadership.",
-      budgetAmount: 48000,
-      materials: [],
-      files: [],
-      notes: [
-        {
-          id: "pn-dmc-1",
-          author: "M. Doyle",
-          body: "Keep the Friday briefing under two pages.",
-          createdAt: "Nov 7, 2026",
-          visibility: "internal",
-        },
-      ],
-      rates: [{ memberName: DMC_MANAGER_NAME, hourlyRate: 185 }],
-      statusHistory: [],
-      scope: {
-        objectives: "Give leadership a live view of delivery, time, and invoices.",
-        inScope: ["Weekly brief", "Module walkthroughs", "Sample invoices"],
-        outOfScope: ["Client portal branding"],
-        deliverables: ["Operating picture", "Sample reports"],
-        assumptions: ["Team roster stays current"],
-      },
-      contactId: contact?.id,
-      contactName: contact?.name,
-    });
-  }
 
   const tickets: Ticket[] = [
     {
@@ -343,9 +228,9 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
       subject: "Weekly brief chart labels",
       companyId: company.id,
       companyName: company.name,
-      projectId: "p-dmc-playbook",
+      projectId: project.id,
       priority: "Low",
-      assignee: "M. Doyle",
+      assignee: DMC_MANAGER_NAME,
       slaDue: "2d",
       status: "Open",
       submitted: today,
@@ -417,28 +302,28 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
     },
     {
       id: "te-dmc-thu",
-      userName: "J. Kim",
-      projectId: "p-dmc-playbook",
-      projectName: "PMO Operating Picture",
+      userName: DMC_MANAGER_NAME,
+      projectId: project.id,
+      projectName: project.name,
       workKind: "project",
       date: thu,
       start: "09:00",
       hours: 4,
-      billable: true,
-      note: "Report pack draft",
+      billable: false,
+      note: "Internal delivery plan review",
       status: "Submitted",
     },
     {
       id: "te-dmc-fri",
-      userName: "M. Doyle",
-      projectId: "p-dmc-playbook",
-      projectName: "PMO Operating Picture",
+      userName: DMC_MANAGER_NAME,
+      projectId: project.id,
+      projectName: project.name,
       workKind: "project",
       date: fri,
       start: "08:00",
       hours: 2,
-      billable: true,
-      note: "Friday briefing",
+      billable: false,
+      note: "Friday standup notes",
       status: "Draft",
     },
   ];
@@ -452,17 +337,17 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
       terms: "Net 30",
       due: addDaysIso(today, 20),
       status: "Draft",
-      projectId: "p-dmc-playbook",
-      title: "PMO Operating Picture (Nov)",
-      owner: "J. Alvarez",
+      projectId: project.id,
+      title: "DMC Internal Project (Nov)",
+      owner: DMC_MANAGER_NAME,
       billToContactId: contact?.id,
       billToName: contact?.name,
       currency: "USD",
       raised: today,
       templateId: "tpl-progress",
-      description: "November progress on the operating picture.",
+      description: "November progress on DMC Internal Project.",
       lineItems: [
-        { id: "il-dmc-1", kind: "service", description: "PMO operating picture", amount: 6400, includeInPdf: true },
+        { id: "il-dmc-1", kind: "service", description: "Internal delivery", amount: 6400, includeInPdf: true },
         { id: "il-dmc-2", kind: "expense", description: "AWS sandbox", amount: 1000, includeInPdf: true },
       ],
     },
@@ -624,10 +509,10 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
     },
     {
       id: "al-dmc-md",
-      memberId: "tm-md",
-      memberName: "M. Doyle",
-      projectId: "p-dmc-playbook",
-      projectName: "PMO Operating Picture",
+      memberId: "tm-ah",
+      memberName: DMC_MANAGER_NAME,
+      projectId: project.id,
+      projectName: project.name,
       allocationPct: 25,
       hoursPerWeek: 10,
       start: "2026-10-01",
@@ -672,34 +557,25 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
     {
       id: "a-dmc-2",
       companyId: company.id,
-      projectId: "p-dmc-playbook",
+      projectId: project.id,
       when: `${thu} 11:05`,
-      text: "M. Doyle added a note on PMO Operating Picture.",
+      text: `${DMC_MANAGER_NAME} added a note on ${project.name}.`,
       type: "comment",
-      actor: "M. Doyle",
+      actor: DMC_MANAGER_NAME,
       action: "commented",
       entityType: "project",
-      entityId: "p-dmc-playbook",
-      entityLabel: "PMO Operating Picture",
-      href: "/app/projects/view/?id=p-dmc-playbook",
+      entityId: project.id,
+      entityLabel: project.name,
+      href: `/app/projects/view/?id=${project.id}`,
     },
   ];
-  const service = demoServiceOps(company, cascade);
-  const extraInstances: WorkspaceInstance[] = [
-    {
-      id: "inst-rowlett",
-      name: "Rowlett Field Ops",
-      status: "Trial",
-      packs: DEFAULT_PACKS,
-      owner: "A. Chen",
-    },
-  ];
+  const service = demoServiceOps(company);
 
   const companies = state.companies.map((row) =>
     row.id === company.id
       ? {
           ...row,
-          openProjects: Math.max(row.openProjects, projects.filter((item) => item.companyId === row.id && item.status !== "Completed" && item.status !== "Cancelled").length),
+          openProjects: Math.max(row.openProjects, 1),
           openTickets: Math.max(row.openTickets, 2),
           lastActivity: "Nov 13, 2026",
           initials: row.initials || initialsFromName(row.name),
@@ -710,7 +586,6 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
   return {
     ...state,
     companies,
-    projects,
     tickets: upsertById(state.tickets, tickets),
     ticketMessages: upsertById(state.ticketMessages, ticketMessages),
     timeEntries: upsertById(state.timeEntries, timeEntries),
@@ -731,7 +606,7 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
     recurringServices: upsertById(state.recurringServices, service.recurringServices),
     serviceDocuments: upsertById(state.serviceDocuments, service.serviceDocuments),
     fieldClocks: upsertById(state.fieldClocks, service.fieldClocks),
-    workspaceInstances: upsertById(state.workspaceInstances.length ? state.workspaceInstances : DEFAULT_INSTANCES, extraInstances),
+    workspaceInstances: state.workspaceInstances.length ? state.workspaceInstances : DEFAULT_INSTANCES,
     promotionalTrial:
       state.promotionalTrial.active || state.promotionalTrial.used > 0
         ? state.promotionalTrial
@@ -739,37 +614,192 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
   };
 }
 
-function withCatalog(state: DemoWorkspaceState): DemoWorkspaceState {
+const REMOVED_COMPANY_IDS = new Set([
+  "c-northridge",
+  "c-harlow",
+  "c-oakton",
+  "c-cascade",
+  "c-bellweather",
+  "c-rowlett",
+  "c-trinity",
+  "c-roadway",
+  "c-melissa",
+]);
+const REMOVED_PROJECT_IDS = new Set([
+  "p-warehouse",
+  "p-website",
+  "p-vendor",
+  "p-fleet",
+  "p-pos",
+  "p-melissa-dev",
+  "p-sidewalk",
+  "p-dmc-playbook",
+]);
+
+function hrefId(href?: string) {
+  if (!href) return;
+  const match = href.match(/[?&]id=([^&/#]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+function retainLinkedRecords(
+  state: DemoWorkspaceState,
+  companies: Company[],
+  projects: Project[],
+  instanceMode: "dmc-only" | "keep-non-rowlett",
+): DemoWorkspaceState {
+  const companyIds = new Set(companies.map((row) => row.id));
+  const projectIds = new Set(projects.map((row) => row.id));
+  const contacts = state.contacts
+    .filter((row) => companyIds.has(row.companyId))
+    .map((row) => ({ ...row, projectIds: row.projectIds?.filter((id) => projectIds.has(id)) }));
+  const tickets = state.tickets.filter(
+    (row) => companyIds.has(row.companyId) && (!row.projectId || projectIds.has(row.projectId)),
+  );
+  const ticketIds = new Set(tickets.map((row) => row.id));
+  const retainers = state.retainers.filter((row) => companyIds.has(row.companyId));
+  const retainerIds = new Set(retainers.map((row) => row.id));
+  const invoices = state.invoices.filter(
+    (row) => companyIds.has(row.companyId) && (!row.projectId || projectIds.has(row.projectId)),
+  );
+  const milestones = state.milestones.filter((row) => projectIds.has(row.projectId));
+  const tasks = state.tasks.filter((row) => projectIds.has(row.projectId));
+  const timeEntries = state.timeEntries.filter((row) => projectIds.has(row.projectId));
+  const allocations = state.allocations.filter((row) => projectIds.has(row.projectId));
+  const workOrders = state.workOrders.filter((row) => companyIds.has(row.companyId));
+  const keepNames = new Set(
+    [
+      DMC_MANAGER_NAME,
+      "Dillon Morgan",
+      ...companies.map((row) => row.accountManager),
+      ...projects.map((row) => row.manager),
+      ...tasks.map((row) => row.assignee),
+      ...tickets.map((row) => row.assignee),
+      ...allocations.map((row) => row.memberName),
+      ...workOrders.map((row) => row.assignee),
+      ...timeEntries.map((row) => row.userName),
+    ].filter((name): name is string => Boolean(name)),
+  );
+  const team = state.team.filter((row) => keepNames.has(row.name) || row.id === "tm-ah");
+  const teamIds = new Set(team.map((row) => row.id));
+  const sourceInstances = state.workspaceInstances.length ? state.workspaceInstances : DEFAULT_INSTANCES;
+  const workspaceInstances = sourceInstances.filter((row) => {
+    if (row.id === "inst-rowlett") return false;
+    if (instanceMode === "dmc-only") return row.id === "inst-dmc" || sameName(row.name, "Dillon Morgan");
+    return true;
+  });
+
   return {
     ...state,
-    companies: upsertById(state.companies, demoCompanies),
-    companyAssets: upsertById(state.companyAssets, demoCompanyAssets),
-    contacts: upsertById(state.contacts, demoContacts),
-    projects: upsertById(state.projects, demoProjects),
-    milestones: upsertById(state.milestones, demoMilestones),
-    tickets: upsertById(state.tickets, demoTickets),
-    ticketMessages: upsertById(state.ticketMessages, demoTicketMessages),
-    tasks: upsertById(state.tasks, demoTasks),
-    invoices: upsertById(state.invoices, demoInvoices),
-    timeEntries: upsertById(state.timeEntries, demoTimeEntries),
-    notifications: upsertById(state.notifications, demoNotifications),
-    activities: upsertById(state.activities, demoActivities),
-    retainers: upsertById(state.retainers, demoRetainers),
-    retainerPeriods: upsertById(state.retainerPeriods, demoRetainerPeriods),
-    automations: upsertById(state.automations, demoAutomations),
-    emailOutbox: upsertById(state.emailOutbox, demoEmailOutbox),
-    expenses: upsertById(state.expenses, demoExpenses),
-    opportunities: upsertById(state.opportunities, demoOpportunities),
-    objectives: upsertById(state.objectives, demoObjectives),
-    ideas: upsertById(state.ideas, demoIdeas),
-    portfolios: upsertById(state.portfolios, demoPortfolios),
-    risks: upsertById(state.risks, demoRisks),
-    issues: upsertById(state.issues, demoIssues),
-    dependencies: upsertById(state.dependencies, demoDependencies),
-    benefits: upsertById(state.benefits, demoBenefits),
-    gates: upsertById(state.gates, demoGates),
-    allocations: upsertById(state.allocations, demoAllocations),
+    companies,
+    projects,
+    contacts,
+    companyAssets: state.companyAssets.filter(
+      (row) => companyIds.has(row.companyId) && (!row.projectId || projectIds.has(row.projectId)),
+    ),
+    milestones,
+    tickets,
+    ticketMessages: state.ticketMessages.filter((row) => ticketIds.has(row.ticketId)),
+    tasks,
+    team,
+    invoices,
+    timeEntries,
+    notifications: state.notifications.filter((row) => {
+      const id = hrefId(row.href);
+      if (!id) return true;
+      const href = row.href ?? "";
+      if (href.includes("/companies/")) return companyIds.has(id);
+      if (href.includes("/projects/")) return projectIds.has(id);
+      return true;
+    }),
+    activities: state.activities.filter(
+      (row) =>
+        (!row.companyId || companyIds.has(row.companyId)) && (!row.projectId || projectIds.has(row.projectId)),
+    ),
+    retainers,
+    retainerPeriods: state.retainerPeriods.filter((row) => retainerIds.has(row.retainerId)),
+    expenses: state.expenses.filter(
+      (row) => projectIds.has(row.projectId) || (!!row.companyId && companyIds.has(row.companyId)),
+    ),
+    purchases: state.purchases.filter(
+      (row) =>
+        (!row.companyId || companyIds.has(row.companyId)) && (!row.projectId || projectIds.has(row.projectId)),
+    ),
+    billMaterials: state.billMaterials.filter(
+      (row) =>
+        (!row.companyId || companyIds.has(row.companyId)) && (!row.projectId || projectIds.has(row.projectId)),
+    ),
+    opportunities: state.opportunities.filter((row) => companyIds.has(row.companyId)),
+    ideas: state.ideas.filter(
+      (row) =>
+        (!row.companyId || companyIds.has(row.companyId)) &&
+        (!row.convertedProjectId || projectIds.has(row.convertedProjectId)),
+    ),
+    portfolios: state.portfolios
+      .map((row) => ({ ...row, projectIds: row.projectIds.filter((id) => projectIds.has(id)) }))
+      .filter((row) => row.projectIds.length > 0),
+    risks: state.risks.filter((row) => !row.projectId || projectIds.has(row.projectId)),
+    issues: state.issues.filter((row) => projectIds.has(row.projectId)),
+    dependencies: state.dependencies.filter(
+      (row) => projectIds.has(row.predecessorProjectId) && projectIds.has(row.successorProjectId),
+    ),
+    benefits: state.benefits.filter((row) => !row.projectId || projectIds.has(row.projectId)),
+    gates: state.gates.filter((row) => projectIds.has(row.projectId)),
+    allocations: allocations.filter((row) => !row.memberId || teamIds.has(row.memberId) || keepNames.has(row.memberName)),
+    workOrders,
+    recurringServices: state.recurringServices.filter((row) => companyIds.has(row.companyId)),
+    serviceDocuments: state.serviceDocuments.filter((row) => companyIds.has(row.companyId)),
+    fieldClocks: state.fieldClocks.filter((row) => keepNames.has(row.memberName)),
+    workspaceInstances: workspaceInstances.length ? workspaceInstances : DEFAULT_INSTANCES,
+    recentlyViewed: (state.recentlyViewed ?? []).filter((row) => {
+      if (row.type === "company") return companyIds.has(row.id);
+      if (row.type === "project") return projectIds.has(row.id);
+      if (row.type === "contact") return contacts.some((contact) => contact.id === row.id);
+      return true;
+    }),
+    focusCompanyId:
+      state.focusCompanyId && companyIds.has(state.focusCompanyId) ? state.focusCompanyId : null,
   };
+}
+
+function pruneToDmcInternal(state: DemoWorkspaceState): DemoWorkspaceState {
+  const company =
+    state.companies.find((row) => sameName(row.name, DMC_CONSULTING_NAME)) ??
+    state.companies.find((row) => row.id === "c-dmc");
+  const project = state.projects.find(
+    (row) => row.id === DMC_INTERNAL_PROJECT_ID || sameName(row.name, DMC_INTERNAL_PROJECT_NAME),
+  );
+  if (!company || !project) return state;
+  return retainLinkedRecords(
+    state,
+    [{ ...company, openProjects: 1 }],
+    [{ ...project, companyId: company.id, companyName: company.name }],
+    "dmc-only",
+  );
+}
+
+function stripRemovedDemo(state: DemoWorkspaceState): DemoWorkspaceState {
+  const companies = state.companies.filter((row) => !REMOVED_COMPANY_IDS.has(row.id));
+  const projects = state.projects.filter(
+    (row) => !REMOVED_PROJECT_IDS.has(row.id) && !REMOVED_COMPANY_IDS.has(row.companyId),
+  );
+  const dropRowlett = state.workspaceInstances.some((row) => row.id === "inst-rowlett");
+  const dropRecent = (state.recentlyViewed ?? []).some(
+    (row) =>
+      (row.type === "company" && REMOVED_COMPANY_IDS.has(row.id)) ||
+      (row.type === "project" && REMOVED_PROJECT_IDS.has(row.id)),
+  );
+  const dropFocus = Boolean(state.focusCompanyId && REMOVED_COMPANY_IDS.has(state.focusCompanyId));
+  if (
+    companies.length === state.companies.length &&
+    projects.length === state.projects.length &&
+    !dropRowlett &&
+    !dropRecent &&
+    !dropFocus
+  ) {
+    return state;
+  }
+  return retainLinkedRecords(state, companies, projects, "keep-non-rowlett");
 }
 
 export function emptyDemoState(): DemoWorkspaceState {
@@ -826,8 +856,14 @@ export function withDemoWorkspace(input: DemoWorkspaceState): DemoWorkspaceState
   let changed = Boolean(dmc);
 
   if (next.demoWorkspaceGeneration !== DEMO_WORKSPACE_GENERATION) {
-    next = dmcPlayRecords(withCatalog(next));
+    next = pruneToDmcInternal(dmcPlayRecords(next));
     next.demoWorkspaceGeneration = DEMO_WORKSPACE_GENERATION;
+    changed = true;
+  }
+
+  const stripped = stripRemovedDemo(next);
+  if (stripped !== next) {
+    next = stripped;
     changed = true;
   }
 
