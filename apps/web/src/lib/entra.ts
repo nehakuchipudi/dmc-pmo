@@ -3,6 +3,15 @@ import { azureRuntimeConfig } from "./azure-config";
 
 export const ENTRA_SCOPES = ["openid", "profile", "email", "User.Read"];
 export const MAIL_SCOPES = ["Mail.Send"];
+export const SIGNIN_SCOPES = [...ENTRA_SCOPES, ...MAIL_SCOPES];
+export const AFTER_AUTH_KEY = "dmc-pmo-after-auth";
+
+export type OutlookMailState = "unconfigured" | "needs-sign-in" | "needs-consent" | "ready";
+
+export type OutlookMailStatus = {
+  state: OutlookMailState;
+  account?: string;
+};
 
 export function entraClientId() {
   return (
@@ -85,11 +94,26 @@ export function claimsFromAccount(account: AccountInfo) {
   };
 }
 
-export async function startEntraSignIn(opts?: { email?: string; create?: boolean }) {
+function rememberReturnTo(path?: string) {
+  if (typeof window === "undefined") return;
+  const next = (path ?? "").trim();
+  if (next.startsWith("/") && !next.startsWith("//")) window.sessionStorage.setItem(AFTER_AUTH_KEY, next);
+  else window.sessionStorage.removeItem(AFTER_AUTH_KEY);
+}
+
+export function takeAfterAuthPath() {
+  if (typeof window === "undefined") return "";
+  const next = window.sessionStorage.getItem(AFTER_AUTH_KEY) ?? "";
+  window.sessionStorage.removeItem(AFTER_AUTH_KEY);
+  return next.startsWith("/") && !next.startsWith("//") ? next : "";
+}
+
+export async function startEntraSignIn(opts?: { email?: string; create?: boolean; returnTo?: string }) {
   const msal = await getMsal();
   if (!msal) throw new Error("Microsoft Entra ID is not configured.");
+  rememberReturnTo(opts?.returnTo);
   await msal.loginRedirect({
-    scopes: ENTRA_SCOPES,
+    scopes: SIGNIN_SCOPES,
     loginHint: opts?.email,
     prompt: opts?.create ? "create" : "select_account",
     redirectStartPage: entraRedirectUri(),
@@ -130,17 +154,59 @@ export async function acquireWorkspaceToken() {
   }
 }
 
+function entraAccountOf(msal: MsalInstance) {
+  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+  if (account) msal.setActiveAccount(account);
+  return account;
+}
+
+export async function peekOutlookMail(): Promise<OutlookMailStatus> {
+  if (!entraConfigured()) return { state: "unconfigured" };
+  const msal = await getMsal();
+  if (!msal) return { state: "unconfigured" };
+  const account = entraAccountOf(msal);
+  if (!account) return { state: "needs-sign-in" };
+  try {
+    await msal.acquireTokenSilent({ account, scopes: MAIL_SCOPES });
+    return { state: "ready", account: account.username };
+  } catch {
+    return { state: "needs-consent", account: account.username };
+  }
+}
+
+export async function connectOutlookMail(opts?: { returnTo?: string }) {
+  const status = await peekOutlookMail();
+  if (status.state === "unconfigured") {
+    return { ok: false, error: "Microsoft Entra ID is not configured." };
+  }
+  if (status.state === "needs-sign-in") {
+    await startEntraSignIn({ returnTo: opts?.returnTo ?? "/app/settings/?section=email" });
+    return { ok: false, error: "Redirecting to Microsoft sign-in." };
+  }
+  const token = await acquireMailToken();
+  if (!token) {
+    return {
+      ok: false,
+      error: "Microsoft needs the Mail.Send permission on the Entra app before Outlook can send.",
+    };
+  }
+  return { ok: true };
+}
+
 export async function acquireMailToken() {
   const msal = await getMsal();
   if (!msal) return undefined;
-  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+  const account = entraAccountOf(msal);
   if (!account) return undefined;
-  msal.setActiveAccount(account);
   try {
     const silent = await msal.acquireTokenSilent({ account, scopes: MAIL_SCOPES });
     return silent.accessToken;
   } catch {
-    const popup = await msal.acquireTokenPopup({ account, scopes: MAIL_SCOPES });
-    return popup.accessToken;
+    try {
+      const popup = await msal.acquireTokenPopup({ account, scopes: MAIL_SCOPES });
+      return popup.accessToken;
+    } catch {
+      return undefined;
+    }
   }
 }

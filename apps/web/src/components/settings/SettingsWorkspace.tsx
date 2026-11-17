@@ -9,6 +9,7 @@ import { RowMenu } from "@/components/RowMenu";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
+import { OutlookMailCard } from "@/components/settings/OutlookMailCard";
 import { SettingsBilling } from "@/components/settings/SettingsBilling";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
@@ -188,6 +189,8 @@ export function SettingsWorkspace() {
                 </IfCan>
               </div>
             </header>
+
+            {canManageUsers ? <OutlookMailCard returnTo="/app/settings/?section=users" /> : null}
 
             <label className="settings-search">
               <input

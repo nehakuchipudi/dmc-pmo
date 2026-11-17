@@ -22,18 +22,18 @@ export function mailHtml(text: string) {
 }
 
 export function noSenderMessage() {
-  return "No mail sender is connected. Sign in with Microsoft so DMC PMO can send from your mailbox, or add a RESEND_API_KEY on the host.";
+  return "Sign in with Microsoft so DMC PMO can send from your Outlook mailbox. Demo users cannot deliver mail.";
 }
 
 export async function deliverMail(input: MailPayload): Promise<MailDelivery> {
   const to = input.to.trim();
   if (!to || !to.includes("@")) return { delivered: false, error: "That invite needs a valid email address." };
 
-  const api = await tryApiSend(input);
-  if (api) return api;
-
   const graph = await tryGraphSend(input);
   if (graph) return graph;
+
+  const api = await tryApiSend(input);
+  if (api) return api;
 
   return { delivered: false, error: noSenderMessage() };
 }

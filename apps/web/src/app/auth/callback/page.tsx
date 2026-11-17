@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { claimsFromAccount, completeEntraRedirect, entraConfigured } from "@/lib/entra";
+import { claimsFromAccount, completeEntraRedirect, entraConfigured, takeAfterAuthPath } from "@/lib/entra";
 import { takePendingSignup } from "@/lib/directory";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
@@ -45,7 +45,8 @@ export default function AuthCallbackPage() {
         });
         if (cancelled) return;
         setSessionUser(user);
-        router.replace(user.role === "client" ? "/portal" : "/app/home");
+        const next = takeAfterAuthPath();
+        router.replace(next || (user.role === "client" ? "/portal" : "/app/home"));
       } catch (err) {
         setMessage(err instanceof Error ? err.message : "Microsoft sign-in failed.");
       }
