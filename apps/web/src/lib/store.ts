@@ -775,14 +775,18 @@ function persistTeam(team: TeamMember[]) {
   writeAccountExtras({ ...extras, team });
 }
 
-function assignmentPeople(team: TeamMember[]) {
+function assignmentPeople(team: TeamMember[], contacts: Contact[] = []) {
   const seen = new Set<string>();
   const people: { name: string; email: string; notifyEmail?: boolean }[] = [];
-  for (const row of [...team, ...allAccounts()]) {
+  for (const row of [...team, ...allAccounts(), ...contacts]) {
     const email = row.email?.trim().toLowerCase();
     if (!email || seen.has(email)) continue;
     seen.add(email);
-    people.push({ name: row.name, email: row.email, notifyEmail: row.notifyEmail });
+    people.push({
+      name: row.name,
+      email: row.email,
+      notifyEmail: "notifyEmail" in row ? row.notifyEmail : undefined,
+    });
   }
   return people;
 }
@@ -1476,7 +1480,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const owner = resolveNotifyEmail({
       name: input.manager,
       email: input.ownerEmail,
-      people: assignmentPeople(get().team),
+      people: assignmentPeople(get().team, get().contacts),
     });
     const ownerMember = get().team.find(
       (member) =>
@@ -1661,7 +1665,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const next = get().projects.find((row) => row.id === id) ?? { ...prev, manager: patch.manager };
         const owner = resolveNotifyEmail({
           name: patch.manager,
-          people: assignmentPeople(get().team),
+          people: assignmentPeople(get().team, get().contacts),
         });
         if (owner) {
           const href = projectHref(id);
@@ -2347,7 +2351,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   addProjectMember: (input) => {
     if (!requireCap(get, "manage_project_team")) return "";
     const project = get().projects.find((p) => p.id === input.projectId);
-    const member = get().team.find((m) => m.id === input.memberId);
+    const teamMember = get().team.find((m) => m.id === input.memberId);
+    const contact = teamMember ? undefined : get().contacts.find((c) => c.id === input.memberId);
+    const member = teamMember
+      ? { id: teamMember.id, name: teamMember.name, email: teamMember.email }
+      : contact
+        ? { id: contact.id, name: contact.name, email: contact.email }
+        : undefined;
     if (!project || !member) return "";
     if (get().allocations.some((row) => row.projectId === project.id && row.memberId === member.id)) {
       get().pushToast(`${member.name} is already on this team`, "info");
@@ -2387,7 +2397,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const notified = resolveNotifyEmail({
       name: member.name,
       email: member.email,
-      people: assignmentPeople(get().team),
+      people: assignmentPeople(get().team, get().contacts),
     });
     if (notified) {
       const href = projectHref(project.id);

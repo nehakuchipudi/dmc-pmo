@@ -16,6 +16,7 @@ import { Avatar, Field, FilterChips, Modal, PageHeader, ProgressBar, StatusPill,
 import { initialsFromName } from "@/lib/seed";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
+import { ownerChoices } from "@/lib/people-picker";
 import { useAppStore } from "@/lib/store";
 import { IfCan } from "@/components/auth/IfCan";
 import { useAuth } from "@/lib/auth";
@@ -40,6 +41,8 @@ export default function ProjectsPage() {
   const tickets = useAppStore((s) => s.tickets);
   const ticketMessages = useAppStore((s) => s.ticketMessages);
   const timeEntries = useAppStore((s) => s.timeEntries);
+  const team = useAppStore((s) => s.team);
+  const contacts = useAppStore((s) => s.contacts);
   const updateProject = useAppStore((s) => s.updateProject);
   const [filter, setFilter] = useState<(typeof PROJECT_LIST_FILTERS)[number]>(PROJECT_LIST_FILTERS[0]);
   const [createKind, setCreateKind] = useState<CreateKind>(null);
@@ -339,7 +342,14 @@ export default function ProjectsPage() {
               </TextSelect>
             </Field>
             <Field label="Owner">
-              <TextInput name="manager" defaultValue={editing.manager} />
+              <TextSelect name="manager" defaultValue={editing.manager}>
+                <option value="">Select owner</option>
+                {ownerChoices(team, contacts, editing.manager).map((person) => (
+                  <option key={person.id} value={person.name}>
+                    {person.name}
+                  </option>
+                ))}
+              </TextSelect>
             </Field>
             <Field label="Status">
               <p className="text-sm">

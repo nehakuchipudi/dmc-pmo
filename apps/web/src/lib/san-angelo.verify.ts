@@ -28,6 +28,7 @@ assert.equal(empty.companies[0]?.industry, "Government");
 assert.equal(empty.companies[0]?.website, "http://sanangelo.gov");
 assert.equal(empty.companies[0]?.status, "Active");
 assert.equal(empty.companies[0]?.accountManager, DMC_MANAGER_NAME);
+assert.deepEqual(empty.companies[0]?.accountManagers, [DMC_MANAGER_NAME]);
 assert.deepEqual(empty.companies[0]?.teamMembers, [SAN_ANGELO_TEAM_NAME]);
 assert.equal(empty.contacts[0]?.name, SAN_ANGELO_CONTACT_NAME);
 assert.equal(empty.projects[0]?.name, SAN_ANGELO_PROJECT_NAME);
@@ -69,7 +70,7 @@ assert.ok(workspace.contacts.some((row) => row.name === SAN_ANGELO_CONTACT_NAME)
 assert.equal(withDemoWorkspace(workspace), null);
 
 const revived = withSanAngeloExample({
-  companies: empty.companies.map((row) => ({ ...row, teamMembers: [] })),
+  companies: empty.companies.map((row) => ({ ...row, teamMembers: [], accountManagers: [], accountManager: "" })),
   contacts: empty.contacts,
   projects: empty.projects,
   milestones: empty.milestones,
@@ -80,6 +81,8 @@ const revived = withSanAngeloExample({
 });
 assert.ok(revived);
 assert.deepEqual(revived.companies[0]?.teamMembers, [SAN_ANGELO_TEAM_NAME]);
+assert.equal(revived.companies[0]?.accountManager, DMC_MANAGER_NAME);
+assert.deepEqual(revived.companies[0]?.accountManagers, [DMC_MANAGER_NAME]);
 
 const root = dirname(fileURLToPath(import.meta.url));
 const company = readFileSync(join(root, "../app/app/companies/[id]/company-detail.tsx"), "utf8");

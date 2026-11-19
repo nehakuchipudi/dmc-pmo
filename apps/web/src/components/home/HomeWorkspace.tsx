@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { homeSectionOn, hasPack } from "@/lib/modules";
 import { allocationByMember, openHighRisks } from "@/lib/ppm";
 import { formatDisplayDate, money } from "@/lib/seed";
+import { listedPeople } from "@/lib/people-picker";
 import { useAppStore } from "@/lib/store";
 
 function firstName(name?: string) {
@@ -428,7 +429,7 @@ function CompanyHome({ companyId }: { companyId: string }) {
     [companyId, activities, projects, tasks, timeEntries, milestones, company],
   );
   const primary = companyContacts.find((c) => c.id === company?.primaryContactId) ?? companyContacts[0];
-  const managers = company?.accountManagers?.length ? company.accountManagers : company ? [company.accountManager] : [];
+  const managers = listedPeople(company?.accountManagers, company?.accountManager);
 
   if (!company) {
     return (
