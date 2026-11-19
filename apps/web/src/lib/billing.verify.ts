@@ -13,6 +13,10 @@ import {
 import {
   applyPickedSourceLines,
   billedSourceIds,
+  calendarDaysBetween,
+  invoiceOwingTip,
+  invoiceOwingView,
+  invoiceSubject,
   dueFromTerms,
   emptyInvoiceLine,
   INVOICE_TERMS,
@@ -42,6 +46,26 @@ assert.equal(billedSourceIds([{ projectId: "p", lineItems: [{ sourceId: "m1" }] 
 assert.equal(
   billedSourceIds([{ id: "a", projectId: "p", lineItems: [{ sourceId: "m1" }] }] as never, "p", "a").has("m1"),
   false,
+);
+assert.equal(invoiceSubject({ title: "Strategic Planning", number: "INV-144" } as never), "Strategic Planning");
+assert.equal(calendarDaysBetween("2026-10-22", "2026-10-24"), 2);
+assert.equal(invoiceOwingView({ status: "Paid", amount: 21000, due: "2026-10-22", payments: [{ date: "2026-10-01", amount: 21000 }] } as never, "2026-11-19").kind, "paid");
+assert.equal(
+  (invoiceOwingView({ status: "Paid", amount: 21000, due: "2026-10-22", payments: [{ date: "2026-10-01", amount: 21000 }] } as never, "2026-11-19") as { daysAfterDue: number }).daysAfterDue,
+  -21,
+);
+assert.equal(invoiceOwingView({ status: "Overdue", amount: 15000, due: "2026-11-17", payments: [] } as never, "2026-11-19").kind, "owing");
+assert.equal(
+  (invoiceOwingView({ status: "Sent", amount: 21000, due: "2026-11-21", payments: [] } as never, "2026-11-19") as { days: number; overdue: boolean }).days,
+  2,
+);
+assert.equal(
+  invoiceOwingTip(invoiceOwingView({ status: "Sent", amount: 21000, due: "2026-11-21", payments: [] } as never, "2026-11-19")),
+  "Due in 2 days",
+);
+assert.equal(
+  invoiceOwingTip(invoiceOwingView({ status: "Overdue", amount: 24000, due: "2026-10-14", payments: [] } as never, "2026-11-19")),
+  "Overdue by 36 days",
 );
 assert.equal(
   invoiceTotals([{ id: "1", kind: "purchase", description: "PO", amount: 50 }]).purchase,
@@ -99,6 +123,22 @@ assert.match(billing, /PurchaseCreateForm/);
 assert.match(billing, /MaterialCreateForm/);
 assert.match(billing, /InvoiceRowActions/);
 assert.match(billing, /InvoiceEditorModal/);
+assert.match(billing, /ID #/);
+assert.match(billing, /Invoice Subject/);
+assert.match(billing, /Against/);
+assert.match(billing, /Owner/);
+assert.match(billing, /Raised/);
+assert.match(billing, /Total owing/);
+assert.match(billing, /billing-invoice-table/);
+assert.match(billing, /OwingCell/);
+
+const css = readFileSync(join(root, "../app/globals.css"), "utf8");
+assert.match(css, /\.billing-invoice-table/);
+assert.match(css, /\.billing-against/);
+assert.match(css, /\.billing-owing-days\.is-overdue/);
+assert.match(css, /\.billing-owing-tip/);
+assert.match(billing, /billing-owing-tip/);
+assert.match(billing, /OwingDays/);
 
 const invoice = readFileSync(join(root, "../components/InvoiceCreateForm.tsx"), "utf8");
 assert.match(invoice, /title="Expenses"/);
@@ -148,7 +188,10 @@ assert.match(store, /deleteInvoice: \(id\) =>/);
 assert.match(store, /invoices: s\.invoices\.filter\(\(row\) => row\.id !== id\)/);
 
 const rowActions = readFileSync(join(root, "../components/billing/InvoiceRowActions.tsx"), "utf8");
+assert.match(rowActions, /\bView\b/);
 assert.match(rowActions, /\bEdit\b/);
+assert.match(rowActions, /Add activity/);
+assert.match(rowActions, /Receive payment/);
 assert.match(rowActions, /\bDelete\b/);
 assert.match(rowActions, /Delete invoice/);
 assert.match(rowActions, /manage_invoice/);
@@ -158,6 +201,7 @@ assert.match(companyBilling, /InvoiceRowActions/);
 assert.match(companyBilling, /InvoiceEditorModal/);
 
 const invoiceLib = readFileSync(join(root, "invoice.ts"), "utf8");
+assert.match(invoiceLib, /invoiceOwingTip/);
 assert.match(invoiceLib, /INVOICE_FOR_OPTIONS/);
 assert.match(invoiceLib, /phaseChildIds/);
 assert.match(invoiceLib, /timeMatchesWork/);

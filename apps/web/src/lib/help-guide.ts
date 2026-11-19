@@ -356,7 +356,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Open Billing. Each tab has New Invoice, New Expense, New Purchase, or New Material.",
       "New expense asks for title, type, where it belongs, date, owner, and an attachment.",
       "New Invoice can select created expenses, purchases, and materials, or add them on the form. Checking a material, expense, or purchase adds it to the invoice total on the right. Preview PDF shows the invoice on screen in the same layout as a saved invoice; it does not download until you choose Download PDF. Download PDF saves that same on-screen layout.",
-      "On Billing, use the row menu to edit or delete an invoice. Confirm delete before the invoice is removed. The same Edit and Delete actions are on the invoice, the project Billing tab, and the company Billing tab.",
+      "The invoice list shows ID, subject, company, against, owner, raised, amount, and total owing. Days until due are green; overdue days are red. Hover the color for Due in or Overdue by. The row menu opens View, Edit, Add activity, Receive payment, and Delete.",
       "On a saved invoice, use Send to QuickBooks after connecting the company in Settings, Invoice & Pricing.",
       "Approve pending expenses on the Expenses tab if you are Finance or Admin.",
     ],

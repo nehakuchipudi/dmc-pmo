@@ -261,6 +261,50 @@ export function templateInvoiceFor(value: InvoiceForOption): InvoiceTemplate["in
   return value;
 }
 
+export function invoiceSubject(invoice: Invoice) {
+  return invoice.title?.trim() || invoice.description?.trim() || `Invoice ${invoice.number}`;
+}
+
+export function invoicePaidTotal(invoice: Invoice) {
+  return (invoice.payments ?? []).reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+export function calendarDaysBetween(fromIso: string, toIso: string) {
+  if (!fromIso || !toIso) return 0;
+  const from = new Date(`${fromIso}T12:00:00`).getTime();
+  const to = new Date(`${toIso}T12:00:00`).getTime();
+  return Math.round((to - from) / 86_400_000);
+}
+
+export type InvoiceOwingView =
+  | { kind: "draft"; amount: number }
+  | { kind: "paid"; daysAfterDue: number | null }
+  | { kind: "owing"; amount: number; days: number; overdue: boolean };
+
+export function invoiceOwingView(invoice: Invoice, today: string): InvoiceOwingView {
+  const paid = invoicePaidTotal(invoice);
+  if (invoice.status === "Paid" || paid >= invoice.amount) {
+    const paidOn = invoice.payments?.at(-1)?.date;
+    return { kind: "paid", daysAfterDue: paidOn ? calendarDaysBetween(invoice.due, paidOn) : null };
+  }
+  if (invoice.status === "Draft") return { kind: "draft", amount: invoice.amount };
+  const daysToDue = calendarDaysBetween(today, invoice.due);
+  return {
+    kind: "owing",
+    amount: Math.max(0, invoice.amount - paid),
+    days: Math.abs(daysToDue),
+    overdue: daysToDue < 0,
+  };
+}
+
+export function invoiceOwingTip(view: InvoiceOwingView): string | undefined {
+  if (view.kind !== "owing") return undefined;
+  const unit = view.days === 1 ? "day" : "days";
+  if (view.overdue) return `Overdue by ${view.days} ${unit}`;
+  if (view.days === 0) return "Due today";
+  return `Due in ${view.days} ${unit}`;
+}
+
 export function billedSourceIds(invoices: Invoice[], projectId?: string, exceptInvoiceId?: string) {
   return new Set(
     invoices

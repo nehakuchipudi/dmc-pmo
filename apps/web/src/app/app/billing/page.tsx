@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Briefcase, Plus } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
 import { InvoiceEditorModal, InvoiceRowActions } from "@/components/billing/InvoiceRowActions";
@@ -11,10 +12,12 @@ import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import type { Invoice } from "@/lib/types";
-import { FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
-import { formatDisplayDate, money } from "@/lib/seed";
+import { FilterChips, Modal, PageHeader, StatusPill, Tabs, statusTone } from "@/components/ui";
+import { invoiceOwingTip, invoiceOwingView, invoiceSubject } from "@/lib/invoice";
+import { formatDisplayDate, formatShortDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
 import { useAppStore } from "@/lib/store";
+import { todayIso } from "@/lib/timesheet";
 
 const FILTERS = ["All Invoices", "Draft", "In Terms", "Overdue", "Paid"];
 
@@ -22,6 +25,8 @@ export default function BillingPage() {
   const router = useRouter();
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
+  const projects = useAppStore((s) => s.projects);
+  const retainers = useAppStore((s) => s.retainers);
   const expenses = useAppStore((s) => s.expenses);
   const purchases = useAppStore((s) => s.purchases);
   const billMaterials = useAppStore((s) => s.billMaterials);
@@ -66,13 +71,25 @@ export default function BillingPage() {
               onClick={() =>
                 exportCsv(
                   "invoices.csv",
-                  rows.map((i) => ({
-                    number: i.number,
-                    company: i.companyName,
-                    amount: i.amount,
-                    status: i.status,
-                    due: i.due,
-                  })),
+                  rows.map((i) => {
+                    const against =
+                      projects.find((project) => project.id === i.projectId)?.name ||
+                      retainers.find((retainer) => retainer.id === i.retainerId)?.name ||
+                      "";
+                    const owing = invoiceOwingView(i, todayIso());
+                    return {
+                      id: i.number,
+                      subject: invoiceSubject(i),
+                      company: i.companyName,
+                      against,
+                      owner: i.owner || i.manager || "",
+                      raised: i.raised || "",
+                      amount: i.amount,
+                      owing: owing.kind === "paid" ? "Paid" : owing.amount,
+                      status: i.status,
+                      due: i.due,
+                    };
+                  }),
                 )
               }
             >
@@ -119,61 +136,82 @@ export default function BillingPage() {
             <Total label="Paid (MTD)" value={money(totals.paidMtd)} success />
           </div>
           <FilterChips items={FILTERS} active={filter} onChange={setFilter} />
-          <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-            <div className="panel overflow-hidden">
-              <table className="table">
+          <div className="panel overflow-hidden">
+            <div className="table-wrap">
+              <table className="table billing-invoice-table">
                 <thead>
                   <tr>
-                    <th>Invoice #</th>
+                    <th>ID #</th>
+                    <th>Invoice Subject</th>
                     <th>Company</th>
+                    <th>Against</th>
+                    <th>Owner</th>
+                    <th>Raised</th>
                     <th>Amount</th>
-                    <th>Terms</th>
-                    <th>Due</th>
-                    <th>Status</th>
+                    <th>Total owing</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((inv) => (
-                    <tr key={inv.id}>
-                      <td>
-                        <Link href={`/app/billing/view/?id=${inv.id}`} className="font-medium text-[var(--color-navy)]">
-                          {inv.number}
-                        </Link>
-                      </td>
-                      <td>{inv.companyName}</td>
-                      <td className="tabular-nums">{money(inv.amount)}</td>
-                      <td>{inv.terms}</td>
-                      <td>{formatDisplayDate(inv.due)}</td>
-                      <td>
-                        <StatusPill tone={statusTone(inv.status)}>{inv.status}</StatusPill>
-                      </td>
-                      <InvoiceRowActions invoice={inv} onEdit={setEditing} />
-                    </tr>
-                  ))}
+                  {rows.map((inv) => {
+                    const againstProject = projects.find((project) => project.id === inv.projectId);
+                    const againstRetainer = retainers.find((retainer) => retainer.id === inv.retainerId);
+                    const againstHref = againstProject
+                      ? `/app/projects/view/?id=${againstProject.id}`
+                      : againstRetainer
+                        ? `/app/retainers/view/?id=${againstRetainer.id}`
+                        : "";
+                    const againstLabel = againstProject?.name || againstRetainer?.name || "";
+                    return (
+                      <tr key={inv.id}>
+                        <td>
+                          <Link href={`/app/billing/view/?id=${inv.id}`} className="font-medium text-[var(--color-navy)]">
+                            {inv.number}
+                          </Link>
+                        </td>
+                        <td>
+                          <Link href={`/app/billing/view/?id=${inv.id}`} className="font-medium text-[var(--color-navy)]">
+                            {invoiceSubject(inv)}
+                          </Link>
+                        </td>
+                        <td>{inv.companyName}</td>
+                        <td>
+                          {againstHref ? (
+                            <Link href={againstHref} className="billing-against">
+                              <Briefcase size={14} />
+                              {againstLabel}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td>{inv.owner || inv.manager || "—"}</td>
+                        <td className="whitespace-nowrap">{inv.raised ? formatShortDate(inv.raised) : "—"}</td>
+                        <td className="tabular-nums whitespace-nowrap">{money(inv.amount)}</td>
+                        <td>
+                          <OwingCell invoice={inv} />
+                        </td>
+                        <InvoiceRowActions invoice={inv} onEdit={setEditing} />
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            <SideRail title="Shortcuts">
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/app/reports/profitability" className="hover:underline">
-                    Profitability
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/app/timesheets" className="hover:underline">
-                    Timesheet overview
-                  </Link>
-                </li>
-                <li>
-                  <button type="button" className="hover:underline" onClick={() => setFilter("Overdue")}>
-                    Overdue invoices
-                  </button>
-                </li>
-              </ul>
-            </SideRail>
           </div>
+          <p className="mt-3 text-sm text-[var(--color-muted)]">
+            <Link href="/app/reports/profitability" className="hover:underline">
+              Profitability
+            </Link>
+            {" · "}
+            <Link href="/app/timesheets" className="hover:underline">
+              Timesheet overview
+            </Link>
+            {" · "}
+            <button type="button" className="hover:underline" onClick={() => setFilter("Overdue")}>
+              Overdue invoices
+            </button>
+          </p>
         </>
       ) : null}
       {tab === "Expenses" ? (
@@ -320,6 +358,60 @@ export default function BillingPage() {
           }}
         />
       </Modal>
+    </div>
+  );
+}
+
+function OwingDays({ overdue, days, tip }: { overdue: boolean; days: number; tip: string }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  return (
+    <>
+      <span
+        className={overdue ? "billing-owing-days is-overdue" : "billing-owing-days is-ok"}
+        onMouseEnter={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          setPos({ top: rect.top, left: rect.left + rect.width / 2 });
+        }}
+        onMouseLeave={() => setPos(null)}
+      >
+        ({days} {days === 1 ? "day" : "days"})
+      </span>
+      {pos
+        ? createPortal(
+            <div className="billing-owing-tip" role="tooltip" style={{ top: pos.top, left: pos.left }}>
+              {tip}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function OwingCell({ invoice }: { invoice: Invoice }) {
+  const view = invoiceOwingView(invoice, todayIso());
+  if (view.kind === "paid") {
+    return (
+      <div className="billing-owing">
+        <span className="billing-owing-days is-ok">
+          {view.daysAfterDue === null ? "Paid" : `Paid after ${view.daysAfterDue} days`}
+        </span>
+      </div>
+    );
+  }
+  if (view.kind === "draft") {
+    return (
+      <div className="billing-owing">
+        <span className="tabular-nums">{money(view.amount)}</span>{" "}
+        <span className="billing-owing-days">Draft</span>
+      </div>
+    );
+  }
+  const tip = invoiceOwingTip(view) ?? "";
+  return (
+    <div className="billing-owing">
+      <span className="tabular-nums">{money(view.amount)}</span>{" "}
+      <OwingDays overdue={view.overdue} days={view.days} tip={tip} />
     </div>
   );
 }
