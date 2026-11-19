@@ -160,6 +160,7 @@ export function Modal({
   children,
   wide,
   xl,
+  stacked,
 }: {
   open: boolean;
   title: string;
@@ -167,11 +168,12 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
   xl?: boolean;
+  stacked?: boolean;
 }) {
   if (!open) return null;
   return (
     <Overlay>
-      <div className="modal-backdrop" onClick={onClose}>
+      <div className={clsx("modal-backdrop", stacked && "is-stacked")} onClick={onClose}>
         <div
           className={clsx("modal-panel fade-in", wide && "modal-wide", xl && "modal-xl")}
           role="dialog"

@@ -1,11 +1,13 @@
-import { uid } from "./seed";
+import { formatShortDate, moneyExact, uid } from "./seed";
 import type {
   Invoice,
+  InvoiceDeliverable,
   InvoiceLineItem,
   InvoiceLineItemize,
   InvoiceLineKind,
   InvoiceTemplate,
   Milestone,
+  ProjectFile,
   TimeEntry,
 } from "./types";
 
@@ -71,6 +73,95 @@ export function invoiceManagerName(invoice: Invoice) {
   return name;
 }
 
+export function invoiceAttachedDeliverables(invoice: Invoice) {
+  if (invoice.attachDeliverables === false) return [];
+  return invoice.deliverableDocs ?? [];
+}
+
+export function invoiceFileKind(name: string, mime = ""): InvoiceDeliverable["kind"] {
+  const lower = name.toLowerCase();
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/.test(lower)) return "img";
+  if (mime === "application/pdf" || lower.endsWith(".pdf")) return "pdf";
+  if (/\.docx?$/.test(lower)) return "docx";
+  if (/\.pptx?$/.test(lower)) return "pptx";
+  return "other";
+}
+
+export function deliverableFromProjectFile(file: ProjectFile): InvoiceDeliverable {
+  return {
+    id: file.id,
+    name: file.name,
+    kind: file.kind,
+    sizeKb: file.sizeKb,
+    folder: file.folder,
+    source: "project",
+    fileId: file.id,
+  };
+}
+
+export function deliverableContentType(doc: InvoiceDeliverable) {
+  if (doc.kind === "pdf") return "application/pdf";
+  if (doc.kind === "img") {
+    if (/\.png$/i.test(doc.name)) return "image/png";
+    if (/\.gif$/i.test(doc.name)) return "image/gif";
+    if (/\.webp$/i.test(doc.name)) return "image/webp";
+    return "image/jpeg";
+  }
+  if (doc.kind === "docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (doc.kind === "pptx") return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  return "application/octet-stream";
+}
+
+export function invoiceSendDraft(input: {
+  invoice: Invoice;
+  project?: { name: string; number?: number; description?: string; manager?: string; due?: string; location?: string };
+  company?: { name: string };
+  contact?: { name: string; firstName?: string };
+  sender?: { name: string };
+}) {
+  const invoice = input.invoice;
+  const project = input.project;
+  const greeting =
+    input.contact?.firstName?.trim() || input.contact?.name?.trim().split(/\s+/)[0] || "there";
+  const subjectParts = [`Invoice ${invoice.number}`, invoiceSubject(invoice)];
+  if (project?.name && !invoiceSubject(invoice).includes(project.name)) subjectParts.push(project.name);
+  const docs = invoiceAttachedDeliverables(invoice);
+  const details = [
+    `Hi ${greeting},`,
+    "",
+    `Please find invoice ${invoice.number} attached${project?.name ? ` for ${project.name}` : ` for ${invoice.companyName}`}.`,
+    "",
+    "Invoice details",
+    `- Invoice: ${invoice.number}`,
+    `- Subject: ${invoiceSubject(invoice)}`,
+    project ? `- Project: ${project.name}${project.number ? ` (#${project.number})` : ""}` : undefined,
+    project?.manager ? `- Project manager: ${project.manager}` : undefined,
+    project?.location ? `- Location: ${project.location}` : undefined,
+    project?.due ? `- Project due: ${formatShortDate(project.due)}` : undefined,
+    `- Company: ${input.company?.name || invoice.companyName}`,
+    `- Amount due: ${moneyExact(invoice.amount)}`,
+    `- Raised: ${invoice.raised ? formatShortDate(invoice.raised) : "Not set"}`,
+    `- Due: ${formatShortDate(invoice.due)}`,
+    `- Terms: ${invoice.terms}`,
+    invoice.description ? `- Description: ${invoice.description}` : undefined,
+  ].filter((line): line is string => line !== undefined);
+  if (docs.length) {
+    details.push("", "Proof of deliverable attached");
+    for (const doc of docs) {
+      details.push(`- ${doc.name}${doc.folder ? ` (${doc.folder})` : ""}`);
+    }
+  }
+  details.push(
+    "",
+    "This invoice is issued against the work and deliverable proof listed above.",
+    "",
+    "Thank you,",
+    input.sender?.name || invoice.owner || "Dillon Morgan Consulting",
+    "Dillon Morgan Consulting",
+  );
+  return { subject: subjectParts.join(" - "), body: details.join("\n") };
+}
+
 export function invoiceDocumentModel(invoice: Invoice, companyAddress?: string) {
   const lines = invoice.lineItems.filter((line) => line.includeInPdf !== false);
   const totals = invoiceTotals(invoice.lineItems);
@@ -86,6 +177,7 @@ export function invoiceDocumentModel(invoice: Invoice, companyAddress?: string) 
     number: invoice.number,
     raised: invoice.raised,
     billingThrough: invoice.billingThrough,
+    deliverables: invoiceAttachedDeliverables(invoice),
   };
 }
 

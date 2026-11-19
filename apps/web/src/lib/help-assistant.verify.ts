@@ -14,6 +14,8 @@ const invoice = answerHelpQuestion("How do I create an invoice?", [], { role: "a
 assert.equal(invoice.articleId, "billing");
 assert.match(invoice.text, /New Invoice/);
 assert.match(invoice.text, /Preview PDF/);
+assert.match(invoice.text, /deliverable/);
+assert.match(invoice.text, /Save & Send PDF/);
 assert.ok(invoice.hrefs.some((link) => link.href === "/app/billing"));
 
 const staffBilling = answerHelpQuestion("How do I create an invoice?", [], { role: "staff" });

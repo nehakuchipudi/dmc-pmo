@@ -422,6 +422,17 @@ export interface InvoicePayment {
   amount: number;
 }
 
+export interface InvoiceDeliverable {
+  id: string;
+  name: string;
+  kind: ProjectFile["kind"];
+  sizeKb: number;
+  folder?: string;
+  source: "project" | "upload";
+  fileId?: string;
+  dataUrl?: string;
+}
+
 export interface Invoice {
   id: string;
   number: string;
@@ -460,6 +471,8 @@ export interface Invoice {
   quickbooksHref?: string;
   quickbooksSyncedAt?: string;
   quickbooksError?: string;
+  deliverableDocs?: InvoiceDeliverable[];
+  attachDeliverables?: boolean;
 }
 
 export type TimesheetWorkKind = "project" | "phase" | "task" | "subtask";
@@ -595,11 +608,13 @@ export interface AutomationRule {
 export interface EmailOutboxItem {
   id: string;
   to: string;
+  cc?: string;
   subject: string;
   body: string;
   sentAt: string;
   status: "Queued" | "Sent" | "Failed";
   error?: string;
+  attachmentNames?: string[];
 }
 
 export type DnsRecordKind = "spf" | "dkim" | "dmarc";

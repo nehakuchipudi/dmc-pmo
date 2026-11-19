@@ -20,15 +20,17 @@ import {
   dueFromTerms,
   emptyInvoiceLine,
   INVOICE_TERMS,
+  invoiceAttachedDeliverables,
   invoiceDocumentModel,
   invoiceDraftIssueMessage,
   invoiceDraftIssues,
   invoiceForFromTemplate,
   invoiceManagerName,
+  invoiceSendDraft,
   invoiceTotals,
   phaseChildIds,
 } from "./invoice";
-import { buildInvoicePdf } from "./pdf";
+import { buildInvoicePdf, mailAttachmentsForInvoice } from "./pdf";
 import type { Invoice } from "./types";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -169,6 +171,22 @@ assert.match(invoice, /Save as Draft/);
 assert.match(invoice, /Save changes/);
 assert.match(invoice, /invoice\?: Invoice/);
 assert.match(invoice, /Save & Send PDF/);
+assert.match(invoice, /InvoiceDeliverablePicker/);
+assert.match(invoice, /InvoiceSendCompose/);
+assert.match(invoice, /setComposeInvoice/);
+assert.doesNotMatch(invoice, /sendInvoice\(invoice\.id\)/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /Attach deliverable docs to invoice/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /type="button"/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /Upload deliverable/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /<label className="invoice-deliverable-upload">/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Where to send/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Refresh from project/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /invoice-send-backdrop/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /MailAttachmentCopies/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Click a file name to download/);
+assert.match(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /downloadMailAttachment/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /View/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /invoice-send-file-actions/);
 assert.match(invoice, /Add new Service line item/);
 assert.match(invoice, /INVOICE_TERMS/);
 assert.match(invoice, /invalid=\{issues.includes\("company"\)\}/);
@@ -185,6 +203,8 @@ assert.match(projectBilling, /InvoiceEditorModal/);
 
 const store = readFileSync(join(root, "store.ts"), "utf8");
 assert.match(store, /deleteInvoice: \(id\) =>/);
+assert.match(store, /skipMail/);
+assert.match(store, /deliverableDocs: opts\?\.deliverableDocs/);
 assert.match(store, /invoices: s\.invoices\.filter\(\(row\) => row\.id !== id\)/);
 
 const rowActions = readFileSync(join(root, "../components/billing/InvoiceRowActions.tsx"), "utf8");
@@ -312,10 +332,42 @@ assert.equal(previewModel.amountDue, 96480);
 assert.equal(previewModel.payments.length, 0);
 const pdfDoc = buildInvoicePdf(previewInvoice);
 assert.equal(pdfDoc.getNumberOfPages(), 1);
+const withProof: Invoice = {
+  ...previewInvoice,
+  attachDeliverables: true,
+  deliverableDocs: [
+    {
+      id: "f-dmc-plan",
+      name: "DMC_Project_Plan.pdf",
+      kind: "pdf",
+      sizeKb: 420,
+      folder: "Deliverables",
+      source: "project",
+      fileId: "f-dmc-plan",
+    },
+  ],
+};
+assert.equal(invoiceAttachedDeliverables(withProof).length, 1);
+assert.equal(invoiceDocumentModel(withProof).deliverables[0]?.name, "DMC_Project_Plan.pdf");
+assert.ok(buildInvoicePdf(withProof).getNumberOfPages() >= 2);
+const draft = invoiceSendDraft({
+  invoice: withProof,
+  project: { name: "DMC Internal Project", manager: "Akeal Hawkins" },
+  company: { name: "Dillon Morgan Consulting" },
+  contact: { name: "Mzee Dillon", firstName: "Mzee" },
+  sender: { name: "Akeal Hawkins" },
+});
+assert.match(draft.subject, /INV-2313/);
+assert.match(draft.body, /DMC Internal Project/);
+assert.match(draft.body, /DMC_Project_Plan.pdf/);
+assert.match(draft.body, /Hi Mzee/);
 
 const detail = readFileSync(join(root, "../app/app/billing/[id]/invoice-detail.tsx"), "utf8");
 assert.match(detail, /InvoiceDocument/);
 assert.match(detail, /Email PDF/);
+assert.match(detail, /InvoiceSendCompose/);
+assert.match(detail, /MailAttachmentCopies/);
+assert.match(detail, /mailAttachmentsForInvoice/);
 assert.match(detail, /Send via Activity/);
 assert.match(detail, /Send to QuickBooks/);
 assert.match(detail, /Open in QuickBooks/);
@@ -325,6 +377,9 @@ assert.match(detail, /setEditOpen\(true\)/);
 
 const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx"), "utf8");
 assert.match(paper, /AMOUNT DUE THIS INVOICE/);
+assert.match(paper, /Proof of deliverable/);
+assert.match(paper, /invoice-proof-note/);
+assert.match(paper, /invoice-payments/);
 assert.match(paper, /DmcMark/);
 assert.match(paper, /INVOICE DATE/);
 assert.match(paper, /data-invoice-paper/);
@@ -338,11 +393,45 @@ assert.match(pdf, /Invoice Items/);
 assert.match(pdf, /html2canvas/);
 assert.match(pdf, /data-invoice-paper/);
 assert.match(pdf, /drawPreviewTable/);
+assert.match(pdf, /Proof of deliverable/);
+assert.match(pdf, /mailAttachmentsForInvoice/);
+assert.match(pdf, /deliverableMailAttachment/);
 assert.match(paper, /invoiceDocumentModel/);
+
+async function assertMailCopies() {
+  const copies = await mailAttachmentsForInvoice(withProof);
+  assert.equal(copies.length, 2);
+  assert.equal(copies[0].name, "invoice_INV-2313.pdf");
+  assert.equal(copies[1].name, "DMC_Project_Plan.pdf");
+  assert.ok(copies[1].contentBytes.length > 80);
+
+  const uploaded = await mailAttachmentsForInvoice({
+    ...previewInvoice,
+    attachDeliverables: true,
+    deliverableDocs: [
+      {
+        id: "up1",
+        name: "signed-acceptance.pdf",
+        kind: "pdf",
+        sizeKb: 12,
+        source: "upload",
+        dataUrl: "data:application/pdf;base64,QUJD",
+      },
+    ],
+  });
+  assert.equal(uploaded[1].contentBytes, "QUJD");
+}
 
 const catalog = readFileSync(join(root, "demo-catalog.ts"), "utf8");
 assert.match(catalog, /number: "50526"/);
 assert.match(catalog, /Weeks 1-3: Discovery & Current State Mapping/);
 assert.match(catalog, /QuickBooks:/);
 
-console.log("billing.verify ok");
+void assertMailCopies()
+  .then(() => {
+    console.log("billing.verify ok");
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

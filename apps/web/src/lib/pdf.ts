@@ -1,10 +1,17 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { FIRM_LETTERHEAD, invoiceDocumentModel, invoicePdfName } from "./invoice";
+import type { MailAttachment } from "./deliver-mail";
+import {
+  deliverableContentType,
+  FIRM_LETTERHEAD,
+  invoiceAttachedDeliverables,
+  invoiceDocumentModel,
+  invoicePdfName,
+} from "./invoice";
 import { formatHours } from "./plan-allocation";
 import { addDays, ganttDayLabel, ganttDependencyLinks, ganttMonthBands, type PlanRow } from "./project-plan";
 import { formatDisplayDate, formatLongMonthDay, formatShortDate, moneyExact } from "./seed";
-import type { Invoice } from "./types";
+import type { Invoice, InvoiceDeliverable } from "./types";
 
 export type PlanPdfProject = {
   name: string;
@@ -191,20 +198,106 @@ export function buildInvoicePdf(invoice: Invoice, companyAddress?: string) {
       marginX,
       2,
     );
-    y += mm(16);
+    y += mm(18);
   } else {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10.2);
     doc.setTextColor(...EMPTY);
-    doc.text("No payments recorded.", marginX + mm(10), y + mm(22));
-    y += mm(38);
+    y += mm(22);
+    doc.text("No payments recorded.", marginX + mm(10), y);
+    y += mm(20);
   }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.8);
   doc.setTextColor(...MUTED);
-  doc.text(`This invoice is due on ${formatShortDate(model.due)}`, pageWidth - marginX, y + mm(16), { align: "right" });
+  y += mm(16);
+  doc.text(`This invoice is due on ${formatShortDate(model.due)}`, pageWidth - marginX, y, { align: "right" });
+  y += mm(28);
+
+  if (model.deliverables.length) {
+    y = drawSectionBar(doc, y, "Proof of deliverable", pageWidth, marginX);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.8);
+    doc.setTextColor(...MUTED);
+    y += mm(20);
+    doc.text("This invoice is issued against the attached deliverable proof.", marginX, y);
+    y += mm(16);
+    y = drawPreviewTable(
+      doc,
+      y,
+      ["Document", "Source", "Size"],
+      model.deliverables.map((docRow) => [
+        docRow.name,
+        docRow.folder || (docRow.source === "upload" ? "Uploaded" : "Project files"),
+        `${docRow.sizeKb} KB`,
+      ]),
+      pageWidth,
+      marginX,
+      2,
+    );
+    for (const attached of model.deliverables) {
+      doc.addPage();
+      drawDeliverableProofPage(doc, model, attached);
+    }
+  }
   return doc;
+}
+
+type InvoiceDocModel = ReturnType<typeof invoiceDocumentModel>;
+
+function drawDeliverableProofPage(doc: jsPDF, model: InvoiceDocModel, attached: InvoiceDeliverable) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = mm(32);
+  const pageY = drawSectionBar(doc, mm(36), "Attached deliverable", pageWidth, marginX);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...INK);
+  doc.text(attached.name, marginX, pageY + mm(28));
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...MUTED);
+  doc.text(
+    [
+      attached.folder ? `Folder: ${attached.folder}` : "",
+      `Type: ${attached.kind.toUpperCase()}`,
+      `Size: ${attached.sizeKb} KB`,
+      `Invoice: ${model.number}`,
+      `Billed work: ${model.heading}`,
+      "This copy is attached as proof of deliverable for payment.",
+    ].filter(Boolean),
+    marginX,
+    pageY + mm(52),
+  );
+}
+
+export function buildDeliverableProofPdf(invoice: Invoice, attached: InvoiceDeliverable, companyAddress?: string) {
+  const pdf = new jsPDF({ unit: "mm", format: "letter" });
+  drawDeliverableProofPage(pdf, invoiceDocumentModel(invoice, companyAddress), attached);
+  return pdf;
+}
+
+function dataUrlBytes(dataUrl?: string) {
+  return dataUrl?.split("base64,")[1] || "";
+}
+
+export function deliverableMailAttachment(
+  invoice: Invoice,
+  doc: InvoiceDeliverable,
+  companyAddress?: string,
+): MailAttachment {
+  const bytes = dataUrlBytes(doc.dataUrl);
+  if (bytes) {
+    return { name: doc.name, contentType: deliverableContentType(doc), contentBytes: bytes };
+  }
+  const pdf = buildDeliverableProofPdf(invoice, doc, companyAddress);
+  const uri = pdf.output("datauristring") as string;
+  const name = /\.pdf$/i.test(doc.name) ? doc.name : `${doc.name}.pdf`;
+  return {
+    name,
+    contentType: "application/pdf",
+    contentBytes: uri.split(",")[1] ?? "",
+  };
 }
 
 function invoicePaperElement() {
@@ -212,7 +305,7 @@ function invoicePaperElement() {
   return document.querySelector<HTMLElement>("[data-invoice-paper]");
 }
 
-async function exportInvoicePaperPdf(paper: HTMLElement, filename: string) {
+async function captureInvoicePaperPdf(paper: HTMLElement) {
   const html2canvas = (await import("html2canvas")).default;
   const canvas = await html2canvas(paper, {
     scale: 2,
@@ -227,6 +320,18 @@ async function exportInvoicePaperPdf(paper: HTMLElement, filename: string) {
       el.style.borderRadius = "0";
       el.style.background = "#fff";
       el.style.color = "#243447";
+      el.style.overflow = "visible";
+      el.querySelectorAll<HTMLElement>(".invoice-section").forEach((section, index) => {
+        section.style.position = "relative";
+        section.style.display = "block";
+        section.style.overflow = "visible";
+        if (index > 0) section.style.marginTop = "28px";
+      });
+      el.querySelectorAll<HTMLElement>(".invoice-due-note, .invoice-proof-note, .invoice-empty-pay").forEach((node) => {
+        node.style.position = "relative";
+        node.style.display = "block";
+        node.style.transform = "none";
+      });
     },
   });
   if (canvas.width < 40 || canvas.height < 40) {
@@ -245,15 +350,47 @@ async function exportInvoicePaperPdf(paper: HTMLElement, filename: string) {
     offset += pageH;
     page += 1;
   }
-  doc.save(filename);
+  return doc;
+}
+
+export async function invoicePdfDocument(invoice: Invoice, companyAddress?: string) {
+  const paper = invoicePaperElement();
+  if (paper) {
+    try {
+      return await captureInvoicePaperPdf(paper);
+    } catch {
+      return buildInvoicePdf(invoice, companyAddress);
+    }
+  }
+  return buildInvoicePdf(invoice, companyAddress);
+}
+
+export async function invoicePdfAttachment(invoice: Invoice, companyAddress?: string): Promise<MailAttachment> {
+  const doc = await invoicePdfDocument(invoice, companyAddress);
+  const uri = doc.output("datauristring") as string;
+  return {
+    name: invoicePdfName(invoice),
+    contentType: "application/pdf",
+    contentBytes: uri.split(",")[1] ?? "",
+  };
+}
+
+export async function mailAttachmentsForInvoice(invoice: Invoice, companyAddress?: string): Promise<MailAttachment[]> {
+  const pdf = await invoicePdfAttachment(invoice, companyAddress);
+  const extras = invoiceAttachedDeliverables(invoice).map((doc) =>
+    deliverableMailAttachment(invoice, doc, companyAddress),
+  );
+  return [pdf, ...extras];
 }
 
 export function exportInvoicePdf(invoice: Invoice, companyAddress?: string) {
   const paper = invoicePaperElement();
   if (paper) {
-    void exportInvoicePaperPdf(paper, invoicePdfName(invoice)).catch(() => {
-      buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));
-    });
+    void captureInvoicePaperPdf(paper)
+      .then((doc) => doc.save(invoicePdfName(invoice)))
+      .catch(() => {
+        buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));
+      });
     return;
   }
   buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));

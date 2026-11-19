@@ -164,6 +164,7 @@ import {
   computeLineAmount,
   dueFromTerms,
   emptyInvoiceLine,
+  invoiceSendDraft,
   invoiceTotals,
   nextInvoiceNumber,
 } from "./invoice";
@@ -288,6 +289,8 @@ export type CreateInvoiceInput = {
   terms?: string;
   number?: string;
   lineItems?: InvoiceLineItem[];
+  deliverableDocs?: Invoice["deliverableDocs"];
+  attachDeliverables?: boolean;
   send?: boolean;
 };
 
@@ -567,13 +570,19 @@ type AppState = {
   addRetainerFile: (retainerId: string, file: Omit<ProjectFile, "id">) => void;
   addRetainerNote: (retainerId: string, note: Omit<ProjectNote, "id" | "createdAt">) => void;
   addMaterial: (projectId: string, title: string, salePrice: number) => void;
-  sendInvoice: (id: string) => void;
+  sendInvoice: (id: string, opts?: { to?: string; skipMail?: boolean }) => void;
   payInvoice: (id: string) => void;
   requestSignoff: (projectId: string, milestoneName: string) => void;
   approveSignoff: (milestoneId: string) => void;
   toggleAutomation: (id: string) => void;
   runAutomation: (id: string) => void;
-  queueEmail: (to: string, subject: string, body: string, status?: EmailOutboxItem["status"]) => string;
+  queueEmail: (
+    to: string,
+    subject: string,
+    body: string,
+    status?: EmailOutboxItem["status"],
+    extras?: { cc?: string; attachments?: import("./deliver-mail").MailAttachment[] },
+  ) => string;
   addEmailDomain: (input: { domain: string; fromName: string; fromEmail: string }) => string | undefined;
   removeEmailDomain: (id: string) => void;
   setPrimaryEmailDomain: (id: string) => void;
@@ -2948,6 +2957,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       milestoneId: opts?.milestoneId,
       invoiceFor: opts?.invoiceFor,
       taxAmount: totals.tax,
+      deliverableDocs: opts?.deliverableDocs,
+      attachDeliverables: opts?.attachDeliverables,
     };
     set((s) => ({ invoices: [invoice, ...s.invoices] }));
     get().pushToast(`${number} draft created`);
@@ -3550,28 +3561,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Material added");
   },
 
-  sendInvoice: (id) => {
+  sendInvoice: (id, opts) => {
     if (!requireCap(get, "manage_invoice")) return;
     const inv = get().invoices.find((i) => i.id === id);
     if (!inv) return;
+    const company = get().companies.find((row) => row.id === inv.companyId);
+    const project = inv.projectId ? get().projects.find((row) => row.id === inv.projectId) : undefined;
+    const contact = inv.billToContactId ? get().contacts.find((row) => row.id === inv.billToContactId) : undefined;
+    const draft = invoiceSendDraft({
+      invoice: inv,
+      project,
+      company,
+      contact,
+      sender: { name: currentUser()?.name || inv.owner || "Dillon Morgan Consulting" },
+    });
+    const to = opts?.to || contact?.email || company?.email || "";
     set((s) => ({
       invoices: s.invoices.map((i) => (i.id === id ? { ...i, status: i.status === "Draft" ? "Sent" : i.status } : i)),
-      emailOutbox: [
-        {
-          id: uid("e"),
-          to: "billing@client.com",
-          subject: `Invoice ${inv.number}`,
-          body: `Please find invoice ${inv.number}${inv.title ? ` (${inv.title})` : ""} for ${inv.companyName}.`,
-          sentAt: displayNow(),
-          status: "Sent",
-        },
-        ...s.emailOutbox,
-      ],
       notifications: [
         {
           id: uid("n"),
           title: "Invoice sent",
-          body: `${inv.number} emailed to ${inv.companyName}.`,
+          body: `${inv.number} emailed to ${to || inv.companyName}.`,
           createdAt: displayNow(),
           read: false,
           href: `/app/billing/view/?id=${id}`,
@@ -3579,6 +3590,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...s.notifications,
       ],
     }));
+    if (!opts?.skipMail) {
+      if (to) get().queueEmail(to, draft.subject, draft.body);
+      else get().pushToast("Add a bill-to email before sending this invoice.", "danger");
+    }
     get().pushToast(`${inv.number} sent`);
   },
 
@@ -3789,13 +3804,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     return next;
   },
 
-  queueEmail: (to, subject, body, status) => {
+  queueEmail: (to, subject, body, status, extras) => {
     const id = uid("e");
     const sender = get().emailDomains.find((row) => row.primary);
     const draft = status === "Queued";
     set((s) => ({
       emailOutbox: [
-        { id, to, subject, body, sentAt: displayNow(), status: "Queued" },
+        {
+          id,
+          to,
+          cc: extras?.cc,
+          subject,
+          body,
+          sentAt: displayNow(),
+          status: "Queued",
+          attachmentNames: extras?.attachments?.map((file) => file.name),
+        },
         ...s.emailOutbox,
       ],
     }));
@@ -3811,6 +3835,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       body,
       fromName: sender?.fromName,
       fromEmail: sender?.fromEmail,
+      cc: extras?.cc,
+      attachments: extras?.attachments,
     }).then((result) => {
       set((s) => ({
         emailOutbox: s.emailOutbox.map((row) =>

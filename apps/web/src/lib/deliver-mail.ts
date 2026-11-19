@@ -1,10 +1,54 @@
+export type MailAttachment = {
+  name: string;
+  contentType: string;
+  contentBytes: string;
+};
+
 export type MailPayload = {
   to: string;
   subject: string;
   body: string;
   fromName?: string;
   fromEmail?: string;
+  cc?: string;
+  attachments?: MailAttachment[];
 };
+
+export function parseMailAddresses(value?: string) {
+  return (value ?? "")
+    .split(/[;,]/)
+    .map((part) => part.trim())
+    .filter((part) => part.includes("@"));
+}
+
+function decodeBase64(value: string) {
+  if (typeof Buffer !== "undefined") {
+    return Uint8Array.from(Buffer.from(value, "base64"));
+  }
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+export function mailAttachmentBlob(file: MailAttachment) {
+  return new Blob([decodeBase64(file.contentBytes)], {
+    type: file.contentType || "application/octet-stream",
+  });
+}
+
+export function downloadMailAttachment(file: MailAttachment) {
+  if (typeof document === "undefined") return;
+  const url = URL.createObjectURL(mailAttachmentBlob(file));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
 
 export type MailDelivery = {
   delivered: boolean;
@@ -26,7 +70,7 @@ export function noSenderMessage() {
 }
 
 export async function deliverMail(input: MailPayload): Promise<MailDelivery> {
-  const to = input.to.trim();
+  const to = parseMailAddresses(input.to)[0] ?? input.to.trim();
   if (!to || !to.includes("@")) return { delivered: false, error: "That invite needs a valid email address." };
 
   const graph = await tryGraphSend(input);
@@ -73,7 +117,14 @@ async function tryGraphSend(input: MailPayload): Promise<MailDelivery | undefine
         message: {
           subject: input.subject,
           body: { contentType: "HTML", content: mailHtml(input.body) },
-          toRecipients: [{ emailAddress: { address: input.to } }],
+          toRecipients: parseMailAddresses(input.to).map((address) => ({ emailAddress: { address } })),
+          ccRecipients: parseMailAddresses(input.cc).map((address) => ({ emailAddress: { address } })),
+          attachments: (input.attachments ?? []).map((file) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: file.name,
+            contentType: file.contentType,
+            contentBytes: file.contentBytes,
+          })),
         },
         saveToSentItems: true,
       }),
