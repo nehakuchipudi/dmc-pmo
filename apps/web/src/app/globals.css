@@ -2896,6 +2896,7 @@ button, input, select, textarea { font: inherit; }
   border-radius: 12px;
   padding: 10px 12px;
   background: var(--color-fog);
+  min-width: 0;
 }
 .invoice-send-files strong {
   display: inline-flex;
@@ -2934,15 +2935,11 @@ button, input, select, textarea { font: inherit; }
   padding: 0;
   text-align: left;
 }
-.invoice-send-file-actions {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.invoice-send-file-actions .btn {
-  padding: 2px 8px;
-  font-size: 0.75rem;
+.invoice-send-file-name span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .invoice-send-actions {
   display: flex;
@@ -3066,6 +3063,7 @@ button, input, select, textarea { font: inherit; }
   border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 16px;
+  min-width: 0;
 }
 .invoice-view-project {
   margin: 0 0 12px;
@@ -3115,6 +3113,8 @@ button, input, select, textarea { font: inherit; }
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 .invoice-pdf-box h3 {
   margin: 0 0 8px;

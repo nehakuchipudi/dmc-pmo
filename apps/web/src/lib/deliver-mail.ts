@@ -50,18 +50,6 @@ export function downloadMailAttachment(file: MailAttachment) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-export function viewMailAttachment(file: MailAttachment) {
-  if (typeof window === "undefined") return;
-  const url = URL.createObjectURL(mailAttachmentBlob(file));
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    downloadMailAttachment(file);
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-    return;
-  }
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
-
 export type MailDelivery = {
   delivered: boolean;
   via?: "graph" | "api";

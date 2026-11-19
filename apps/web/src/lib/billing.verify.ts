@@ -183,8 +183,10 @@ assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.t
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Refresh from project/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /invoice-send-backdrop/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /MailAttachmentCopies/);
-assert.match(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /viewMailAttachment/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Click a file name to download/);
 assert.match(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /downloadMailAttachment/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /View/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /invoice-send-file-actions/);
 assert.match(invoice, /Add new Service line item/);
 assert.match(invoice, /INVOICE_TERMS/);
 assert.match(invoice, /invalid=\{issues.includes\("company"\)\}/);

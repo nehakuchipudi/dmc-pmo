@@ -163,8 +163,7 @@ export function InvoiceSendCompose({
         >
           <p className="invoice-empty-note">
             Choose whom to send this invoice to and where it should arrive. The draft updates from the project, and the
-            PDF{hasDeliverables ? " plus deliverable proof" : ""} is attached. Open, view, or download a copy of each
-            file before you send.
+            PDF{hasDeliverables ? " plus deliverable proof" : ""} is attached. Click a file name to download a copy.
           </p>
           <Field label="From">
             <TextInput
