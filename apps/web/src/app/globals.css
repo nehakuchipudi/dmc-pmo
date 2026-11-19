@@ -1720,6 +1720,51 @@ button, input, select, textarea { font: inherit; }
 .table tbody tr { transition: background 140ms ease; }
 .table tbody tr:hover { background: #f4f7fb; }
 
+.billing-invoice-table {
+  min-width: 1080px;
+}
+.billing-against {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-navy);
+  font-weight: 600;
+}
+.billing-against svg {
+  flex-shrink: 0;
+  color: var(--color-muted);
+}
+.billing-owing {
+  white-space: nowrap;
+}
+.billing-owing-days {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: default;
+}
+.billing-owing-days.is-ok {
+  color: var(--color-success);
+}
+.billing-owing-days.is-overdue {
+  color: var(--color-danger);
+}
+.billing-owing-tip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 8px));
+  z-index: 90;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.28);
+}
+
 .progress {
   height: 7px;
   background: var(--color-fog);
