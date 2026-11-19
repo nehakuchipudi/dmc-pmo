@@ -1,10 +1,25 @@
+export type MailAttachment = {
+  name: string;
+  contentType: string;
+  contentBytes: string;
+};
+
 export type MailPayload = {
   to: string;
   subject: string;
   body: string;
   fromName?: string;
   fromEmail?: string;
+  cc?: string;
+  attachments?: MailAttachment[];
 };
+
+export function parseMailAddresses(value?: string) {
+  return (value ?? "")
+    .split(/[;,]/)
+    .map((part) => part.trim())
+    .filter((part) => part.includes("@"));
+}
 
 export type MailDelivery = {
   delivered: boolean;
@@ -26,7 +41,7 @@ export function noSenderMessage() {
 }
 
 export async function deliverMail(input: MailPayload): Promise<MailDelivery> {
-  const to = input.to.trim();
+  const to = parseMailAddresses(input.to)[0] ?? input.to.trim();
   if (!to || !to.includes("@")) return { delivered: false, error: "That invite needs a valid email address." };
 
   const graph = await tryGraphSend(input);
@@ -73,7 +88,14 @@ async function tryGraphSend(input: MailPayload): Promise<MailDelivery | undefine
         message: {
           subject: input.subject,
           body: { contentType: "HTML", content: mailHtml(input.body) },
-          toRecipients: [{ emailAddress: { address: input.to } }],
+          toRecipients: parseMailAddresses(input.to).map((address) => ({ emailAddress: { address } })),
+          ccRecipients: parseMailAddresses(input.cc).map((address) => ({ emailAddress: { address } })),
+          attachments: (input.attachments ?? []).map((file) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: file.name,
+            contentType: file.contentType,
+            contentBytes: file.contentBytes,
+          })),
         },
         saveToSentItems: true,
       }),

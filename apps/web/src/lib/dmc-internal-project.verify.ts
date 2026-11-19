@@ -24,6 +24,8 @@ assert.equal(empty.contacts[0]?.name, DMC_CONTACT_NAME);
 assert.equal(empty.projects[0]?.name, DMC_INTERNAL_PROJECT_NAME);
 assert.equal(empty.projects[0]?.projectType, "Internal");
 assert.equal(empty.projects[0]?.manager, DMC_MANAGER_NAME);
+assert.ok(empty.projects[0]?.files.some((file) => file.name === "DMC_Project_Plan.pdf"));
+assert.ok(empty.projects[0]?.files.some((file) => file.folder === "Deliverables"));
 assert.equal(empty.projects[0]?.companyId, empty.companies[0]?.id);
 assert.equal(empty.milestones.length, 4);
 assert.ok(empty.milestones.some((row) => row.name === "Hire Full Stack Developer"));

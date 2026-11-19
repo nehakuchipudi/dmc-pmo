@@ -369,6 +369,18 @@ function dmcPlayRecords(state: DemoWorkspaceState): DemoWorkspaceState {
       raised: addDaysIso(today, -28),
       description: "Strategic planning progress billing.",
       lineItems: [{ id: "il-dmc-3", kind: "service", description: "Strategic planning", amount: 21000, includeInPdf: true }],
+      attachDeliverables: true,
+      deliverableDocs: [
+        {
+          id: "f-dmc-plan",
+          name: "DMC_Project_Plan.pdf",
+          kind: "pdf",
+          sizeKb: 420,
+          folder: "Deliverables",
+          source: "project",
+          fileId: "f-dmc-plan",
+        },
+      ],
     },
     {
       id: "inv-dmc-1003",

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, FileText, Plus, Trash2 } from "lucide-react";
 import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
+import { InvoiceDeliverablePicker } from "@/components/billing/InvoiceDeliverablePicker";
+import { InvoiceSendCompose } from "@/components/billing/InvoiceSendCompose";
 import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
@@ -43,7 +45,7 @@ import {
   type QuickBooksStatus,
 } from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
-import type { Invoice, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "@/lib/types";
+import type { Invoice, InvoiceDeliverable, InvoiceLineItem, InvoiceLineKind, InvoiceTemplate } from "@/lib/types";
 
 const TERMS = INVOICE_TERMS as readonly string[];
 
@@ -92,7 +94,7 @@ export function InvoiceCreateForm({
   const templates = useAppStore((s) => s.invoiceTemplates);
   const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
   const updateInvoice = useAppStore((s) => s.updateInvoice);
-  const sendInvoice = useAppStore((s) => s.sendInvoice);
+  const addProjectFile = useAppStore((s) => s.addProjectFile);
   const createInvoiceTemplate = useAppStore((s) => s.createInvoiceTemplate);
   const updateInvoiceTemplate = useAppStore((s) => s.updateInvoiceTemplate);
   const pushToast = useAppStore((s) => s.pushToast);
@@ -144,6 +146,9 @@ export function InvoiceCreateForm({
   const [qbStatus, setQbStatus] = useState<QuickBooksStatus | null>(null);
   const [qbBusy, setQbBusy] = useState(false);
   const [preview, setPreview] = useState<Invoice | null>(null);
+  const [deliverableDocs, setDeliverableDocs] = useState<InvoiceDeliverable[]>(invoice?.deliverableDocs ?? []);
+  const [attachDeliverables, setAttachDeliverables] = useState(invoice?.attachDeliverables !== false);
+  const [composeInvoice, setComposeInvoice] = useState<Invoice | null>(null);
 
   const company = companies.find((c) => c.id === companyId);
   const project = projects.find((p) => p.id === projectId);
@@ -528,6 +533,8 @@ export function InvoiceCreateForm({
       templateId: templateId || undefined,
       milestoneId: selectedMilestones[0],
       invoiceFor: templateInvoiceFor(invoiceFor),
+      deliverableDocs,
+      attachDeliverables,
     });
   }
 
@@ -565,13 +572,13 @@ export function InvoiceCreateForm({
         templateId: draft.templateId,
         milestoneId: draft.milestoneId,
         invoiceFor: draft.invoiceFor,
+        deliverableDocs: draft.deliverableDocs,
+        attachDeliverables: draft.attachDeliverables,
       });
-      if (send && invoice.status === "Draft") sendInvoice(invoice.id);
       pushToast(`${draft.number} updated`);
     } else {
       id = createInvoiceDraft(company.id, {
         ...draft,
-        send,
       });
     }
     if (!id) return;
@@ -590,6 +597,11 @@ export function InvoiceCreateForm({
         }
         setQbBusy(false);
       }
+    }
+    if (send) {
+      const saved = useAppStore.getState().invoices.find((row) => row.id === id);
+      setComposeInvoice(saved ?? { ...draft, id });
+      return;
     }
     onCreated(id);
   }
@@ -645,6 +657,7 @@ export function InvoiceCreateForm({
   }
 
   return (
+    <>
     <form
       className="invoice-create"
       onSubmit={(e) => {
@@ -1130,6 +1143,20 @@ export function InvoiceCreateForm({
               <LineRow key={line.id} line={line} onChange={patchLine} onRemove={removeLine} />
             ))}
           </section>
+
+          <InvoiceDeliverablePicker
+            projectName={project?.name}
+            files={project?.files ?? []}
+            docs={deliverableDocs}
+            onChange={setDeliverableDocs}
+            attachToInvoice={attachDeliverables}
+            onAttachToInvoiceChange={setAttachDeliverables}
+            onUploadToProject={
+              project
+                ? (file) => addProjectFile(project.id, file)
+                : undefined
+            }
+          />
         </div>
 
         <aside className="invoice-create-rail">
@@ -1222,6 +1249,13 @@ export function InvoiceCreateForm({
         </div>
       </div>
     </form>
+    <InvoiceSendCompose
+      invoice={composeInvoice}
+      open={Boolean(composeInvoice)}
+      onClose={() => setComposeInvoice(null)}
+      onSent={(id) => onCreated(id)}
+    />
+    </>
   );
 }
 

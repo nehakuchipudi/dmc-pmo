@@ -129,6 +129,35 @@ export function InvoiceDocument({
         )}
         <p className="invoice-due-note">This invoice is due on {formatShortDate(model.due)}</p>
       </section>
+      {model.deliverables.length ? (
+        <section className="invoice-section">
+          <h3>Proof of deliverable</h3>
+          <p className="invoice-due-note">This invoice is issued against the attached deliverable proof.</p>
+          <table className="invoice-doc-table">
+            <colgroup>
+              <col />
+              <col />
+              <col className="invoice-amt-col" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Source</th>
+                <th>Size</th>
+              </tr>
+            </thead>
+            <tbody>
+              {model.deliverables.map((doc) => (
+                <tr key={doc.id}>
+                  <td>{doc.name}</td>
+                  <td>{doc.folder || (doc.source === "upload" ? "Uploaded" : "Project files")}</td>
+                  <td className="tabular-nums">{doc.sizeKb} KB</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
       {projectName ? <p className="sr-only">Project {projectName}</p> : null}
     </article>
   );

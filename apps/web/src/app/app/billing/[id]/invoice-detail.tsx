@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
+import { InvoiceSendCompose } from "@/components/billing/InvoiceSendCompose";
 import { InvoiceEditorModal } from "@/components/billing/InvoiceRowActions";
 import { ConfirmModal, StatusPill, statusTone } from "@/components/ui";
-import { invoicePdfName } from "@/lib/invoice";
+import { invoiceAttachedDeliverables, invoicePdfName } from "@/lib/invoice";
 import { formatShortDate, moneyExact } from "@/lib/seed";
 import { exportInvoicePdf } from "@/lib/pdf";
 import { createQuickBooksInvoice, quickbooksInvoicePatch, quickbooksSettingsHref } from "@/lib/quickbooks";
@@ -22,13 +23,13 @@ export function InvoiceDetail({ id }: { id: string }) {
   const projects = useAppStore((s) => s.projects);
   const sendInvoice = useAppStore((s) => s.sendInvoice);
   const payInvoice = useAppStore((s) => s.payInvoice);
-  const queueEmail = useAppStore((s) => s.queueEmail);
   const updateInvoice = useAppStore((s) => s.updateInvoice);
   const deleteInvoice = useAppStore((s) => s.deleteInvoice);
   const pushToast = useAppStore((s) => s.pushToast);
   const [qbBusy, setQbBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const invoice = invoices.find((item) => item.id === id);
 
   if (!invoice) {
@@ -123,20 +124,17 @@ export function InvoiceDetail({ id }: { id: string }) {
             <FileText size={16} />
             {pdfName}
           </button>
+          {invoiceAttachedDeliverables(invoice).length ? (
+            <ul className="invoice-deliverable-files">
+              {invoiceAttachedDeliverables(invoice).map((doc) => (
+                <li key={doc.id}>
+                  <FileText size={14} /> {doc.name}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="invoice-pdf-actions">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                downloadPdf();
-                queueEmail(
-                  "billing@client.com",
-                  `${invoice.number} PDF`,
-                  `Please find ${pdfName} attached.`,
-                );
-                pushToast("PDF emailed");
-              }}
-            >
+            <button type="button" className="btn btn-ghost" onClick={() => setSendOpen(true)}>
               Email PDF
             </button>
             <IfCan cap="manage_invoice">
@@ -197,6 +195,7 @@ export function InvoiceDetail({ id }: { id: string }) {
       </aside>
       <InvoiceDocument invoice={invoice} companyAddress={company?.address} projectName={project?.name} />
       <InvoiceEditorModal invoice={editOpen ? invoice : null} onClose={() => setEditOpen(false)} />
+      <InvoiceSendCompose invoice={invoice} open={sendOpen} onClose={() => setSendOpen(false)} />
       <ConfirmModal
         open={deleteOpen}
         title={`Delete ${invoice.number}?`}

@@ -8,6 +8,13 @@ export const DMC_INTERNAL_PROJECT_ID = "p-dmc-internal";
 export const DMC_CONTACT_NAME = "Mzee Dillon";
 export const DMC_MANAGER_NAME = "Akeal Hawkins";
 
+export const DMC_DELIVERABLE_FILES = [
+  { id: "f-dmc-plan", folder: "Deliverables", name: "DMC_Project_Plan.pdf", kind: "pdf" as const, sizeKb: 420, linkedTaskIds: [] as string[] },
+  { id: "f-dmc-aws", folder: "Deliverables", name: "AWS_Environment_Acceptance.pdf", kind: "pdf" as const, sizeKb: 180, linkedTaskIds: [] as string[] },
+  { id: "f-dmc-wire", folder: "Deliverables", name: "UI_UX_Wireframes.pdf", kind: "pdf" as const, sizeKb: 760, linkedTaskIds: [] as string[] },
+  { id: "f-dmc-auth", folder: "Deliverables", name: "Cognito_Login_Acceptance.pdf", kind: "pdf" as const, sizeKb: 210, linkedTaskIds: [] as string[] },
+];
+
 const COMPANY_ID = "c-dmc";
 const CONTACT_ID = "ct-mzee";
 const MEMBER_ID = "tm-ah";
@@ -187,7 +194,7 @@ export function withDmcInternalExample(input: Collections): Collections | null {
       description: "Internal delivery plan covering hiring, AWS setup, UI/UX, and authentication.",
       budgetAmount: 96480,
       materials: [],
-      files: [],
+      files: DMC_DELIVERABLE_FILES,
       notes: [],
       rates: [],
       statusHistory: [],
@@ -205,6 +212,12 @@ export function withDmcInternalExample(input: Collections): Collections | null {
     company = { ...company, openProjects: company.openProjects + 1 };
     const companyIdx = companies.findIndex((row) => row.id === company.id);
     if (companyIdx >= 0) companies[companyIdx] = company;
+    changed = true;
+  } else if (!project.files.length) {
+    const withFiles = { ...project, files: DMC_DELIVERABLE_FILES };
+    project = withFiles;
+    const idx = projects.findIndex((row) => row.id === withFiles.id);
+    if (idx >= 0) projects[idx] = withFiles;
     changed = true;
   }
 
