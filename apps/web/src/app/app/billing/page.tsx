@@ -182,11 +182,11 @@ export default function BillingPage() {
                               {againstLabel}
                             </Link>
                           ) : (
-                            "—"
+                            "-"
                           )}
                         </td>
-                        <td>{inv.owner || inv.manager || "—"}</td>
-                        <td className="whitespace-nowrap">{inv.raised ? formatShortDate(inv.raised) : "—"}</td>
+                        <td>{inv.owner || inv.manager || "-"}</td>
+                        <td className="whitespace-nowrap">{inv.raised ? formatShortDate(inv.raised) : "-"}</td>
                         <td className="tabular-nums whitespace-nowrap">{money(inv.amount)}</td>
                         <td>
                           <OwingCell invoice={inv} />
