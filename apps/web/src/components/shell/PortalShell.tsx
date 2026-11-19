@@ -126,9 +126,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </button>
             <div className="relative" data-shell-menu>
             <button type="button" className="profile-btn" onClick={() => setProfileOpen((v) => !v)}>
-              <Avatar initials={user.initials} name={user.name} />
-              <span className="hidden sm:inline text-sm font-medium">{user.name.split(" ")[0]}</span>
-              <ChevronDown size={14} className="text-[var(--color-muted)]" />
+              <Avatar initials={user.initials} name={user.name} size={28} />
+              <span className="profile-meta">
+                <span className="profile-name">{user.name.split(" ")[0]}</span>
+                <span className="profile-role">{company?.name ?? "Client portal"}</span>
+              </span>
+              <ChevronDown size={14} className="profile-caret text-[var(--color-muted)]" />
             </button>
             {profileOpen ? (
               <div className="menu-popover profile-popover fade-in">
