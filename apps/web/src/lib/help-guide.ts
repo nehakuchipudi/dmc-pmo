@@ -355,7 +355,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     steps: [
       "Open Billing. Each tab has New Invoice, New Expense, New Purchase, or New Material.",
       "New expense asks for title, type, where it belongs, date, owner, and an attachment.",
-      "New Invoice can select created expenses, purchases, and materials, or add them on the form. Checking a material, expense, or purchase adds it to the invoice total on the right. Preview PDF shows the invoice on screen in the same layout as a saved invoice; it does not download until you choose Download PDF.",
+      "New Invoice can select created expenses, purchases, and materials, or add them on the form. Checking a material, expense, or purchase adds it to the invoice total on the right. Preview PDF shows the invoice on screen in the same layout as a saved invoice; it does not download until you choose Download PDF. Download PDF saves that same on-screen layout.",
       "On a saved invoice, use Send to QuickBooks after connecting the company in Settings, Invoice & Pricing.",
       "Approve pending expenses on the Expenses tab if you are Finance or Admin.",
     ],

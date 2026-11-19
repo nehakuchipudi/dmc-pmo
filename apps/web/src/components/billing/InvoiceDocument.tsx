@@ -24,7 +24,7 @@ export function InvoiceDocument({
   const model = invoiceDocumentModel(invoice, companyAddress);
 
   return (
-    <article className="invoice-paper">
+    <article className="invoice-paper" data-invoice-paper>
       <header className="invoice-letterhead">
         <DmcMark />
         <div className="invoice-firm">

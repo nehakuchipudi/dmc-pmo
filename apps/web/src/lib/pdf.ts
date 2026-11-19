@@ -36,123 +36,226 @@ function lastTableY(doc: jsPDF, fallback: number) {
   return (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? fallback;
 }
 
-function drawSectionBar(doc: jsPDF, y: number, title: string, pageWidth: number) {
-  doc.setFillColor(238, 241, 244);
-  doc.rect(14, y, pageWidth - 28, 8, "F");
+const PX = 25.4 / 96;
+const INK: [number, number, number] = [36, 52, 71];
+const MUTED: [number, number, number] = [58, 70, 82];
+const BLUE: [number, number, number] = [43, 123, 185];
+const BAR: [number, number, number] = [238, 241, 244];
+const RULE: [number, number, number] = [213, 222, 232];
+const EMPTY: [number, number, number] = [107, 124, 143];
+
+function mm(px: number) {
+  return px * PX;
+}
+
+function drawSectionBar(doc: jsPDF, y: number, title: string, pageWidth: number, marginX: number) {
+  const height = mm(34);
+  doc.setFillColor(...BAR);
+  doc.rect(marginX, y, pageWidth - marginX * 2, height, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(58, 70, 82);
-  doc.text(title, 17, y + 5.4);
-  return y + 8;
+  doc.setFontSize(9.8);
+  doc.setTextColor(...MUTED);
+  doc.text(title, marginX + mm(10), y + height * 0.68);
+  return y + height;
+}
+
+function drawPreviewTable(
+  doc: jsPDF,
+  startY: number,
+  head: string[],
+  body: string[][],
+  pageWidth: number,
+  marginX: number,
+  amountCol = 1,
+) {
+  autoTable(doc, {
+    startY,
+    head: [head],
+    body: body.length ? body : [head.map(() => "")],
+    theme: "plain",
+    styles: {
+      fontSize: 10.3,
+      cellPadding: { top: mm(8), bottom: mm(8), left: mm(10), right: mm(10) },
+      textColor: INK,
+      lineColor: RULE,
+      lineWidth: 0,
+    },
+    headStyles: { textColor: BLUE, fontStyle: "bold", fontSize: 9.4, fillColor: [255, 255, 255] },
+    columnStyles: {
+      [amountCol]: { halign: "right", cellWidth: mm(140) },
+    },
+    margin: { left: marginX, right: marginX },
+    didDrawCell: (data) => {
+      if (data.section !== "head" && data.section !== "body") return;
+      doc.setDrawColor(...RULE);
+      doc.setLineWidth(0.2);
+      const y = data.cell.y + data.cell.height;
+      doc.line(marginX, y, pageWidth - marginX, y);
+    },
+  });
+  return lastTableY(doc, startY + 12);
 }
 
 export function buildInvoicePdf(invoice: Invoice, companyAddress?: string) {
   const doc = new jsPDF({ unit: "mm", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const model = invoiceDocumentModel(invoice, companyAddress);
-  drawDmcMark(doc, 14, 14, 28);
+  const marginX = mm(32);
+  let y = mm(28);
+  const markSize = mm(92);
+  drawDmcMark(doc, marginX, y, markSize);
 
-  doc.setTextColor(36, 52, 71);
+  let firmY = y + mm(14);
+  doc.setTextColor(...INK);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(FIRM_LETTERHEAD.name, pageWidth - 14, 18, { align: "right" });
+  doc.setFontSize(10.6);
+  doc.text(FIRM_LETTERHEAD.name, pageWidth - marginX, firmY, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(58, 70, 82);
-  FIRM_LETTERHEAD.lines.forEach((line, index) => {
-    doc.text(line, pageWidth - 14, 23 + index * 4.2, { align: "right" });
+  doc.setFontSize(9.8);
+  doc.setTextColor(...MUTED);
+  FIRM_LETTERHEAD.lines.forEach((line) => {
+    firmY += mm(19);
+    doc.text(line, pageWidth - marginX, firmY, { align: "right" });
   });
 
-  const metaTop = 52;
-  doc.setTextColor(58, 70, 82);
-  doc.setFontSize(10);
+  y = Math.max(y + markSize, firmY) + mm(28);
+  const metaTop = y;
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(10.3);
   model.billTo.forEach((line, index) => {
-    doc.text(line, 14, metaTop + index * 5);
+    doc.text(line, marginX, metaTop + index * mm(20));
   });
 
-  doc.setTextColor(36, 52, 71);
+  doc.setTextColor(...INK);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text("INVOICE", pageWidth - 14, metaTop, { align: "right" });
+  doc.setFontSize(13.4);
+  doc.text("INVOICE", pageWidth - marginX, metaTop, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`INVOICE DATE: ${model.raised ? formatShortDate(model.raised) : "Not set"}`, pageWidth - 14, metaTop + 6, {
+  doc.setFontSize(9.8);
+  doc.text(`INVOICE DATE: ${model.raised ? formatShortDate(model.raised) : "Not set"}`, pageWidth - marginX, metaTop + mm(20), {
     align: "right",
   });
-  doc.text(`INVOICE NO: ${model.number}`, pageWidth - 14, metaTop + 11, { align: "right" });
+  doc.text(`INVOICE NO: ${model.number}`, pageWidth - marginX, metaTop + mm(40), { align: "right" });
   doc.text(
     `BILLING THROUGH: ${model.billingThrough ? formatLongMonthDay(model.billingThrough) : "Not set"}`,
-    pageWidth - 14,
-    metaTop + 16,
+    pageWidth - marginX,
+    metaTop + mm(60),
     { align: "right" },
   );
 
-  const headingY = Math.max(metaTop + 24, metaTop + model.billTo.length * 5 + 8);
+  y = Math.max(metaTop + mm(80), metaTop + model.billTo.length * mm(20) + mm(18));
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(36, 52, 71);
-  doc.text(model.heading, 14, headingY);
+  doc.setFontSize(10.6);
+  doc.setTextColor(...INK);
+  doc.text(model.heading, marginX, y);
   if (model.manager) {
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(58, 70, 82);
-    doc.text(`Managed by: ${model.manager}`, pageWidth - 14, headingY, { align: "right" });
+    doc.setTextColor(...MUTED);
+    doc.text(`Managed by: ${model.manager}`, pageWidth - marginX, y, { align: "right" });
   }
 
-  const itemsStart = drawSectionBar(doc, headingY + 6, "Invoice Items", pageWidth);
-  autoTable(doc, {
-    startY: itemsStart,
-    head: [["Activity", "AMOUNT"]],
-    body: model.lines.length ? model.lines.map((line) => [line.description, moneyExact(line.amount)]) : [["", ""]],
-    theme: "plain",
-    styles: { fontSize: 10, cellPadding: { top: 2.4, bottom: 2.4, left: 3, right: 3 }, textColor: [40, 48, 56] },
-    headStyles: { textColor: [43, 123, 185], fontStyle: "bold", fillColor: [255, 255, 255] },
-    columnStyles: { 1: { halign: "right", cellWidth: 40 } },
-    margin: { left: 14, right: 14 },
-  });
+  y = drawSectionBar(doc, y + mm(22), "Invoice Items", pageWidth, marginX);
+  y = drawPreviewTable(
+    doc,
+    y,
+    ["Activity", "AMOUNT"],
+    model.lines.map((line) => [line.description, moneyExact(line.amount)]),
+    pageWidth,
+    marginX,
+  );
 
-  let y = lastTableY(doc, itemsStart + 12) + 8;
+  y += mm(12);
+  const amountX = pageWidth - marginX;
+  const labelX = amountX - mm(120) - mm(24);
   const writeTotal = (label: string, value: string, due = false) => {
     doc.setFont("helvetica", due ? "bold" : "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(due ? 43 : 36, due ? 123 : 52, due ? 185 : 71);
-    doc.text(label, pageWidth - 54, y, { align: "right" });
+    doc.setFontSize(10.3);
+    doc.setTextColor(...(due ? BLUE : INK));
+    doc.text(label, labelX, y, { align: "right" });
     doc.setFont("helvetica", "bold");
-    doc.text(value, pageWidth - 14, y, { align: "right" });
-    y += 6;
+    doc.text(value, amountX, y, { align: "right" });
+    y += mm(22);
   };
   writeTotal("SUBTOTAL", moneyExact(model.totals.subtotal));
   if (model.totals.tax > 0) writeTotal("TAX", moneyExact(model.totals.tax));
   writeTotal("AMOUNT DUE THIS INVOICE", moneyExact(model.amountDue), true);
 
-  y = drawSectionBar(doc, y + 6, "Payments", pageWidth);
+  y = drawSectionBar(doc, y + mm(8), "Payments", pageWidth, marginX);
   if (model.payments.length) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Date", "Description", "Amount"]],
-      body: model.payments.map((payment) => [formatShortDate(payment.date), payment.description, moneyExact(payment.amount)]),
-      theme: "plain",
-      styles: { fontSize: 10, cellPadding: { top: 2.4, bottom: 2.4, left: 3, right: 3 }, textColor: [40, 48, 56] },
-      headStyles: { fontStyle: "bold", fillColor: [255, 255, 255], textColor: [43, 123, 185] },
-      columnStyles: { 2: { halign: "right", cellWidth: 40 } },
-      margin: { left: 14, right: 14 },
-    });
-    y = lastTableY(doc, y) + 8;
+    y = drawPreviewTable(
+      doc,
+      y,
+      ["Date", "Description", "Amount"],
+      model.payments.map((payment) => [formatShortDate(payment.date), payment.description, moneyExact(payment.amount)]),
+      pageWidth,
+      marginX,
+      2,
+    );
+    y += mm(16);
   } else {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(90, 102, 114);
-    doc.text("No payments recorded.", 17, y + 7);
-    y += 14;
+    doc.setFontSize(10.2);
+    doc.setTextColor(...EMPTY);
+    doc.text("No payments recorded.", marginX + mm(10), y + mm(22));
+    y += mm(38);
   }
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(58, 70, 82);
-  doc.text(`This invoice is due on ${formatShortDate(model.due)}`, pageWidth - 14, y + 4, { align: "right" });
+  doc.setFontSize(9.8);
+  doc.setTextColor(...MUTED);
+  doc.text(`This invoice is due on ${formatShortDate(model.due)}`, pageWidth - marginX, y + mm(16), { align: "right" });
   return doc;
 }
 
+function invoicePaperElement() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLElement>("[data-invoice-paper]");
+}
+
+async function exportInvoicePaperPdf(paper: HTMLElement, filename: string) {
+  const html2canvas = (await import("html2canvas")).default;
+  const canvas = await html2canvas(paper, {
+    scale: 2,
+    backgroundColor: "#ffffff",
+    useCORS: true,
+    logging: false,
+    onclone: (clonedDoc) => {
+      const el = clonedDoc.querySelector<HTMLElement>("[data-invoice-paper]");
+      if (!el) return;
+      el.style.boxShadow = "none";
+      el.style.border = "none";
+      el.style.borderRadius = "0";
+      el.style.background = "#fff";
+      el.style.color = "#243447";
+    },
+  });
+  if (canvas.width < 40 || canvas.height < 40) {
+    throw new Error("Invoice preview capture was empty");
+  }
+  const img = canvas.toDataURL("image/png");
+  const doc = new jsPDF({ unit: "mm", format: "letter" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const imgH = (canvas.height / canvas.width) * pageW;
+  let offset = 0;
+  let page = 0;
+  while (offset < imgH - 0.4) {
+    if (page > 0) doc.addPage();
+    doc.addImage(img, "PNG", 0, -offset, pageW, imgH, undefined, "FAST");
+    offset += pageH;
+    page += 1;
+  }
+  doc.save(filename);
+}
+
 export function exportInvoicePdf(invoice: Invoice, companyAddress?: string) {
+  const paper = invoicePaperElement();
+  if (paper) {
+    void exportInvoicePaperPdf(paper, invoicePdfName(invoice)).catch(() => {
+      buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));
+    });
+    return;
+  }
   buildInvoicePdf(invoice, companyAddress).save(invoicePdfName(invoice));
 }
 

@@ -256,6 +256,7 @@ const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx
 assert.match(paper, /AMOUNT DUE THIS INVOICE/);
 assert.match(paper, /DmcMark/);
 assert.match(paper, /INVOICE DATE/);
+assert.match(paper, /data-invoice-paper/);
 
 const pdf = readFileSync(join(root, "pdf.ts"), "utf8");
 assert.match(pdf, /FIRM_LETTERHEAD/);
@@ -263,6 +264,9 @@ assert.match(pdf, /invoicePdfName/);
 assert.match(pdf, /invoiceDocumentModel/);
 assert.match(pdf, /AMOUNT DUE THIS INVOICE/);
 assert.match(pdf, /Invoice Items/);
+assert.match(pdf, /html2canvas/);
+assert.match(pdf, /data-invoice-paper/);
+assert.match(pdf, /drawPreviewTable/);
 assert.match(paper, /invoiceDocumentModel/);
 
 const catalog = readFileSync(join(root, "demo-catalog.ts"), "utf8");
