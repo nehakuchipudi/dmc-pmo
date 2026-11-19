@@ -746,6 +746,8 @@ function retainLinkedRecords(
       DMC_MANAGER_NAME,
       "Dillon Morgan",
       ...companies.map((row) => row.accountManager),
+      ...companies.flatMap((row) => row.accountManagers ?? []),
+      ...companies.flatMap((row) => row.teamMembers ?? []),
       ...projects.map((row) => row.manager),
       ...tasks.map((row) => row.assignee),
       ...tickets.map((row) => row.assignee),

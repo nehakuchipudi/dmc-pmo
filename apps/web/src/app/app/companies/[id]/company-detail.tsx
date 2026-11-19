@@ -32,7 +32,7 @@ import {
 import { COMPANY_KINDS, companyKindOf } from "@/lib/company-kinds";
 import { industryChoices } from "@/lib/industries";
 import { formatPhoneDisplay } from "@/lib/contacts";
-import { formatDisplayDate, money } from "@/lib/seed";
+import { formatDisplayDate, initialsFromName, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
 import type { CompanyAssetKind, CompanyAssetStatus, CompanyKind, CompanyStatus, Invoice } from "@/lib/types";
@@ -168,6 +168,7 @@ export function CompanyDetail({ id }: { id: string }) {
   );
   const primary = companyContacts.find((c) => c.id === company?.primaryContactId) ?? companyContacts[0];
   const managers = company?.accountManagers?.length ? company.accountManagers : company ? [company.accountManager] : [];
+  const companyTeam = company?.teamMembers ?? [];
   const paidRevenue = companyInvoices.filter((i) => i.status === "Paid").reduce((sum, i) => sum + i.amount, 0);
   const overdueAmount = companyInvoices.filter((i) => i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
   const outstanding = companyInvoices.filter((i) => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
@@ -207,12 +208,17 @@ export function CompanyDetail({ id }: { id: string }) {
 
   const tags = company.tags ?? [company.industry];
   const availableManagers = team.filter((m) => m.active && !managers.includes(m.name));
+  const availableTeam = team.filter((m) => m.active && !companyTeam.includes(m.name));
 
   function setManagers(next: string[]) {
     updateCompany(company!.id, {
       accountManagers: next,
       accountManager: next[0] ?? company!.accountManager,
     });
+  }
+
+  function setCompanyTeam(next: string[]) {
+    updateCompany(company!.id, { teamMembers: next });
   }
 
   return (
@@ -338,6 +344,49 @@ export function CompanyDetail({ id }: { id: string }) {
                           </option>
                         ))}
                       </select>
+                    ) : null}
+                  </div>
+                </RecordFact>
+                <RecordFact label="Team">
+                  <div className="space-y-1.5">
+                    {companyTeam.map((name) => {
+                      const member = team.find((row) => row.name === name);
+                      return (
+                        <div key={name} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Avatar initials={member?.initials ?? initialsFromName(name)} name={name} size={26} />
+                            <span className="truncate">{name}</span>
+                          </span>
+                          <button
+                            type="button"
+                            className="text-[var(--color-muted)]"
+                            aria-label={`Remove ${name}`}
+                            onClick={() => setCompanyTeam(companyTeam.filter((item) => item !== name))}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {availableTeam.length ? (
+                      <select
+                        className="field-input"
+                        value=""
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          setCompanyTeam([...companyTeam, e.target.value]);
+                        }}
+                      >
+                        <option value="">Add team</option>
+                        {availableTeam.map((m) => (
+                          <option key={m.id} value={m.name}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                    {!companyTeam.length && !availableTeam.length ? (
+                      <div className="text-sm text-[var(--color-muted)]">No team assigned.</div>
                     ) : null}
                   </div>
                 </RecordFact>
