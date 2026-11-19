@@ -21,6 +21,47 @@ export function parseMailAddresses(value?: string) {
     .filter((part) => part.includes("@"));
 }
 
+function decodeBase64(value: string) {
+  if (typeof Buffer !== "undefined") {
+    return Uint8Array.from(Buffer.from(value, "base64"));
+  }
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+export function mailAttachmentBlob(file: MailAttachment) {
+  return new Blob([decodeBase64(file.contentBytes)], {
+    type: file.contentType || "application/octet-stream",
+  });
+}
+
+export function downloadMailAttachment(file: MailAttachment) {
+  if (typeof document === "undefined") return;
+  const url = URL.createObjectURL(mailAttachmentBlob(file));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+export function viewMailAttachment(file: MailAttachment) {
+  if (typeof window === "undefined") return;
+  const url = URL.createObjectURL(mailAttachmentBlob(file));
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    downloadMailAttachment(file);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    return;
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export type MailDelivery = {
   delivered: boolean;
   via?: "graph" | "api";

@@ -98,7 +98,7 @@ export function InvoiceDocument({
         </div>
       </section>
 
-      <section className="invoice-section">
+      <section className="invoice-section invoice-payments">
         <h3>Payments</h3>
         {model.payments.length ? (
           <table className="invoice-doc-table">
@@ -130,9 +130,9 @@ export function InvoiceDocument({
         <p className="invoice-due-note">This invoice is due on {formatShortDate(model.due)}</p>
       </section>
       {model.deliverables.length ? (
-        <section className="invoice-section">
+        <section className="invoice-section invoice-proof">
           <h3>Proof of deliverable</h3>
-          <p className="invoice-due-note">This invoice is issued against the attached deliverable proof.</p>
+          <p className="invoice-proof-note">This invoice is issued against the attached deliverable proof.</p>
           <table className="invoice-doc-table">
             <colgroup>
               <col />

@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileText, Paperclip, X } from "lucide-react";
+import { X } from "lucide-react";
+import { MailAttachmentCopies } from "@/components/billing/MailAttachmentCopies";
 import { Field, TextInput, TextSelect, TextTextarea } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
-import { invoiceAttachedDeliverables, invoicePdfName, invoiceSendDraft } from "@/lib/invoice";
+import { invoiceSendDraft } from "@/lib/invoice";
 import { mailAttachmentsForInvoice } from "@/lib/pdf";
-import { parseMailAddresses } from "@/lib/deliver-mail";
+import { parseMailAddresses, type MailAttachment } from "@/lib/deliver-mail";
 import { useAppStore } from "@/lib/store";
 import type { Invoice } from "@/lib/types";
 
@@ -38,6 +39,8 @@ export function InvoiceSendCompose({
   const [subjectDirty, setSubjectDirty] = useState(false);
   const [bodyDirty, setBodyDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [copies, setCopies] = useState<MailAttachment[]>([]);
+  const [copiesBusy, setCopiesBusy] = useState(false);
 
   const record = invoice;
   const company = companies.find((row) => row.id === record?.companyId);
@@ -58,8 +61,7 @@ export function InvoiceSendCompose({
       sender: { name: user?.name || record.owner || "Dillon Morgan Consulting" },
     });
   }, [record, project, company, companyContacts, contactId, user?.name]);
-  const docs = record ? invoiceAttachedDeliverables(record) : [];
-  const pdfName = record ? invoicePdfName(record) : "invoice.pdf";
+  const hasDeliverables = Boolean(record?.attachDeliverables !== false && record?.deliverableDocs?.length);
 
   useEffect(() => {
     if (!open || !record) return;
@@ -83,6 +85,28 @@ export function InvoiceSendCompose({
     if (!bodyDirty) setBody(generated.body);
   }, [generated, open, subjectDirty, bodyDirty]);
 
+  useEffect(() => {
+    if (!open || !record) {
+      setCopies([]);
+      return;
+    }
+    let cancelled = false;
+    setCopiesBusy(true);
+    void mailAttachmentsForInvoice(record, company?.address)
+      .then((next) => {
+        if (!cancelled) setCopies(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCopies([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCopiesBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, record?.id, company?.address, record?.attachDeliverables, record?.deliverableDocs]);
+
   function applyContact(id: string) {
     setContactId(id);
     const contact = companyContacts.find((row) => row.id === id);
@@ -98,7 +122,7 @@ export function InvoiceSendCompose({
     }
     setBusy(true);
     try {
-      const attachments = await mailAttachmentsForInvoice(record, company?.address);
+      const attachments = copies.length ? copies : await mailAttachmentsForInvoice(record, company?.address);
       queueEmail(recipients.join(", "), subject.trim() || generated.subject, body.trim() || generated.body, undefined, {
         cc: cc.trim() || undefined,
         attachments,
@@ -139,7 +163,8 @@ export function InvoiceSendCompose({
         >
           <p className="invoice-empty-note">
             Choose whom to send this invoice to and where it should arrive. The draft updates from the project, and the
-            PDF{docs.length ? " plus deliverable proof" : ""} is attached.
+            PDF{hasDeliverables ? " plus deliverable proof" : ""} is attached. Open, view, or download a copy of each
+            file before you send.
           </p>
           <Field label="From">
             <TextInput
@@ -209,27 +234,13 @@ export function InvoiceSendCompose({
           >
             Refresh from project
           </button>
-          <div className="invoice-send-files">
-            <strong>
-              <Paperclip size={14} /> Attachments
-            </strong>
-            <ul>
-              <li>
-                <FileText size={14} /> {pdfName}
-              </li>
-              {docs.map((doc) => (
-                <li key={doc.id}>
-                  <FileText size={14} /> {doc.name}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <MailAttachmentCopies files={copies} loading={copiesBusy} />
           <div className="invoice-send-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
               Back
             </button>
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "Attaching PDF..." : "Send invoice"}
+            <button type="submit" className="btn btn-primary" disabled={busy || copiesBusy}>
+              {busy ? "Attaching PDF..." : copiesBusy ? "Preparing copies..." : "Send invoice"}
             </button>
           </div>
         </form>

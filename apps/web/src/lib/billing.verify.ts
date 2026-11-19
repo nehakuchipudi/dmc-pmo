@@ -30,7 +30,7 @@ import {
   invoiceTotals,
   phaseChildIds,
 } from "./invoice";
-import { buildInvoicePdf } from "./pdf";
+import { buildInvoicePdf, mailAttachmentsForInvoice } from "./pdf";
 import type { Invoice } from "./types";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -176,9 +176,15 @@ assert.match(invoice, /InvoiceSendCompose/);
 assert.match(invoice, /setComposeInvoice/);
 assert.doesNotMatch(invoice, /sendInvoice\(invoice\.id\)/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /Attach deliverable docs to invoice/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /type="button"/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /Upload deliverable/);
+assert.doesNotMatch(readFileSync(join(root, "../components/billing/InvoiceDeliverablePicker.tsx"), "utf8"), /<label className="invoice-deliverable-upload">/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Where to send/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /Refresh from project/);
 assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /invoice-send-backdrop/);
+assert.match(readFileSync(join(root, "../components/billing/InvoiceSendCompose.tsx"), "utf8"), /MailAttachmentCopies/);
+assert.match(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /viewMailAttachment/);
+assert.match(readFileSync(join(root, "../components/billing/MailAttachmentCopies.tsx"), "utf8"), /downloadMailAttachment/);
 assert.match(invoice, /Add new Service line item/);
 assert.match(invoice, /INVOICE_TERMS/);
 assert.match(invoice, /invalid=\{issues.includes\("company"\)\}/);
@@ -358,7 +364,8 @@ const detail = readFileSync(join(root, "../app/app/billing/[id]/invoice-detail.t
 assert.match(detail, /InvoiceDocument/);
 assert.match(detail, /Email PDF/);
 assert.match(detail, /InvoiceSendCompose/);
-assert.match(detail, /invoiceAttachedDeliverables/);
+assert.match(detail, /MailAttachmentCopies/);
+assert.match(detail, /mailAttachmentsForInvoice/);
 assert.match(detail, /Send via Activity/);
 assert.match(detail, /Send to QuickBooks/);
 assert.match(detail, /Open in QuickBooks/);
@@ -369,6 +376,8 @@ assert.match(detail, /setEditOpen\(true\)/);
 const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx"), "utf8");
 assert.match(paper, /AMOUNT DUE THIS INVOICE/);
 assert.match(paper, /Proof of deliverable/);
+assert.match(paper, /invoice-proof-note/);
+assert.match(paper, /invoice-payments/);
 assert.match(paper, /DmcMark/);
 assert.match(paper, /INVOICE DATE/);
 assert.match(paper, /data-invoice-paper/);
@@ -384,11 +393,43 @@ assert.match(pdf, /data-invoice-paper/);
 assert.match(pdf, /drawPreviewTable/);
 assert.match(pdf, /Proof of deliverable/);
 assert.match(pdf, /mailAttachmentsForInvoice/);
+assert.match(pdf, /deliverableMailAttachment/);
 assert.match(paper, /invoiceDocumentModel/);
+
+async function assertMailCopies() {
+  const copies = await mailAttachmentsForInvoice(withProof);
+  assert.equal(copies.length, 2);
+  assert.equal(copies[0].name, "invoice_INV-2313.pdf");
+  assert.equal(copies[1].name, "DMC_Project_Plan.pdf");
+  assert.ok(copies[1].contentBytes.length > 80);
+
+  const uploaded = await mailAttachmentsForInvoice({
+    ...previewInvoice,
+    attachDeliverables: true,
+    deliverableDocs: [
+      {
+        id: "up1",
+        name: "signed-acceptance.pdf",
+        kind: "pdf",
+        sizeKb: 12,
+        source: "upload",
+        dataUrl: "data:application/pdf;base64,QUJD",
+      },
+    ],
+  });
+  assert.equal(uploaded[1].contentBytes, "QUJD");
+}
 
 const catalog = readFileSync(join(root, "demo-catalog.ts"), "utf8");
 assert.match(catalog, /number: "50526"/);
 assert.match(catalog, /Weeks 1-3: Discovery & Current State Mapping/);
 assert.match(catalog, /QuickBooks:/);
 
-console.log("billing.verify ok");
+void assertMailCopies()
+  .then(() => {
+    console.log("billing.verify ok");
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

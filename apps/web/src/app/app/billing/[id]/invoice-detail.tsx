@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
 import { InvoiceSendCompose } from "@/components/billing/InvoiceSendCompose";
+import { MailAttachmentCopies } from "@/components/billing/MailAttachmentCopies";
 import { InvoiceEditorModal } from "@/components/billing/InvoiceRowActions";
 import { ConfirmModal, StatusPill, statusTone } from "@/components/ui";
-import { invoiceAttachedDeliverables, invoicePdfName } from "@/lib/invoice";
+import type { MailAttachment } from "@/lib/deliver-mail";
 import { formatShortDate, moneyExact } from "@/lib/seed";
-import { exportInvoicePdf } from "@/lib/pdf";
+import { exportInvoicePdf, mailAttachmentsForInvoice } from "@/lib/pdf";
 import { createQuickBooksInvoice, quickbooksInvoicePatch, quickbooksSettingsHref } from "@/lib/quickbooks";
 import { useAppStore } from "@/lib/store";
 
@@ -30,7 +30,33 @@ export function InvoiceDetail({ id }: { id: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [copies, setCopies] = useState<MailAttachment[]>([]);
+  const [copiesBusy, setCopiesBusy] = useState(false);
   const invoice = invoices.find((item) => item.id === id);
+  const company = companies.find((item) => item.id === invoice?.companyId);
+
+  useEffect(() => {
+    if (!invoice) {
+      setCopies([]);
+      setCopiesBusy(false);
+      return;
+    }
+    let cancelled = false;
+    setCopiesBusy(true);
+    void mailAttachmentsForInvoice(invoice, company?.address)
+      .then((next) => {
+        if (!cancelled) setCopies(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCopies([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCopiesBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice?.id, invoice?.attachDeliverables, invoice?.deliverableDocs, company?.address]);
 
   if (!invoice) {
     return (
@@ -43,10 +69,8 @@ export function InvoiceDetail({ id }: { id: string }) {
     );
   }
 
-  const company = companies.find((item) => item.id === invoice.companyId);
   const contact = contacts.find((item) => item.id === invoice.billToContactId);
   const project = projects.find((item) => item.id === invoice.projectId);
-  const pdfName = invoicePdfName(invoice);
   const record = invoice;
 
   function downloadPdf() {
@@ -120,19 +144,7 @@ export function InvoiceDetail({ id }: { id: string }) {
         </dl>
         <div className="invoice-pdf-box">
           <h3>Company PDF Invoice</h3>
-          <button type="button" className="invoice-pdf-file" onClick={downloadPdf}>
-            <FileText size={16} />
-            {pdfName}
-          </button>
-          {invoiceAttachedDeliverables(invoice).length ? (
-            <ul className="invoice-deliverable-files">
-              {invoiceAttachedDeliverables(invoice).map((doc) => (
-                <li key={doc.id}>
-                  <FileText size={14} /> {doc.name}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <MailAttachmentCopies files={copies} loading={copiesBusy} />
           <div className="invoice-pdf-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setSendOpen(true)}>
               Email PDF

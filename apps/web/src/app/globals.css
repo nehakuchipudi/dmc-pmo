@@ -2915,10 +2915,34 @@ button, input, select, textarea { font: inherit; }
 .invoice-deliverable-files li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.86rem;
   color: var(--color-navy);
   font-weight: 600;
+}
+.invoice-send-file-name {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-navy);
+  font-weight: 650;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+.invoice-send-file-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.invoice-send-file-actions .btn {
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
 .invoice-send-actions {
   display: flex;
@@ -3121,6 +3145,7 @@ button, input, select, textarea { font: inherit; }
   border-radius: 4px;
   padding: 28px 32px 36px;
   min-height: 640px;
+  overflow: visible;
 }
 .dmc-mark {
   display: grid;
@@ -3187,8 +3212,17 @@ button, input, select, textarea { font: inherit; }
   font-size: 0.82rem;
   font-weight: 650;
   color: #3a4652;
+  position: relative;
 }
-.invoice-section { display: block; width: 100%; }
+.invoice-section {
+  display: block;
+  width: 100%;
+  position: relative;
+  overflow: visible;
+}
+.invoice-section + .invoice-section {
+  margin-top: 28px;
+}
 .invoice-doc-table {
   width: 100%;
   border-collapse: collapse;
@@ -3226,16 +3260,34 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
 }
 .invoice-totals .is-due { color: #2b7bb9; font-weight: 700; }
+.invoice-payments .invoice-empty-pay,
+.invoice-payments .invoice-due-note {
+  display: block;
+}
 .invoice-empty-pay {
-  margin: 10px;
+  margin: 12px 10px 8px;
   font-size: 0.85rem;
   color: var(--color-muted);
+  line-height: 1.45;
 }
 .invoice-due-note {
-  margin: 16px 10px 0;
+  margin: 0 10px 4px;
+  padding: 8px 0 12px;
   text-align: right;
   font-size: 0.82rem;
   color: #3a4652;
+  line-height: 1.45;
+  position: relative;
+  clear: both;
+}
+.invoice-proof-note {
+  display: block;
+  margin: 10px 10px 12px;
+  text-align: left;
+  font-size: 0.82rem;
+  color: #3a4652;
+  line-height: 1.45;
+  position: relative;
 }
 .timesheet-week {
   display: grid;

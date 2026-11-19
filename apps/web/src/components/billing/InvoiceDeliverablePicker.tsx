@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Paperclip, Upload } from "lucide-react";
+import { useRef, type MouseEvent } from "react";
 import { deliverableFromProjectFile, invoiceFileKind } from "@/lib/invoice";
 import { uid } from "@/lib/seed";
 import type { InvoiceDeliverable, ProjectFile } from "@/lib/types";
@@ -19,7 +20,7 @@ async function readUpload(file: File): Promise<InvoiceDeliverable> {
     dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(reader.error);
+      reader.onerror = () => reject(reader.error ?? new Error("Could not read that file"));
       reader.readAsDataURL(file);
     });
   }
@@ -51,6 +52,7 @@ export function InvoiceDeliverablePicker({
   onAttachToInvoiceChange: (value: boolean) => void;
   onUploadToProject?: (file: Omit<ProjectFile, "id">) => void;
 }) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const selectedIds = new Set(docs.map((doc) => doc.fileId ?? doc.id));
   const extraDocs = docs.filter((doc) => doc.source === "upload" || !files.some((file) => file.id === doc.fileId));
 
@@ -62,22 +64,35 @@ export function InvoiceDeliverablePicker({
     onChange([...docs, deliverableFromProjectFile(file)]);
   }
 
-  async function addFiles(list: FileList | null) {
-    const uploads = Array.from(list ?? []);
+  function openPicker(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    fileRef.current?.click();
+  }
+
+  async function addFiles(uploads: File[]) {
     if (!uploads.length) return;
-    const next = [...docs];
-    for (const file of uploads) {
-      const doc = await readUpload(file);
-      next.push(doc);
-      onUploadToProject?.({
-        folder: "Deliverables",
-        name: doc.name,
-        kind: doc.kind,
-        sizeKb: doc.sizeKb,
-        linkedTaskIds: [],
-      });
+    try {
+      const next = [...docs];
+      for (const file of uploads) {
+        const doc = await readUpload(file);
+        next.push(doc);
+        try {
+          onUploadToProject?.({
+            folder: "Deliverables",
+            name: doc.name,
+            kind: doc.kind,
+            sizeKb: doc.sizeKb,
+            linkedTaskIds: [],
+          });
+        } catch {
+          // Keep the invoice copy even if the project file list rejects it.
+        }
+      }
+      onChange(next);
+    } catch {
+      // Leave the invoice form on screen if a file cannot be read.
     }
-    onChange(next);
   }
 
   return (
@@ -138,19 +153,22 @@ export function InvoiceDeliverablePicker({
           ))}
         </ul>
       ) : null}
-      <label className="invoice-deliverable-upload">
+      <button type="button" className="invoice-deliverable-upload" onClick={openPicker}>
         <Upload size={15} />
         Upload deliverable
-        <input
-          type="file"
-          multiple
-          className="sr-only"
-          onChange={(event) => {
-            void addFiles(event.target.files);
-            event.currentTarget.value = "";
-          }}
-        />
-      </label>
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        hidden
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => {
+          const uploads = event.target.files ? Array.from(event.target.files) : [];
+          event.target.value = "";
+          void addFiles(uploads);
+        }}
+      />
       {docs.length ? (
         <p className="invoice-empty-note">
           <Paperclip size={14} /> {docs.length} deliverable{docs.length === 1 ? "" : "s"} selected
