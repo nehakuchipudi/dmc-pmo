@@ -7,6 +7,7 @@ import { Mail, X } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { InvoiceEditorModal, InvoiceRowActions } from "@/components/billing/InvoiceRowActions";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { ActivityHoursChart, monthSeries } from "@/components/records/ActivityHoursChart";
 import { ActivityList, ActivityStream } from "@/components/records/ActivityStream";
@@ -34,7 +35,7 @@ import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
-import type { CompanyAssetKind, CompanyAssetStatus, CompanyKind, CompanyStatus } from "@/lib/types";
+import type { CompanyAssetKind, CompanyAssetStatus, CompanyKind, CompanyStatus, Invoice } from "@/lib/types";
 
 const TABS = [
   "Overview",
@@ -106,6 +107,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const [fileOpen, setFileOpen] = useState(false);
   const [assetOpen, setAssetOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   const company = companies.find((c) => c.id === id);
   const companyProjects = useMemo(
@@ -983,6 +985,7 @@ export function CompanyDetail({ id }: { id: string }) {
                     <th>Amount</th>
                     <th>Due</th>
                     <th>Status</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -998,6 +1001,7 @@ export function CompanyDetail({ id }: { id: string }) {
                       <td>
                         <TonePill value={i.status} />
                       </td>
+                      <InvoiceRowActions invoice={i} onEdit={setEditingInvoice} />
                     </tr>
                   ))}
                 </tbody>
@@ -1008,6 +1012,7 @@ export function CompanyDetail({ id }: { id: string }) {
       </RecordShell>
 
       <CreateForms kind={createKind} onClose={() => setCreateKind(null)} defaults={{ companyId: company.id, projectId: companyProjects[0]?.id }} />
+      <InvoiceEditorModal invoice={editingInvoice} onClose={() => setEditingInvoice(null)} />
       <Modal open={invoiceOpen} title={`Create invoice: ${company.name}`} onClose={() => setInvoiceOpen(false)} xl>
         <InvoiceCreateForm
           defaultCompanyId={company.id}

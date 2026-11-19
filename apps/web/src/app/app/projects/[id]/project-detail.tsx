@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { CreateForms, type CreateKind } from "@/components/CreateForms";
+import { InvoiceEditorModal, InvoiceRowActions } from "@/components/billing/InvoiceRowActions";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { FilesNotesPanel } from "@/components/FilesNotesPanel";
 import { ProjectOverviewBoard } from "@/components/projects/ProjectOverviewBoard";
@@ -35,6 +36,7 @@ import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
 import { formatDisplayDate, formatShortDate, initialsFromName, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
+import type { Invoice } from "@/lib/types";
 
 const TABS = [...PROJECT_WORKSPACE_TABS];
 const PROJECT_TYPES = ["Internal", "Client Work", "Retainer", "Fixed Fee", "Capital / PMO"];
@@ -83,6 +85,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const [createDefaults, setCreateDefaults] = useState<{ projectId?: string; companyId?: string }>({});
   const [editOpen, setEditOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [comment, setComment] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [assigneeFilter, setAssigneeFilter] = useState("All");
@@ -633,6 +636,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                     <th>Amount</th>
                     <th>Due</th>
                     <th>Status</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -648,11 +652,12 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                       <td>
                         <TonePill value={i.status} />
                       </td>
+                      <InvoiceRowActions invoice={i} onEdit={setEditingInvoice} />
                     </tr>
                   ))}
                   {!projectInvoices.length ? (
                     <tr>
-                      <td colSpan={4} className="text-[var(--color-muted)]">
+                      <td colSpan={5} className="text-[var(--color-muted)]">
                         No invoices on this project yet.
                       </td>
                     </tr>
@@ -698,6 +703,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
         }}
       />
 
+      <InvoiceEditorModal invoice={editingInvoice} onClose={() => setEditingInvoice(null)} />
       <Modal open={invoiceOpen} title="Create invoice" onClose={() => setInvoiceOpen(false)} xl>
         <InvoiceCreateForm
           defaultCompanyId={project.companyId}
