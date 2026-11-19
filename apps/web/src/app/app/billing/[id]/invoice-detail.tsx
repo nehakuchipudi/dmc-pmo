@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { InvoiceDocument } from "@/components/billing/InvoiceDocument";
-import { StatusPill, statusTone } from "@/components/ui";
+import { InvoiceEditorModal } from "@/components/billing/InvoiceRowActions";
+import { ConfirmModal, StatusPill, statusTone } from "@/components/ui";
 import { invoicePdfName } from "@/lib/invoice";
 import { formatShortDate, moneyExact } from "@/lib/seed";
 import { exportInvoicePdf } from "@/lib/pdf";
@@ -13,6 +15,7 @@ import { createQuickBooksInvoice, quickbooksInvoicePatch, quickbooksSettingsHref
 import { useAppStore } from "@/lib/store";
 
 export function InvoiceDetail({ id }: { id: string }) {
+  const router = useRouter();
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
   const contacts = useAppStore((s) => s.contacts);
@@ -21,8 +24,11 @@ export function InvoiceDetail({ id }: { id: string }) {
   const payInvoice = useAppStore((s) => s.payInvoice);
   const queueEmail = useAppStore((s) => s.queueEmail);
   const updateInvoice = useAppStore((s) => s.updateInvoice);
+  const deleteInvoice = useAppStore((s) => s.deleteInvoice);
   const pushToast = useAppStore((s) => s.pushToast);
   const [qbBusy, setQbBusy] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const invoice = invoices.find((item) => item.id === id);
 
   if (!invoice) {
@@ -176,12 +182,33 @@ export function InvoiceDetail({ id }: { id: string }) {
               </button>
             </IfCan>
           ) : null}
+          <IfCan cap="manage_invoice">
+            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
+              Edit
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setDeleteOpen(true)}>
+              Delete
+            </button>
+          </IfCan>
           <button type="button" className="btn btn-ghost" onClick={downloadPdf}>
             Export PDF
           </button>
         </div>
       </aside>
       <InvoiceDocument invoice={invoice} companyAddress={company?.address} projectName={project?.name} />
+      <InvoiceEditorModal invoice={editOpen ? invoice : null} onClose={() => setEditOpen(false)} />
+      <ConfirmModal
+        open={deleteOpen}
+        title={`Delete ${invoice.number}?`}
+        body={`${invoice.number} will be removed from Billing. This cannot be undone.`}
+        confirmLabel="Delete invoice"
+        danger
+        onConfirm={() => {
+          deleteInvoice(invoice.id);
+          router.push("/app/billing");
+        }}
+        onClose={() => setDeleteOpen(false)}
+      />
     </div>
   );
 }

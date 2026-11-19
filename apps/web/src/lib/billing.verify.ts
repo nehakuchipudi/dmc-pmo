@@ -40,6 +40,10 @@ assert.equal(invoiceForFromTemplate({ invoiceFor: "Milestone" } as never), "Mile
 assert.deepEqual([...phaseChildIds([{ id: "p", projectId: "x", name: "P", due: "", start: "", status: "In Progress", kind: "phase" }, { id: "g", projectId: "x", name: "G", due: "", start: "", status: "In Progress", kind: "group", parentId: "p" }], "p")].sort(), ["g", "p"]);
 assert.equal(billedSourceIds([{ projectId: "p", lineItems: [{ sourceId: "m1" }] }] as never, "p").has("m1"), true);
 assert.equal(
+  billedSourceIds([{ id: "a", projectId: "p", lineItems: [{ sourceId: "m1" }] }] as never, "p", "a").has("m1"),
+  false,
+);
+assert.equal(
   invoiceTotals([{ id: "1", kind: "purchase", description: "PO", amount: 50 }]).purchase,
   50,
 );
@@ -93,6 +97,8 @@ assert.match(billing, /New Material/);
 assert.match(billing, /ExpenseCreateForm/);
 assert.match(billing, /PurchaseCreateForm/);
 assert.match(billing, /MaterialCreateForm/);
+assert.match(billing, /InvoiceRowActions/);
+assert.match(billing, /InvoiceEditorModal/);
 
 const invoice = readFileSync(join(root, "../components/InvoiceCreateForm.tsx"), "utf8");
 assert.match(invoice, /title="Expenses"/);
@@ -120,6 +126,8 @@ assert.match(invoice, /InvoiceDocument/);
 assert.match(invoice, /setPreview/);
 assert.doesNotMatch(invoice, /exportInvoicePdf\(draft/);
 assert.match(invoice, /Save as Draft/);
+assert.match(invoice, /Save changes/);
+assert.match(invoice, /invoice\?: Invoice/);
 assert.match(invoice, /Save & Send PDF/);
 assert.match(invoice, /Add new Service line item/);
 assert.match(invoice, /INVOICE_TERMS/);
@@ -132,6 +140,22 @@ assert.doesNotMatch(invoice, /Add a company and at least one line item/);
 const projectBilling = readFileSync(join(root, "../app/app/projects/[id]/project-detail.tsx"), "utf8");
 assert.match(projectBilling, /New invoice/);
 assert.match(projectBilling, /InvoiceCreateForm/);
+assert.match(projectBilling, /InvoiceRowActions/);
+assert.match(projectBilling, /InvoiceEditorModal/);
+
+const store = readFileSync(join(root, "store.ts"), "utf8");
+assert.match(store, /deleteInvoice: \(id\) =>/);
+assert.match(store, /invoices: s\.invoices\.filter\(\(row\) => row\.id !== id\)/);
+
+const rowActions = readFileSync(join(root, "../components/billing/InvoiceRowActions.tsx"), "utf8");
+assert.match(rowActions, /\bEdit\b/);
+assert.match(rowActions, /\bDelete\b/);
+assert.match(rowActions, /Delete invoice/);
+assert.match(rowActions, /manage_invoice/);
+
+const companyBilling = readFileSync(join(root, "../app/app/companies/[id]/company-detail.tsx"), "utf8");
+assert.match(companyBilling, /InvoiceRowActions/);
+assert.match(companyBilling, /InvoiceEditorModal/);
 
 const invoiceLib = readFileSync(join(root, "invoice.ts"), "utf8");
 assert.match(invoiceLib, /INVOICE_FOR_OPTIONS/);
@@ -251,6 +275,9 @@ assert.match(detail, /Email PDF/);
 assert.match(detail, /Send via Activity/);
 assert.match(detail, /Send to QuickBooks/);
 assert.match(detail, /Open in QuickBooks/);
+assert.match(detail, /InvoiceEditorModal/);
+assert.match(detail, /Delete invoice/);
+assert.match(detail, /setEditOpen\(true\)/);
 
 const paper = readFileSync(join(root, "../components/billing/InvoiceDocument.tsx"), "utf8");
 assert.match(paper, /AMOUNT DUE THIS INVOICE/);

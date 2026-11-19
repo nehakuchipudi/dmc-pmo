@@ -261,9 +261,10 @@ export function templateInvoiceFor(value: InvoiceForOption): InvoiceTemplate["in
   return value;
 }
 
-export function billedSourceIds(invoices: Invoice[], projectId?: string) {
+export function billedSourceIds(invoices: Invoice[], projectId?: string, exceptInvoiceId?: string) {
   return new Set(
     invoices
+      .filter((invoice) => !exceptInvoiceId || invoice.id !== exceptInvoiceId)
       .filter((invoice) => !projectId || invoice.projectId === projectId)
       .flatMap((invoice) => invoice.lineItems.map((line) => line.sourceId).filter(Boolean) as string[]),
   );

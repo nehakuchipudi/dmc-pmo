@@ -58,14 +58,20 @@ function lineTotal(line: DraftLine) {
   return amount + amount * ((line.taxPct ?? 0) / 100);
 }
 
+function sourceIdsOfKind(invoice: Invoice | undefined, kind: InvoiceLineKind) {
+  return invoice?.lineItems.filter((line) => line.kind === kind && line.sourceId).map((line) => line.sourceId as string) ?? [];
+}
+
 export function InvoiceCreateForm({
   defaultCompanyId,
   defaultProjectId,
+  invoice,
   onCancel,
   onCreated,
 }: {
   defaultCompanyId?: string;
   defaultProjectId?: string;
+  invoice?: Invoice;
   onCancel: () => void;
   onCreated: (id: string) => void;
 }) {
@@ -86,43 +92,51 @@ export function InvoiceCreateForm({
   const templates = useAppStore((s) => s.invoiceTemplates);
   const createInvoiceDraft = useAppStore((s) => s.createInvoiceDraft);
   const updateInvoice = useAppStore((s) => s.updateInvoice);
+  const sendInvoice = useAppStore((s) => s.sendInvoice);
   const createInvoiceTemplate = useAppStore((s) => s.createInvoiceTemplate);
   const updateInvoiceTemplate = useAppStore((s) => s.updateInvoiceTemplate);
   const pushToast = useAppStore((s) => s.pushToast);
+  const initialInvoiceFor = invoiceForFromTemplate(
+    invoice?.invoiceFor ? ({ invoiceFor: invoice.invoiceFor } as InvoiceTemplate) : undefined,
+  );
 
-  const [companyId, setCompanyId] = useState(defaultCompanyId ?? companies[0]?.id ?? "");
-  const [projectId, setProjectId] = useState(defaultProjectId ?? "");
-  const [retainerId, setRetainerId] = useState("");
-  const [templateId, setTemplateId] = useState("");
-  const [title, setTitle] = useState("");
-  const [owner, setOwner] = useState(team.find((m) => m.role === "finance" || m.role === "pm")?.name ?? team[0]?.name ?? "");
-  const [billToContactId, setBillToContactId] = useState("");
-  const [currency, setCurrency] = useState("USD");
-  const [terms, setTerms] = useState("Net 30");
-  const [raised, setRaised] = useState(todayIso());
-  const [due, setDue] = useState(dueFromTerms(todayIso(), "Net 30"));
-  const [billingThrough, setBillingThrough] = useState(todayIso());
-  const [poNumber, setPoNumber] = useState("");
-  const [number, setNumber] = useState(nextInvoiceNumber(invoices.length));
-  const [description, setDescription] = useState("");
-  const [internalDescription, setInternalDescription] = useState("");
-  const [lines, setLines] = useState<DraftLine[]>([]);
+  const [companyId, setCompanyId] = useState(invoice?.companyId ?? defaultCompanyId ?? companies[0]?.id ?? "");
+  const [projectId, setProjectId] = useState(invoice?.projectId ?? defaultProjectId ?? "");
+  const [retainerId, setRetainerId] = useState(invoice?.retainerId ?? "");
+  const [templateId, setTemplateId] = useState(invoice?.templateId ?? "");
+  const [title, setTitle] = useState(invoice?.title ?? "");
+  const [owner, setOwner] = useState(
+    invoice?.owner ?? team.find((m) => m.role === "finance" || m.role === "pm")?.name ?? team[0]?.name ?? "",
+  );
+  const [billToContactId, setBillToContactId] = useState(invoice?.billToContactId ?? "");
+  const [currency, setCurrency] = useState(invoice?.currency ?? "USD");
+  const [terms, setTerms] = useState(invoice?.terms ?? "Net 30");
+  const [raised, setRaised] = useState(invoice?.raised ?? todayIso());
+  const [due, setDue] = useState(invoice?.due ?? dueFromTerms(invoice?.raised ?? todayIso(), invoice?.terms ?? "Net 30"));
+  const [billingThrough, setBillingThrough] = useState(invoice?.billingThrough ?? todayIso());
+  const [poNumber, setPoNumber] = useState(invoice?.poNumber ?? "");
+  const [number, setNumber] = useState(invoice?.number ?? nextInvoiceNumber(invoices.length));
+  const [description, setDescription] = useState(invoice?.description ?? "");
+  const [internalDescription, setInternalDescription] = useState(invoice?.internalDescription ?? "");
+  const [lines, setLines] = useState<DraftLine[]>(invoice?.lineItems.map((line) => ({ ...line })) ?? []);
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [tplName, setTplName] = useState("");
   const [tplTax, setTplTax] = useState("0");
-  const [pickedExpenses, setPickedExpenses] = useState<string[]>([]);
-  const [pickedPurchases, setPickedPurchases] = useState<string[]>([]);
-  const [pickedMaterials, setPickedMaterials] = useState<string[]>([]);
+  const [pickedExpenses, setPickedExpenses] = useState<string[]>(sourceIdsOfKind(invoice, "expense"));
+  const [pickedPurchases, setPickedPurchases] = useState<string[]>(sourceIdsOfKind(invoice, "purchase"));
+  const [pickedMaterials, setPickedMaterials] = useState<string[]>(sourceIdsOfKind(invoice, "material"));
   const [addKind, setAddKind] = useState<"expense" | "purchase" | "material" | null>(null);
   const [showCustom, setShowCustom] = useState(true);
-  const [invoiceFor, setInvoiceFor] = useState<InvoiceForOption>("Work done");
-  const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetailOption>("Project");
+  const [invoiceFor, setInvoiceFor] = useState<InvoiceForOption>(initialInvoiceFor);
+  const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetailOption>(
+    invoice?.milestoneId || initialInvoiceFor === "Milestone" ? "Milestone" : "Project",
+  );
   const [workStatus, setWorkStatus] = useState<"All" | "Approved">("All");
   const [loggedBefore, setLoggedBefore] = useState(todayIso());
   const [includePdfWork, setIncludePdfWork] = useState(true);
   const [groupByStaff, setGroupByStaff] = useState(false);
   const [includeNonBillable, setIncludeNonBillable] = useState(false);
-  const [selectedMilestones, setSelectedMilestones] = useState<string[]>([]);
+  const [selectedMilestones, setSelectedMilestones] = useState<string[]>(invoice?.milestoneId ? [invoice.milestoneId] : []);
   const [milestonePct, setMilestonePct] = useState("100");
   const [expenseStatus, setExpenseStatus] = useState("All expenses");
   const [issues, setIssues] = useState<InvoiceDraftIssue[]>([]);
@@ -142,12 +156,15 @@ export function InvoiceCreateForm({
     () => milestones.filter((row) => row.projectId === projectId && (row.kind === "phase" || !row.parentId)),
     [milestones, projectId],
   );
-  const billed = useMemo(() => billedSourceIds(invoices, projectId), [invoices, projectId]);
+  const billed = useMemo(() => billedSourceIds(invoices, projectId, invoice?.id), [invoices, projectId, invoice?.id]);
   const heading = project?.name || company?.name || "Invoice";
 
   const invoicedOnProject = useMemo(
-    () => invoices.filter((invoice) => invoice.projectId === projectId && invoice.status !== "Draft").reduce((sum, invoice) => sum + invoice.amount, 0),
-    [invoices, projectId],
+    () =>
+      invoices
+        .filter((row) => row.projectId === projectId && row.status !== "Draft" && row.id !== invoice?.id)
+        .reduce((sum, row) => sum + row.amount, 0),
+    [invoices, projectId, invoice?.id],
   );
   const remainingBudget = Math.max(0, (project?.budgetAmount ?? 0) - invoicedOnProject);
 
@@ -178,6 +195,7 @@ export function InvoiceCreateForm({
 
   useEffect(() => {
     if (!company) return;
+    if (invoice && companyId === invoice.companyId) return;
     const primary = companyContacts.find((c) => c.id === company.primaryContactId) ?? companyContacts[0];
     setBillToContactId(primary?.id ?? "");
     const nextProject = companyProjects.some((p) => p.id === projectId)
@@ -197,8 +215,9 @@ export function InvoiceCreateForm({
   }, [companyId]);
 
   useEffect(() => {
+    if (invoice && projectId === (invoice.projectId ?? "")) return;
     setSelectedMilestones([]);
-  }, [projectId]);
+  }, [projectId, invoice]);
 
   useEffect(() => {
     if (!issues.length) return;
@@ -485,14 +504,14 @@ export function InvoiceCreateForm({
       .map((line) => ({ ...line, amount: computeLineAmount(line) }));
     if (!prepared.length) return null;
     return invoiceFromDraft({
-      id: "preview",
+      id: invoice?.id ?? "preview",
       number: number.trim() || nextInvoiceNumber(invoices.length),
       companyId: company.id,
       companyName: company.name,
       amount: 0,
       terms,
       due,
-      status: "Draft",
+      status: invoice?.status ?? "Draft",
       lineItems: prepared,
       projectId: project?.id,
       retainerId: retainerId || undefined,
@@ -521,12 +540,42 @@ export function InvoiceCreateForm({
   async function submit(send: boolean) {
     const draft = buildInvoice();
     if (!company || !draft || qbBusy) return;
-    const id = createInvoiceDraft(company.id, {
-      ...draft,
-      send,
-    });
+    let id = invoice?.id ?? "";
+    if (invoice) {
+      updateInvoice(invoice.id, {
+        companyId: company.id,
+        companyName: company.name,
+        number: draft.number,
+        title: draft.title,
+        owner: draft.owner,
+        manager: draft.owner,
+        billToContactId: draft.billToContactId,
+        billToName: draft.billToName,
+        currency: draft.currency,
+        terms: draft.terms,
+        raised: draft.raised,
+        due: draft.due,
+        billingThrough: draft.billingThrough,
+        poNumber: draft.poNumber,
+        description: draft.description,
+        internalDescription: draft.internalDescription,
+        lineItems: draft.lineItems,
+        projectId: draft.projectId,
+        retainerId: draft.retainerId,
+        templateId: draft.templateId,
+        milestoneId: draft.milestoneId,
+        invoiceFor: draft.invoiceFor,
+      });
+      if (send && invoice.status === "Draft") sendInvoice(invoice.id);
+      pushToast(`${draft.number} updated`);
+    } else {
+      id = createInvoiceDraft(company.id, {
+        ...draft,
+        send,
+      });
+    }
     if (!id) return;
-    if (pushToQuickBooks) {
+    if (pushToQuickBooks && (!invoice || !invoice.quickbooksId)) {
       const created = useAppStore.getState().invoices.find((row) => row.id === id);
       const contact = companyContacts.find((row) => row.id === billToContactId);
       if (created) {
@@ -608,9 +657,11 @@ export function InvoiceCreateForm({
           <p className="invoice-create-crumb">
             {company?.name ? `Company: ${company.name}` : "Company"}
             {project ? ` · Project: ${project.name}` : ""}
-            {" · Create Invoice"}
+            {invoice ? " · Edit Invoice" : " · Create Invoice"}
           </p>
-          <h2 className="invoice-create-title">Create Invoice: {heading}</h2>
+          <h2 className="invoice-create-title">
+            {invoice ? "Edit Invoice" : "Create Invoice"}: {heading}
+          </h2>
         </div>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
           Cancel
@@ -1161,11 +1212,13 @@ export function InvoiceCreateForm({
             <FileText size={16} /> Preview PDF
           </button>
           <button type="submit" className="btn btn-ghost" disabled={qbBusy}>
-            Save as Draft
+            {invoice ? "Save changes" : "Save as Draft"}
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => void submit(true)} disabled={qbBusy}>
-            Save & Send PDF
-          </button>
+          {!invoice || invoice.status === "Draft" ? (
+            <button type="button" className="btn btn-primary" onClick={() => void submit(true)} disabled={qbBusy}>
+              Save & Send PDF
+            </button>
+          ) : null}
         </div>
       </div>
     </form>

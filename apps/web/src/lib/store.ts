@@ -532,6 +532,7 @@ type AppState = {
   updateRetainerPeriod: (id: string, patch: Partial<Pick<RetainerPeriod, "status" | "usedHours" | "budgetHours" | "start" | "end">>) => void;
   createInvoiceDraft: (companyId: string, opts?: CreateInvoiceInput) => string;
   updateInvoice: (id: string, patch: Partial<Invoice>) => void;
+  deleteInvoice: (id: string) => void;
   createInvoiceTemplate: (input: Omit<InvoiceTemplate, "id">) => string;
   updateInvoiceTemplate: (id: string, patch: Partial<InvoiceTemplate>) => void;
   deleteInvoiceTemplate: (id: string) => void;
@@ -2956,10 +2957,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateInvoice: (id, patch) => {
     if (!requireCap(get, "manage_invoice")) return;
+    const actor = currentUser()?.name;
     set((s) => ({
       invoices: s.invoices.map((invoice) => {
         if (invoice.id !== id) return invoice;
-        const next = { ...invoice, ...patch };
+        const next = {
+          ...invoice,
+          ...patch,
+          modifiedBy: patch.modifiedBy ?? actor,
+          modifiedAt: patch.modifiedAt ?? todayIso(),
+        };
         if (patch.lineItems) {
           const totals = invoiceTotals(patch.lineItems);
           next.amount = totals.total;
@@ -2968,6 +2975,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         return next;
       }),
     }));
+  },
+
+  deleteInvoice: (id) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    const invoice = get().invoices.find((row) => row.id === id);
+    if (!invoice) return;
+    set((s) => ({ invoices: s.invoices.filter((row) => row.id !== id) }));
+    get().pushToast(`${invoice.number} deleted`, "danger");
   },
 
   createInvoiceTemplate: (input) => {

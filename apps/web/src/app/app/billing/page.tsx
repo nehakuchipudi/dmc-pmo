@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { IfCan } from "@/components/auth/IfCan";
 import { ExpenseCreateForm } from "@/components/billing/ExpenseCreateForm";
+import { InvoiceEditorModal, InvoiceRowActions } from "@/components/billing/InvoiceRowActions";
 import { MaterialCreateForm } from "@/components/billing/MaterialCreateForm";
 import { PurchaseCreateForm } from "@/components/billing/PurchaseCreateForm";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
+import type { Invoice } from "@/lib/types";
 import { FilterChips, Modal, PageHeader, SideRail, StatusPill, Tabs, statusTone } from "@/components/ui";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { exportCsv } from "@/lib/pdf";
@@ -30,6 +32,7 @@ export default function BillingPage() {
   const [filter, setFilter] = useState(FILTERS[0]);
   const [tab, setTab] = useState("Invoices");
   const [newOpen, setNewOpen] = useState(false);
+  const [editing, setEditing] = useState<Invoice | null>(null);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [materialOpen, setMaterialOpen] = useState(false);
@@ -127,6 +130,7 @@ export default function BillingPage() {
                     <th>Terms</th>
                     <th>Due</th>
                     <th>Status</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -144,6 +148,7 @@ export default function BillingPage() {
                       <td>
                         <StatusPill tone={statusTone(inv.status)}>{inv.status}</StatusPill>
                       </td>
+                      <InvoiceRowActions invoice={inv} onEdit={setEditing} />
                     </tr>
                   ))}
                 </tbody>
@@ -277,6 +282,7 @@ export default function BillingPage() {
         </div>
       ) : null}
 
+      <InvoiceEditorModal invoice={editing} onClose={() => setEditing(null)} />
       <Modal open={newOpen} title="Create invoice" onClose={() => setNewOpen(false)} xl>
         <InvoiceCreateForm
           defaultCompanyId={companies[0]?.id}
