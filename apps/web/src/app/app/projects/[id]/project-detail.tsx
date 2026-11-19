@@ -256,6 +256,18 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             <>
               <RecordRailBlock title="Project details">
                 <dl className="space-y-2">
+                  <RecordFact label="Company">
+                    <Link href={`/app/companies/view/?id=${project.companyId}`} className="font-semibold text-[var(--color-navy)]">
+                      {project.companyName}
+                    </Link>
+                  </RecordFact>
+                  {companyContact ? (
+                    <RecordFact label="Primary contact">
+                      <Link href={`/app/contacts/view/?id=${companyContact.id}`} className="font-semibold text-[var(--color-navy)]">
+                        {companyContact.name}
+                      </Link>
+                    </RecordFact>
+                  ) : null}
                   <RecordFact label="Manager">{project.manager || "Unassigned"}</RecordFact>
                   <RecordFact label="Type">{project.projectType}</RecordFact>
                 </dl>
