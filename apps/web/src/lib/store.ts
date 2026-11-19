@@ -199,6 +199,7 @@ type CreateCompanyInput = {
   companyKind?: Company["companyKind"];
   accountManager: string;
   accountManagers?: string[];
+  teamMembers?: string[];
   industry: string;
   billingTerms: string;
   website?: string;
@@ -1064,6 +1065,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       billingTerms: input.billingTerms,
       portalContacts: 0,
       accountManagers: managers,
+      teamMembers: input.teamMembers ?? [],
       website: input.website ?? "",
       phone: input.phone ?? "",
       fax: input.fax ?? "",
