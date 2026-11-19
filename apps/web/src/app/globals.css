@@ -33,6 +33,7 @@
   --text-display: 1.12rem;
   --sidebar-width: 220px;
   --sidebar-collapsed: 64px;
+  --topbar-control: 40px;
 }
 
 @theme inline {
@@ -339,16 +340,16 @@ button, input, select, textarea { font: inherit; }
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(380px, 1.8fr) minmax(160px, 280px) auto;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 260px) auto;
+  gap: 12px;
   align-items: center;
-  min-height: 64px;
-  padding: 10px 22px;
+  min-height: 56px;
+  padding: 8px 18px;
   border-bottom: 1px solid var(--color-border);
   background: #fff;
   overflow: visible;
 }
-.topbar-portal { grid-template-columns: minmax(120px, 1fr) minmax(240px, 480px) auto; }
+.topbar-portal { grid-template-columns: minmax(0, 1fr) minmax(200px, 280px) auto; }
 .topbar-lead {
   display: flex;
   align-items: center;
@@ -360,10 +361,11 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   position: relative;
   z-index: 40;
   overflow: visible;
+  flex-shrink: 0;
 }
 .topbar .menu-popover {
   z-index: 60;
@@ -402,6 +404,7 @@ button, input, select, textarea { font: inherit; }
 
 .search {
   width: 100%;
+  height: var(--topbar-control);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -409,7 +412,7 @@ button, input, select, textarea { font: inherit; }
   border: 1px solid var(--color-border);
   background: var(--color-fog);
   border-radius: 999px;
-  padding: 9px 12px 9px 16px;
+  padding: 0 12px 0 14px;
   font-size: var(--text);
   outline: none;
   cursor: pointer;
@@ -430,8 +433,9 @@ button, input, select, textarea { font: inherit; }
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--topbar-control);
+  height: var(--topbar-control);
+  flex-shrink: 0;
   display: inline-grid;
   place-items: center;
   border-radius: 10px;
@@ -466,15 +470,52 @@ button, input, select, textarea { font: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: 280px;
-  min-height: 36px;
-  padding: 4px 10px 4px 8px;
+  height: var(--topbar-control);
+  min-height: var(--topbar-control);
+  padding: 0 10px 0 6px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: #fff;
   color: var(--color-ink);
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.context-btn {
+  min-width: 0;
+  max-width: 220px;
+}
+.profile-btn {
+  flex-shrink: 0;
+  max-width: none;
+  min-width: 0;
+  padding-right: 8px;
+}
+.profile-meta {
+  display: grid;
+  min-width: 7.25rem;
+  max-width: 9.5rem;
+  text-align: left;
+  line-height: 1.15;
+}
+.profile-name {
+  font-size: 0.81rem;
+  font-weight: 650;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-role {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-btn .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.64rem;
 }
 .context-btn:hover, .profile-btn:hover {
   background: var(--color-fog);
@@ -5019,7 +5060,12 @@ button, input, select, textarea { font: inherit; }
   .topbar-actions { min-width: 0; }
   .icon-btn.topbar-menu { display: inline-grid; }
   .search-kbd, .context-label { display: none; }
-  .context-btn { max-width: 44px; padding-right: 8px; }
+  .context-btn {
+    width: var(--topbar-control);
+    max-width: var(--topbar-control);
+    padding: 0;
+    justify-content: center;
+  }
   .kanban { grid-template-columns: 1fr 1fr; }
   .project-health-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
@@ -5047,7 +5093,7 @@ button, input, select, textarea { font: inherit; }
   .settings-shell { margin: -16px -16px 0; }
   .settings-main { padding: 16px; }
   .topbar {
-    padding: 10px 12px;
+    padding: 8px 12px;
     gap: 8px;
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
@@ -5055,8 +5101,15 @@ button, input, select, textarea { font: inherit; }
   .topbar-secondary,
   .topbar-timer { display: none; }
   .topbar-actions { gap: 6px; }
-  .profile-btn { max-width: 44px; padding: 4px; }
-  .search { padding: 8px 10px 8px 12px; min-width: 0; }
+  .profile-meta,
+  .profile-caret { display: none; }
+  .profile-btn {
+    width: var(--topbar-control);
+    max-width: var(--topbar-control);
+    padding: 0;
+    justify-content: center;
+  }
+  .search { padding: 0 10px 0 12px; min-width: 0; }
   .search .truncate { max-width: 18ch; }
   .create-popover, .context-popover, .profile-popover, .menu-popover { width: min(320px, calc(100vw - 24px)); }
   .gantt-grid { grid-template-columns: 1fr; }
