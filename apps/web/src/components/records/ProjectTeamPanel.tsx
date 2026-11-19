@@ -5,7 +5,7 @@ import { TonePill } from "@/components/records/RecordChrome";
 import { Avatar, ConfirmModal, Field, Modal, TextInput, TextSelect } from "@/components/ui";
 import {
   PROJECT_ROLES,
-  availableProjectMembers,
+  availableProjectPeople,
   projectTeamCards,
   projectTeamContributors,
   utilizationLabel,
@@ -43,6 +43,7 @@ export function ProjectTeamPanel({
   managerName?: string;
 }) {
   const team = useAppStore((s) => s.team);
+  const contacts = useAppStore((s) => s.contacts);
   const allocations = useAppStore((s) => s.allocations);
   const tasks = useAppStore((s) => s.tasks);
   const timeEntries = useAppStore((s) => s.timeEntries);
@@ -84,8 +85,8 @@ export function ProjectTeamPanel({
     [allocations, managerName, projectId, projectTasks, projectTime, team],
   );
   const available = useMemo(
-    () => availableProjectMembers(team, allocations, projectId),
-    [allocations, projectId, team],
+    () => availableProjectPeople(team, contacts, allocations, projectId),
+    [allocations, contacts, projectId, team],
   );
   const removeTarget = cards.find((card) => card.allocation.id === removeId);
   const totalAlloc = cards.reduce((sum, card) => sum + card.allocationPct, 0);
@@ -314,7 +315,7 @@ export function ProjectTeamPanel({
                 <option value="">Select a person</option>
                 {available.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} ({member.email})
+                    {member.name}{member.email ? ` (${member.email})` : ""}
                   </option>
                 ))}
               </TextSelect>

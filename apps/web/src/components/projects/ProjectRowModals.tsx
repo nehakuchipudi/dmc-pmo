@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/ui";
-import { PROJECT_ROLES, availableProjectMembers, weeklyHoursFromAllocation } from "@/lib/project-team";
+import { PROJECT_ROLES, availableProjectPeople, weeklyHoursFromAllocation } from "@/lib/project-team";
 import { allowedProjectTransitions, canChangeProjectStatus } from "@/lib/project-lifecycle";
 import { invoiceViewHref, projectTabHref, projectWorkspaceHref } from "@/lib/project-tabs";
 import { formatDisplayDate, money } from "@/lib/seed";
@@ -60,6 +60,7 @@ export function AssignWorkModal({
 }) {
   const router = useRouter();
   const team = useAppStore((s) => s.team);
+  const contacts = useAppStore((s) => s.contacts);
   const allocations = useAppStore((s) => s.allocations);
   const addProjectMember = useAppStore((s) => s.addProjectMember);
   const [memberId, setMemberId] = useState("");
@@ -75,8 +76,8 @@ export function AssignWorkModal({
   }, [project?.id]);
 
   const available = useMemo(
-    () => (project ? availableProjectMembers(team, allocations, project.id) : []),
-    [allocations, project, team],
+    () => (project ? availableProjectPeople(team, contacts, allocations, project.id) : []),
+    [allocations, contacts, project, team],
   );
 
   return (

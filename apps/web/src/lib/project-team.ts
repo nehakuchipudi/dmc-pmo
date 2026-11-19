@@ -1,6 +1,8 @@
 import type { ResourceAllocation, Task, TeamMember, TimeEntry } from "./types";
 import { allocationByMember } from "./ppm";
 
+export { availableProjectPeople } from "./people-picker";
+
 export const PROJECT_ROLES = [
   "Owner",
   "Project Manager",

@@ -30,6 +30,7 @@ import {
   TextSelect,
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
+import { ownerChoices } from "@/lib/people-picker";
 import { computeProjectMetrics, memberRate } from "@/lib/project-workspace";
 import { vendorCompanies } from "@/lib/company-kinds";
 import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
@@ -142,6 +143,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
   const team = useMemo(() => {
     const names = new Set<string>();
     teamMembers.filter((member) => member.active).forEach((member) => names.add(member.name));
+    contacts.forEach((row) => names.add(row.name));
     projectTasks.forEach((t) => names.add(t.assignee));
     ms.forEach((row) => {
       if (row.assignee) names.add(row.assignee);
@@ -151,7 +153,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
     project?.rates?.forEach((r) => names.add(r.memberName));
     if (project?.manager) names.add(project.manager);
     return [...names].filter(Boolean).sort((a, b) => a.localeCompare(b));
-  }, [allocations, ms, project?.id, project?.manager, project?.rates, projectTasks, projectTime, teamMembers]);
+  }, [allocations, contacts, ms, project?.id, project?.manager, project?.rates, projectTasks, projectTime, teamMembers]);
   const hoursByTask = useMemo(() => {
     const map: Record<string, number> = {};
     for (const row of projectTime) {
@@ -778,7 +780,14 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
             </TextSelect>
           </Field>
           <Field label="Owner">
-            <TextInput name="manager" defaultValue={project.manager} />
+            <TextSelect name="manager" defaultValue={project.manager}>
+              <option value="">Select owner</option>
+              {ownerChoices(teamMembers, contacts, project.manager).map((person) => (
+                <option key={person.id} value={person.name}>
+                  {person.name}
+                </option>
+              ))}
+            </TextSelect>
           </Field>
           <Field label="Type">
             <TextSelect name="projectType" defaultValue={project.projectType}>
