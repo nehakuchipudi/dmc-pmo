@@ -33,6 +33,7 @@ import { COMPANY_KINDS, companyKindOf } from "@/lib/company-kinds";
 import { industryChoices } from "@/lib/industries";
 import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, initialsFromName, money } from "@/lib/seed";
+import { invoiceViewHref } from "@/lib/project-tabs";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
 import type { CompanyAssetKind, CompanyAssetStatus, CompanyKind, CompanyStatus, Invoice } from "@/lib/types";
@@ -637,7 +638,10 @@ export function CompanyDetail({ id }: { id: string }) {
                     <dt>Next invoice</dt>
                     <dd>
                       {nextInvoice ? (
-                        <Link href={`/app/billing/view/?id=${nextInvoice.id}`} className="font-semibold text-[var(--color-navy)]">
+                        <Link
+                          href={invoiceViewHref(nextInvoice.id, `/app/companies/view/?id=${company.id}`)}
+                          className="font-semibold text-[var(--color-navy)]"
+                        >
                           {nextInvoice.number}
                         </Link>
                       ) : (
@@ -1041,7 +1045,10 @@ export function CompanyDetail({ id }: { id: string }) {
                   {companyInvoices.map((i) => (
                     <tr key={i.id}>
                       <td>
-                        <Link href={`/app/billing/view/?id=${i.id}`} className="font-medium text-[var(--color-navy)]">
+                        <Link
+                          href={invoiceViewHref(i.id, `/app/companies/view/?id=${company.id}`)}
+                          className="font-medium text-[var(--color-navy)]"
+                        >
                           {i.number}
                         </Link>
                       </td>
@@ -1050,7 +1057,11 @@ export function CompanyDetail({ id }: { id: string }) {
                       <td>
                         <TonePill value={i.status} />
                       </td>
-                      <InvoiceRowActions invoice={i} onEdit={setEditingInvoice} />
+                      <InvoiceRowActions
+                        invoice={i}
+                        onEdit={setEditingInvoice}
+                        returnTo={`/app/companies/view/?id=${company.id}`}
+                      />
                     </tr>
                   ))}
                 </tbody>
@@ -1069,7 +1080,7 @@ export function CompanyDetail({ id }: { id: string }) {
           onCancel={() => setInvoiceOpen(false)}
           onCreated={(invoiceId) => {
             setInvoiceOpen(false);
-            router.push(`/app/billing/view/?id=${invoiceId}`);
+            router.push(invoiceViewHref(invoiceId, `/app/companies/view/?id=${company.id}`));
           }}
         />
       </Modal>

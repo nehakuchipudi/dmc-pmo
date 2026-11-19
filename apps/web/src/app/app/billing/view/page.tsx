@@ -7,7 +7,7 @@ import { InvoiceDetail } from "../[id]/invoice-detail";
 function Inner() {
   const params = useSearchParams();
   const id = params.get("id") ?? "";
-  return <InvoiceDetail id={id} />;
+  return <InvoiceDetail id={id} returnTo={params.get("returnTo")} />;
 }
 
 export default function BillingViewPage() {

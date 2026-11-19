@@ -35,7 +35,7 @@ import { vendorCompanies } from "@/lib/company-kinds";
 import { scheduleWindow, sortPlanItems } from "@/lib/project-plan";
 import { formatDisplayDate, formatShortDate, initialsFromName, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
-import { PROJECT_WORKSPACE_TABS, resolveProjectTab } from "@/lib/project-tabs";
+import { PROJECT_WORKSPACE_TABS, invoiceViewHref, projectTabHref, resolveProjectTab } from "@/lib/project-tabs";
 import type { Invoice } from "@/lib/types";
 
 const TABS = [...PROJECT_WORKSPACE_TABS];
@@ -197,9 +197,14 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
     metrics;
   const billed = projectInvoices.reduce((sum, row) => sum + row.amount, 0);
   const windowStats = scheduleWindow(project.start, project.due, new Date().toISOString().slice(0, 10));
+  const projectId = project.id;
 
   function goTab(next: string) {
-    startTransition(() => setTab(resolveProjectTab(next)));
+    const resolved = resolveProjectTab(next);
+    if (resolved === tab) return;
+    const href = projectTabHref(projectId, resolved);
+    startTransition(() => setTab(resolved));
+    router.push(href, { scroll: false });
   }
 
   return (
@@ -655,7 +660,10 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                   {projectInvoices.map((i) => (
                     <tr key={i.id}>
                       <td>
-                        <Link href={`/app/billing/view/?id=${i.id}`} className="font-medium text-[var(--color-navy)]">
+                        <Link
+                          href={invoiceViewHref(i.id, projectTabHref(project.id, "Billing"))}
+                          className="font-medium text-[var(--color-navy)]"
+                        >
                           {i.number}
                         </Link>
                       </td>
@@ -664,7 +672,11 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
                       <td>
                         <TonePill value={i.status} />
                       </td>
-                      <InvoiceRowActions invoice={i} onEdit={setEditingInvoice} />
+                      <InvoiceRowActions
+                        invoice={i}
+                        onEdit={setEditingInvoice}
+                        returnTo={projectTabHref(project.id, "Billing")}
+                      />
                     </tr>
                   ))}
                   {!projectInvoices.length ? (
@@ -723,7 +735,7 @@ export function ProjectDetail({ id, initialTab }: { id: string; initialTab?: str
           onCancel={() => setInvoiceOpen(false)}
           onCreated={(id) => {
             setInvoiceOpen(false);
-            router.push(`/app/billing/view/?id=${id}`);
+            router.push(invoiceViewHref(id, projectTabHref(project.id, "Billing")));
           }}
         />
       </Modal>

@@ -51,6 +51,8 @@ const detail = readFileSync(join(root, "../app/app/projects/[id]/project-detail.
 assert.match(detail, /ProjectOverviewBoard/);
 assert.match(detail, /onEditPlan/);
 assert.match(detail, /createMilestone/);
+assert.match(detail, /projectTabHref/);
+assert.match(detail, /router\.push\(href, \{ scroll: false \}\)/);
 assert.doesNotMatch(detail, /project-health-strip/);
 assert.doesNotMatch(detail, /tab === "Tasks"/);
 assert.doesNotMatch(detail, /tab === "Rates"/);

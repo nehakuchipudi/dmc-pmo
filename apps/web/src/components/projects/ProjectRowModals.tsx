@@ -6,7 +6,7 @@ import { InvoiceCreateForm } from "@/components/InvoiceCreateForm";
 import { Field, Modal, TextInput, TextSelect, TextTextarea } from "@/components/ui";
 import { PROJECT_ROLES, availableProjectMembers, weeklyHoursFromAllocation } from "@/lib/project-team";
 import { allowedProjectTransitions, canChangeProjectStatus } from "@/lib/project-lifecycle";
-import { projectWorkspaceHref } from "@/lib/project-tabs";
+import { invoiceViewHref, projectTabHref, projectWorkspaceHref } from "@/lib/project-tabs";
 import { formatDisplayDate, money } from "@/lib/seed";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -306,7 +306,7 @@ export function CreateInvoiceModal({
           onCancel={onClose}
           onCreated={(id) => {
             onClose();
-            router.push(`/app/billing/view/?id=${id}`);
+            router.push(invoiceViewHref(id, projectTabHref(project.id, "Billing")));
           }}
         />
       ) : null}
