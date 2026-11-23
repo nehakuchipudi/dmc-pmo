@@ -831,12 +831,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-expanded={menu === "profile"}
                 onClick={() => setMenu((v) => (v === "profile" ? null : "profile"))}
               >
-                <Avatar initials={user.initials} name={user.name} />
-                <span className="hidden sm:grid text-left leading-tight">
-                  <span className="text-sm font-medium text-[var(--color-ink)]">{user.name.split(" ")[0]}</span>
-                  <span className="text-[11px] text-[var(--color-muted)]">{roleLabel(user.role)}</span>
+                <Avatar initials={user.initials} name={user.name} size={28} />
+                <span className="profile-meta">
+                  <span className="profile-name">{user.name.split(" ")[0]}</span>
+                  <span className="profile-role">{roleLabel(user.role)}</span>
                 </span>
-                <ChevronDown size={14} className="hidden sm:block text-[var(--color-muted)]" />
+                <ChevronDown size={14} className="profile-caret text-[var(--color-muted)]" />
               </button>
               {menu === "profile" ? (
                 <div className="menu-popover profile-popover fade-in">
