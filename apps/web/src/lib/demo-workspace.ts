@@ -5,6 +5,13 @@ import {
   DMC_MANAGER_NAME,
   withDmcInternalExample,
 } from "./dmc-internal-project";
+import {
+  SAN_ANGELO_COMPANY_ID,
+  SAN_ANGELO_COMPANY_NAME,
+  SAN_ANGELO_PROJECT_ID,
+  SAN_ANGELO_PROJECT_NAME,
+  withSanAngeloExample,
+} from "./san-angelo";
 import { initialsFromName } from "./seed";
 import {
   addDaysIso,
@@ -837,12 +844,23 @@ function pruneToDmcInternal(state: DemoWorkspaceState): DemoWorkspaceState {
     (row) => row.id === DMC_INTERNAL_PROJECT_ID || sameName(row.name, DMC_INTERNAL_PROJECT_NAME),
   );
   if (!company || !project) return state;
-  return retainLinkedRecords(
-    state,
-    [{ ...company, openProjects: 1 }],
-    [{ ...project, companyId: company.id, companyName: company.name }],
-    "dmc-only",
+  const sanCompany =
+    state.companies.find((row) => sameName(row.name, SAN_ANGELO_COMPANY_NAME)) ??
+    state.companies.find((row) => row.id === SAN_ANGELO_COMPANY_ID);
+  const sanProject = state.projects.find(
+    (row) => row.id === SAN_ANGELO_PROJECT_ID || sameName(row.name, SAN_ANGELO_PROJECT_NAME),
   );
+  const companies = [
+    { ...company, openProjects: Math.max(company.openProjects, 1) },
+    ...(sanCompany ? [{ ...sanCompany, openProjects: Math.max(sanCompany.openProjects, sanProject ? 1 : 0) }] : []),
+  ];
+  const projects = [
+    { ...project, companyId: company.id, companyName: company.name },
+    ...(sanCompany && sanProject
+      ? [{ ...sanProject, companyId: sanCompany.id, companyName: sanCompany.name }]
+      : []),
+  ];
+  return retainLinkedRecords(state, companies, projects, "dmc-only");
 }
 
 function stripRemovedDemo(state: DemoWorkspaceState): DemoWorkspaceState {
@@ -921,6 +939,21 @@ export function withDemoWorkspace(input: DemoWorkspaceState): DemoWorkspaceState
   });
   let next: DemoWorkspaceState = dmc ? { ...input, ...dmc } : { ...input };
   let changed = Boolean(dmc);
+
+  const sanAngelo = withSanAngeloExample({
+    companies: next.companies,
+    contacts: next.contacts,
+    projects: next.projects,
+    milestones: next.milestones,
+    tasks: next.tasks,
+    team: next.team,
+    allocations: next.allocations,
+    timeEntries: next.timeEntries,
+  });
+  if (sanAngelo) {
+    next = { ...next, ...sanAngelo };
+    changed = true;
+  }
 
   if (next.demoWorkspaceGeneration !== DEMO_WORKSPACE_GENERATION) {
     next = pruneToDmcInternal(dmcPlayRecords(next));
