@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Briefcase, ChevronDown, Flag, ListChecks, MoreHorizontal, Pause, Play, X } from "lucide-react";
-import { ConfirmModal, Field, Modal, StatusPill, TextInput, TextSelect, TextTextarea, statusTone } from "@/components/ui";
+import { ConfirmModal, Field, Modal, StatusPill, TextSelect, TextTextarea, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 import type { TimeEntry } from "@/lib/types";
@@ -271,7 +271,7 @@ function ActivityFields({
   const seededTask = tasks.find((item) => item.id === (entry?.taskId ?? work.taskId));
   const [taskId, setTaskId] = useState(seededTask?.parentTaskId ?? seededTask?.id ?? "");
   const [subtaskId, setSubtaskId] = useState(seededTask?.parentTaskId ? seededTask.id : "");
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(entry ? Math.round(entry.hours * 3600) : 0);
@@ -360,9 +360,6 @@ function ActivityFields({
       </button>
       {detailsOpen ? (
         <div className="ts-activity-grid">
-          <Field label="Start">
-            <TextInput type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          </Field>
           <Field label="Class">
             <TextSelect value={billable ? "client" : "internal"} onChange={(e) => setBillable(e.target.value === "client")}>
               <option value="client">Client work</option>

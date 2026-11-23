@@ -38,6 +38,8 @@ const modal = readFileSync(join(root, "../components/timesheets/TimesheetActivit
 assert.match(modal, /Add new activity/);
 assert.match(modal, /Save Log/);
 assert.match(modal, /More worklog details/);
+assert.match(modal, /const \[detailsOpen, setDetailsOpen\] = useState\(false\)/);
+assert.doesNotMatch(modal, /label="Start"/);
 assert.match(modal, /Rounded time/);
 assert.match(modal, /Hours worked/);
 assert.match(modal, /ts-hours-input/);

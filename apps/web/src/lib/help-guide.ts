@@ -216,7 +216,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Open Timesheets and stay on Weekly for day-to-day logging.",
       "Search Find work to add to your timesheet for a project, milestone, or task.",
       "Hover a day cell for the blue +, then Save log. Click the hours later to edit.",
-      "Use More worklog details for start time, class, milestone, and task.",
+      "Use More worklog details for class, milestone, and task.",
     ],
     tips: ["Staff can edit or delete their own drafts. Approvers change approved time. Extra filters live under the three dots."],
   },
