@@ -29,6 +29,7 @@ export const WORKSPACE_KEYS = [
   "paymentMethods",
   "invoiceLedgers",
   "catalogItems",
+  "quickbooksPrefs",
   "pricingSeedGeneration",
   "timeEntries",
   "notifications",

@@ -169,7 +169,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
       "Open Billing. Use New Expense, New Purchase, or New Material on those tabs.",
       "Create invoice, then select created expenses, purchases, and materials, or add them there.",
       "Send puts it on the client portal. Pay records collection.",
-      "Connect QuickBooks in Settings, Invoice & Pricing, then Send to QuickBooks on the invoice.",
+      "Connect QuickBooks in Settings, Invoice & Pricing. Import companies and invoices there, or Send to QuickBooks on an invoice.",
     ],
     canDo: ["Create, send, pay, rename, or generate an invoice", "Add expenses, purchases, and materials", "Send an invoice to QuickBooks"],
   },

@@ -121,6 +121,7 @@ export interface Company {
   teamMembers?: string[];
   notes?: string;
   files?: CompanyFile[];
+  quickbooksId?: string;
 }
 
 export interface ContactNote {
