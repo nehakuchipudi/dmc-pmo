@@ -154,7 +154,7 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
     howTo: [
       "Open Timesheets and search Weekly for a project, milestone, or task.",
       "Hover a day for the blue +, then Save log. Click the hours later to edit.",
-      "Use the timer on the log, or More worklog details for class, milestone, and task.",
+      "Set the hours with the timer or the rounded time field, then Save log.",
     ],
     canDo: ["Log time", "Edit or delete time", "Approve or reject time"],
   },
