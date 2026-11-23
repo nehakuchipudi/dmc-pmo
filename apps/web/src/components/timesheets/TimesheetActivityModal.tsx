@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Briefcase, ChevronDown, Flag, ListChecks, MoreHorizontal, Pause, Play, X } from "lucide-react";
-import { ConfirmModal, Field, Modal, StatusPill, TextInput, TextSelect, TextTextarea, statusTone } from "@/components/ui";
+import { ConfirmModal, Field, Modal, StatusPill, TextTextarea, statusTone } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 import type { TimeEntry } from "@/lib/types";
@@ -101,7 +101,6 @@ export function TimesheetActivityModal({
           <ActivityFields
             key={editing?.id ?? "add"}
             work={work}
-            date={date}
             entry={tab === "add" ? undefined : editing ?? undefined}
             personName={personName}
             submitLabel={editing && tab !== "add" ? "Save changes" : "Save Log"}
@@ -148,7 +147,7 @@ export function TimesheetActivityModal({
                 <div>
                   <strong>{entry.note || entry.taskName || entry.milestoneName || entry.projectName}</strong>
                   <p>
-                    {entry.start ?? "9:00"} · {entry.billable ? "Client work" : "Internal"}
+                    {entry.billable ? "Client work" : "Internal"}
                     {entry.userName !== user?.name ? ` · ${entry.userName}` : ""}
                   </p>
                 </div>
@@ -238,7 +237,6 @@ export function TimesheetActivityModal({
 
 function ActivityFields({
   work,
-  date,
   entry,
   personName,
   submitLabel,
@@ -246,7 +244,6 @@ function ActivityFields({
   onCancel,
 }: {
   work: TimesheetWork;
-  date: string;
   entry?: TimeEntry;
   personName: string;
   submitLabel: string;
@@ -261,17 +258,11 @@ function ActivityFields({
   }) => void;
   onCancel?: () => void;
 }) {
-  const milestones = useAppStore((s) => s.milestones);
-  const tasks = useAppStore((s) => s.tasks);
   const [hours, setHours] = useState(entry ? formatHms(entry.hours) : "01:00:00");
   const [note, setNote] = useState(entry?.note ?? `Time Entry - ${work.projectName}`);
-  const [billable, setBillable] = useState(entry?.billable ?? true);
-  const [start, setStart] = useState(entry?.start ?? "09:00");
-  const [milestoneId, setMilestoneId] = useState(entry?.milestoneId ?? work.milestoneId ?? "");
-  const seededTask = tasks.find((item) => item.id === (entry?.taskId ?? work.taskId));
-  const [taskId, setTaskId] = useState(seededTask?.parentTaskId ?? seededTask?.id ?? "");
-  const [subtaskId, setSubtaskId] = useState(seededTask?.parentTaskId ? seededTask.id : "");
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const billable = entry?.billable ?? true;
+  const milestoneId = entry?.milestoneId ?? work.milestoneId ?? "";
+  const taskId = entry?.taskId ?? work.taskId ?? "";
   const [running, setRunning] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(entry ? Math.round(entry.hours * 3600) : 0);
@@ -279,16 +270,6 @@ function ActivityFields({
   const [hoursError, setHoursError] = useState("");
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [loggedAt] = useState(() => new Date());
-  const phases = useMemo(
-    () => milestones.filter((item) => item.projectId === work.projectId && (item.kind === "phase" || !item.parentId)),
-    [milestones, work.projectId],
-  );
-  const parentTasks = useMemo(
-    () => tasks.filter((item) => item.projectId === work.projectId && !item.parentTaskId && (!milestoneId || item.milestoneId === milestoneId)),
-    [tasks, work.projectId, milestoneId],
-  );
-  const subtasks = useMemo(() => tasks.filter((item) => item.parentTaskId === taskId), [tasks, taskId]);
-
   useEffect(() => {
     if (!running || startedAt == null) return;
     const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
@@ -342,81 +323,13 @@ function ActivityFields({
           hours: parsed,
           note,
           billable,
-          start,
+          start: entry?.start ?? "",
           milestoneId,
-          taskId: subtaskId || taskId,
-          subtask: Boolean(subtaskId),
+          taskId,
+          subtask: work.kind === "subtask",
         });
       }}
     >
-      <button
-        type="button"
-        className="ts-worklog-toggle"
-        aria-expanded={detailsOpen}
-        onClick={() => setDetailsOpen((open) => !open)}
-      >
-        <ChevronDown size={16} className={detailsOpen ? "" : "ts-rotate"} />
-        More worklog details
-      </button>
-      {detailsOpen ? (
-        <div className="ts-activity-grid">
-          <Field label="Start">
-            <TextInput type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          </Field>
-          <Field label="Class">
-            <TextSelect value={billable ? "client" : "internal"} onChange={(e) => setBillable(e.target.value === "client")}>
-              <option value="client">Client work</option>
-              <option value="internal">Internal</option>
-            </TextSelect>
-          </Field>
-          <Field label="Milestone">
-            <TextSelect
-              value={milestoneId}
-              onChange={(e) => {
-                setMilestoneId(e.target.value);
-                setTaskId("");
-                setSubtaskId("");
-              }}
-            >
-              <option value="">Whole project</option>
-              {phases.map((phase) => (
-                <option key={phase.id} value={phase.id}>
-                  {phase.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Task">
-            <TextSelect
-              value={taskId}
-              onChange={(e) => {
-                setTaskId(e.target.value);
-                setSubtaskId("");
-              }}
-            >
-              <option value="">No task</option>
-              {parentTasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          {subtasks.length ? (
-            <Field label="Subtask">
-              <TextSelect value={subtaskId} onChange={(e) => setSubtaskId(e.target.value)}>
-                <option value="">No subtask</option>
-                {subtasks.map((task) => (
-                  <option key={task.id} value={task.id}>
-                    {task.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-          ) : null}
-        </div>
-      ) : null}
-
       <div className="ts-worklog-entry">
         <WorkGlyph kind={work.kind} />
         <div>
@@ -548,7 +461,6 @@ function ActivityFields({
         </div>
       </div>
       {hoursError ? <p className="ts-hours-error">{hoursError}</p> : null}
-      <p className="sr-only">{date}</p>
     </form>
   );
 }
