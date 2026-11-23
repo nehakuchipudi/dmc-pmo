@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DMC_MANAGER_NAME } from "./dmc-internal-project";
 import { emptyDemoState, withDemoWorkspace } from "./demo-workspace";
 import {
@@ -25,6 +28,7 @@ assert.equal(empty.companies[0]?.industry, "Government");
 assert.equal(empty.companies[0]?.website, "http://sanangelo.gov");
 assert.equal(empty.companies[0]?.status, "Active");
 assert.equal(empty.companies[0]?.accountManager, DMC_MANAGER_NAME);
+assert.deepEqual(empty.companies[0]?.teamMembers, [SAN_ANGELO_TEAM_NAME]);
 assert.equal(empty.contacts[0]?.name, SAN_ANGELO_CONTACT_NAME);
 assert.equal(empty.projects[0]?.name, SAN_ANGELO_PROJECT_NAME);
 assert.equal(empty.projects[0]?.projectType, "Client Work");
@@ -63,5 +67,23 @@ assert.ok(workspace.companies.some((row) => row.name === SAN_ANGELO_COMPANY_NAME
 assert.ok(workspace.projects.some((row) => row.name === SAN_ANGELO_PROJECT_NAME));
 assert.ok(workspace.contacts.some((row) => row.name === SAN_ANGELO_CONTACT_NAME));
 assert.equal(withDemoWorkspace(workspace), null);
+
+const revived = withSanAngeloExample({
+  companies: empty.companies.map((row) => ({ ...row, teamMembers: [] })),
+  contacts: empty.contacts,
+  projects: empty.projects,
+  milestones: empty.milestones,
+  tasks: empty.tasks,
+  team: empty.team,
+  allocations: empty.allocations,
+  timeEntries: empty.timeEntries,
+});
+assert.ok(revived);
+assert.deepEqual(revived.companies[0]?.teamMembers, [SAN_ANGELO_TEAM_NAME]);
+
+const root = dirname(fileURLToPath(import.meta.url));
+const company = readFileSync(join(root, "../app/app/companies/[id]/company-detail.tsx"), "utf8");
+assert.match(company, /Add manager[\s\S]*Add team/);
+assert.match(company, /RecordFact label="Team"/);
 
 console.log("san-angelo.verify ok");

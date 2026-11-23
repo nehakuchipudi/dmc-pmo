@@ -121,6 +121,7 @@ export function withSanAngeloExample(input: Collections): Collections | null {
       companyKind: "Client",
       accountManager: DMC_MANAGER_NAME,
       accountManagers: [DMC_MANAGER_NAME],
+      teamMembers: [SAN_ANGELO_TEAM_NAME],
       openProjects: 0,
       openTickets: 0,
       lastActivity: "Aug 24, 2026",
@@ -150,6 +151,12 @@ export function withSanAngeloExample(input: Collections): Collections | null {
     };
   if (!companies.some((row) => row.id === company.id)) {
     companies.push(company);
+    changed = true;
+  }
+  if (!(company.teamMembers ?? []).some((name) => sameName(name, SAN_ANGELO_TEAM_NAME))) {
+    company = { ...company, teamMembers: [...(company.teamMembers ?? []), SAN_ANGELO_TEAM_NAME] };
+    const idx = companies.findIndex((row) => row.id === company.id);
+    if (idx >= 0) companies[idx] = company;
     changed = true;
   }
 

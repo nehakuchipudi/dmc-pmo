@@ -118,6 +118,7 @@ export interface Company {
   favorite?: boolean;
   primaryContactId?: string;
   accountManagers?: string[];
+  teamMembers?: string[];
   notes?: string;
   files?: CompanyFile[];
 }
