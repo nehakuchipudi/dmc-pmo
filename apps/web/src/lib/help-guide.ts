@@ -523,7 +523,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Select Time and materials, Progress billing, Retainer period, Fixed fee milestone, or Expense recovery.",
       "Edit the name, title pattern, and terms. Leave amounts off.",
       "Rates and Tax Codes sit in the same section. Click a title to edit. Create invoice still lets you pick the same templates. Line items start empty.",
-      "Open QuickBooks to connect a company, then import tax codes or send invoices.",
+      "Open QuickBooks to connect a company, choose which customers and vendors to import, then import ledgers, products, companies, and invoices.",
     ],
     tips: ["Finance and Admin can save templates, rates, and tax codes. Amounts belong on the invoice."],
   },

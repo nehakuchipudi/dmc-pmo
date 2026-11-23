@@ -451,6 +451,186 @@ async function listTaxCodes(session) {
   };
 }
 
+function partyWhere(status) {
+  if (status === "All") return "";
+  if (status === "Inactive") return " where Active = false";
+  return " where Active = true";
+}
+
+function mapAccounts(rows = []) {
+  return (rows || [])
+    .filter((row) => row && String(row.Name || "").trim())
+    .map((row) => ({
+      quickbooksId: String(row.Id || ""),
+      title: String(row.Name || "").trim(),
+      code: String(row.AcctNum || row.Id || "").trim(),
+      active: row.Active !== false,
+      accountType: String(row.AccountType || ""),
+    }))
+    .filter((row) => row.quickbooksId && row.title);
+}
+
+function mapItems(rows = []) {
+  return (rows || [])
+    .filter((row) => row && String(row.Name || "").trim() && row.Type !== "Category")
+    .map((row) => ({
+      quickbooksId: String(row.Id || ""),
+      title: String(row.Name || "").trim(),
+      kind: row.Type === "Service" ? "Service" : "Material",
+      code: String(row.Sku || row.Name || "")
+        .trim()
+        .slice(0, 12)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, ""),
+      active: row.Active !== false,
+    }))
+    .filter((row) => row.quickbooksId && row.title);
+}
+
+function mapParties(rows = [], kind) {
+  return (rows || [])
+    .filter((row) => row && String(row.CompanyName || row.DisplayName || "").trim())
+    .map((row) => {
+      const address = [row.BillAddr?.Line1, row.BillAddr?.City, row.BillAddr?.CountrySubDivisionCode, row.BillAddr?.PostalCode]
+        .map((part) => String(part || "").trim())
+        .filter(Boolean)
+        .join(", ");
+      return {
+        quickbooksId: String(row.Id || ""),
+        name: String(row.CompanyName || row.DisplayName || "").trim(),
+        email: String(row.PrimaryEmailAddr?.Address || "").trim(),
+        phone: String(row.PrimaryPhone?.FreeFormNumber || "").trim(),
+        website: String(row.WebAddr?.URI || "").trim(),
+        address,
+        active: row.Active !== false,
+        contactName: [row.GivenName, row.FamilyName]
+          .map((part) => String(part || "").trim())
+          .filter(Boolean)
+          .join(" "),
+        kind: kind === "Contractor" ? "Contractor" : "Client",
+      };
+    })
+    .filter((row) => row.quickbooksId && row.name);
+}
+
+function mapInvoices(invoices = [], payments = [], customers = [], env = "sandbox") {
+  const customerById = Object.fromEntries((customers || []).map((row) => [String(row.Id), row]));
+  const paymentsByInvoice = {};
+  for (const payment of payments || []) {
+    for (const line of payment.Line || []) {
+      for (const link of line.LinkedTxn || []) {
+        if (link.TxnType !== "Invoice" || !link.TxnId) continue;
+        const id = String(link.TxnId);
+        if (!paymentsByInvoice[id]) paymentsByInvoice[id] = [];
+        paymentsByInvoice[id].push({
+          date: String(payment.TxnDate || ""),
+          amount: round2(line.Amount),
+          description: String(payment.PrivateNote || "QuickBooks payment"),
+        });
+      }
+    }
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  return (invoices || [])
+    .filter((row) => row && row.Id)
+    .map((row) => {
+      const customer = customerById[String(row.CustomerRef?.value)] || {};
+      const total = round2(row.TotalAmt);
+      const outstanding = round2(row.Balance);
+      let status = "Sent";
+      if (outstanding <= 0) status = "Paid";
+      else if (row.DueDate && String(row.DueDate) < today) status = "Overdue";
+      const lines = (row.Line || [])
+        .filter((line) => line && line.DetailType !== "SubTotalLineDetail" && line.DetailType !== "DiscountLineDetail")
+        .filter((line) => line.DetailType === "SalesItemLineDetail" || line.DetailType === "DescriptionOnly")
+        .map((line) => ({
+          description: String(line.Description || "Services").trim() || "Services",
+          amount: round2(line.Amount),
+        }))
+        .filter((line) => line.amount !== 0);
+      const paid = (paymentsByInvoice[String(row.Id)] || []).filter((payment) => payment.amount > 0);
+      const paymentsForInvoice =
+        paid.length > 0
+          ? paid
+          : outstanding < total
+            ? [{ date: String(row.TxnDate || today), amount: round2(total - outstanding), description: "QuickBooks payment" }]
+            : [];
+      return {
+        quickbooksId: String(row.Id),
+        number: String(row.DocNumber || row.Id).slice(0, 40),
+        title: String(row.CustomerMemo?.value || row.PrivateNote || `Invoice ${row.DocNumber || row.Id}`).slice(0, 180),
+        companyName: String(row.CustomerRef?.name || customer.DisplayName || customer.CompanyName || "QuickBooks customer"),
+        billEmail: String(row.BillEmail?.Address || customer.PrimaryEmailAddr?.Address || "").trim(),
+        contactName: [customer.GivenName, customer.FamilyName]
+          .map((part) => String(part || "").trim())
+          .filter(Boolean)
+          .join(" "),
+        total,
+        outstanding,
+        txnDate: String(row.TxnDate || today),
+        dueDate: String(row.DueDate || row.TxnDate || today),
+        status,
+        lines: lines.length ? lines : [{ description: "Services", amount: total }],
+        payments: paymentsForInvoice,
+        href: invoiceHref(env, row.Id),
+      };
+    });
+}
+
+async function qboQueryAll(session, entity, where = "") {
+  const rows = [];
+  let start = 1;
+  for (let page = 0; page < 5; page += 1) {
+    const statement = `select * from ${entity}${where} startposition ${start} maxresults 1000`;
+    const result = await qboQuery(session, statement);
+    session = result.session;
+    const batch = result.response[entity] || [];
+    rows.push(...batch);
+    if (batch.length < 1000) break;
+    start += 1000;
+  }
+  return { session, rows };
+}
+
+async function pullQuickBooks(session, resource, prefs = {}) {
+  if (resource === "accounts") {
+    const result = await qboQuery(session, "select * from Account where AccountType = 'Bank' maxresults 200");
+    return { session: result.session, accounts: mapAccounts(result.response.Account || []) };
+  }
+  if (resource === "ledgers") {
+    const accounts = await qboQueryAll(session, "Account");
+    session = accounts.session;
+    const taxes = await listTaxCodes(session);
+    return { session: taxes.session, ledgers: mapAccounts(accounts.rows), codes: taxes.codes };
+  }
+  if (resource === "items") {
+    const items = await qboQueryAll(session, "Item");
+    return { session: items.session, items: mapItems(items.rows) };
+  }
+  if (resource === "companies") {
+    const customers = await qboQueryAll(session, "Customer", partyWhere(prefs.customerStatus));
+    session = customers.session;
+    const vendors = await qboQueryAll(session, "Vendor", partyWhere(prefs.vendorStatus));
+    return {
+      session: vendors.session,
+      customers: mapParties(customers.rows, "Client"),
+      vendors: mapParties(vendors.rows, "Contractor"),
+    };
+  }
+  if (resource === "invoices") {
+    const invoices = await qboQueryAll(session, "Invoice");
+    session = invoices.session;
+    const payments = await qboQueryAll(session, "Payment");
+    session = payments.session;
+    const customers = await qboQueryAll(session, "Customer");
+    return {
+      session: customers.session,
+      invoices: mapInvoices(invoices.rows, payments.rows, customers.rows, session.environment),
+    };
+  }
+  throw new Error("Unknown QuickBooks import.");
+}
+
 module.exports = {
   COOKIE,
   OAUTH_COOKIE,
@@ -476,6 +656,12 @@ module.exports = {
   companyName,
   createQboInvoice,
   listTaxCodes,
+  partyWhere,
+  mapAccounts,
+  mapItems,
+  mapParties,
+  mapInvoices,
+  pullQuickBooks,
   setSessionCookie,
   setOauthCookie,
   clearOauthCookie,

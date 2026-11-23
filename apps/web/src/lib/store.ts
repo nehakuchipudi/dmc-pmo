@@ -168,7 +168,20 @@ import {
   invoiceTotals,
   nextInvoiceNumber,
 } from "./invoice";
-import { mergeImportedTaxCodes } from "./quickbooks";
+import {
+  defaultQuickBooksPrefs,
+  mergeImportedCatalog,
+  mergeImportedLedgers,
+  mergeImportedTaxCodes,
+  planCompanyImport,
+  planInvoiceImport,
+  type QuickBooksAccount,
+  type QuickBooksCatalogItem,
+  type QuickBooksInvoiceImport,
+  type QuickBooksParty,
+  type QuickBooksPrefs,
+  type QuickBooksTaxCode,
+} from "./quickbooks";
 import {
   DEFAULT_RETAINER_INVOICE_LINE,
   DEFAULT_RETAINER_RATE,
@@ -313,6 +326,7 @@ type AppState = {
   paymentMethods: PaymentMethod[];
   invoiceLedgers: InvoiceLedger[];
   catalogItems: CatalogItem[];
+  quickbooksPrefs: QuickBooksPrefs;
   pricingSeedGeneration: string;
   timeEntries: TimeEntry[];
   timeTimers: TimeTimer[];
@@ -552,6 +566,11 @@ type AppState = {
     created: number;
     updated: number;
   };
+  setQuickbooksPrefs: (patch: Partial<QuickBooksPrefs>) => void;
+  importQuickBooksLedgers: (rows: QuickBooksAccount[], codes: QuickBooksTaxCode[]) => { ledgers: number; taxes: number };
+  importQuickBooksCatalog: (rows: QuickBooksCatalogItem[]) => { created: number; updated: number };
+  importQuickBooksCompanies: (rows: QuickBooksParty[]) => { created: number; updated: number };
+  importQuickBooksInvoices: (rows: QuickBooksInvoiceImport[], prefs: QuickBooksPrefs) => { created: number; updated: number };
   createPaymentMethod: (input: Omit<PaymentMethod, "id">) => string;
   updatePaymentMethod: (id: string, patch: Partial<PaymentMethod>) => void;
   setPaymentMethodActive: (id: string, active: boolean) => void;
@@ -958,6 +977,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   paymentMethods: seedPaymentMethods.map((row) => ({ ...row })),
   invoiceLedgers: seedInvoiceLedgers.map((row) => ({ ...row })),
   catalogItems: seedCatalogItems.map((row) => ({ ...row })),
+  quickbooksPrefs: defaultQuickBooksPrefs,
   pricingSeedGeneration: PRICING_SEED_GENERATION,
   timeEntries: seedTimeEntries,
   timeTimers: [],
@@ -3085,6 +3105,182 @@ export const useAppStore = create<AppState>((set, get) => ({
     const updated = plan.update.length;
     if (created || updated) get().pushToast(`Imported ${created + updated} tax codes from QuickBooks`);
     else get().pushToast("QuickBooks had no new tax codes", "info");
+    return { created, updated };
+  },
+  setQuickbooksPrefs: (patch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set((s) => ({ quickbooksPrefs: { ...s.quickbooksPrefs, ...patch } }));
+  },
+  importQuickBooksLedgers: (rows, codes) => {
+    if (!requireCap(get, "manage_invoice")) return { ledgers: 0, taxes: 0 };
+    const ledgerPlan = mergeImportedLedgers(get().invoiceLedgers, rows);
+    const taxPlan = mergeImportedTaxCodes(get().taxCodes, codes);
+    set((s) => {
+      let invoiceLedgers = s.invoiceLedgers;
+      for (const row of ledgerPlan.update) {
+        invoiceLedgers = invoiceLedgers.map((item) => (item.id === row.id ? { ...item, ...row.patch } : item));
+      }
+      let taxCodes = s.taxCodes;
+      for (const row of taxPlan.update) {
+        taxCodes = taxCodes.map((item) => (item.id === row.id ? { ...item, ...row.patch } : item));
+      }
+      return {
+        invoiceLedgers: [...invoiceLedgers, ...ledgerPlan.create.map((row) => ({ ...row, id: uid("led") }))],
+        taxCodes: [...taxCodes, ...taxPlan.create.map((row) => ({ ...row, id: uid("tax") }))],
+      };
+    });
+    const ledgers = ledgerPlan.create.length + ledgerPlan.update.length;
+    const taxes = taxPlan.create.length + taxPlan.update.length;
+    get().pushToast(
+      ledgers || taxes ? `Imported ${ledgers} ledgers and ${taxes} tax codes from QuickBooks` : "QuickBooks had no ledgers or tax codes",
+      ledgers || taxes ? "success" : "info",
+    );
+    return { ledgers, taxes };
+  },
+  importQuickBooksCatalog: (rows) => {
+    if (!requireCap(get, "manage_invoice")) return { created: 0, updated: 0 };
+    const plan = mergeImportedCatalog(get().catalogItems, rows);
+    set((s) => {
+      let catalogItems = s.catalogItems;
+      for (const row of plan.update) {
+        catalogItems = catalogItems.map((item) => (item.id === row.id ? { ...item, ...row.patch } : item));
+      }
+      return { catalogItems: [...catalogItems, ...plan.create.map((row) => ({ ...row, id: uid("cat") }))] };
+    });
+    const created = plan.create.length;
+    const updated = plan.update.length;
+    get().pushToast(
+      created || updated ? `Imported ${created + updated} products and services from QuickBooks` : "QuickBooks had no products or services",
+      created || updated ? "success" : "info",
+    );
+    return { created, updated };
+  },
+  importQuickBooksCompanies: (rows) => {
+    if (!requireCap(get, "manage_invoice")) return { created: 0, updated: 0 };
+    const plan = planCompanyImport(get().companies, rows);
+    const manager = currentActor();
+    set((s) => ({
+      companies: [
+        ...plan.create.map((row) => ({
+          id: uid("c"),
+          name: row.name,
+          initials: initialsFromName(row.name),
+          status: "Active" as const,
+          companyKind: row.kind,
+          accountManager: manager,
+          accountManagers: [manager],
+          openProjects: 0,
+          openTickets: 0,
+          lastActivity: formatDisplayDate(todayIso()),
+          industry: "QuickBooks",
+          billingTerms: "Net 30",
+          portalContacts: 0,
+          website: row.website || "",
+          phone: row.phone || "",
+          email: row.email || "",
+          address: row.address || "",
+          tags: ["QuickBooks"],
+          notes: "",
+          createdAt: todayIso(),
+          quickbooksId: row.quickbooksId,
+        })),
+        ...s.companies.map((company) => {
+          const hit = plan.update.find((row) => row.id === company.id);
+          return hit ? { ...company, ...hit.patch } : company;
+        }),
+      ],
+    }));
+    const created = plan.create.length;
+    const updated = plan.update.length;
+    get().pushToast(
+      created || updated ? `Imported ${created} companies and updated ${updated} from QuickBooks` : "QuickBooks had no companies to import",
+      created || updated ? "success" : "info",
+    );
+    return { created, updated };
+  },
+  importQuickBooksInvoices: (rows, prefs) => {
+    if (!requireCap(get, "manage_invoice")) return { created: 0, updated: 0 };
+    const syncedAt = new Date().toISOString();
+    const plan = planInvoiceImport(get().invoices, get().companies, get().contacts, rows, prefs, syncedAt);
+    const manager = currentActor();
+    const companyIds = new Map<string, string>();
+    const freshCompanies: Company[] = [];
+    for (const row of [...plan.create, ...plan.update]) {
+      const party = "ensureCompany" in row ? row.ensureCompany : undefined;
+      if (!party || companyIds.has(party.quickbooksId)) continue;
+      const existing = get().companies.find((company) => company.name.toLowerCase() === party.name.toLowerCase());
+      if (existing) {
+        companyIds.set(party.quickbooksId, existing.id);
+        continue;
+      }
+      const id = uid("c");
+      companyIds.set(party.quickbooksId, id);
+      freshCompanies.push({
+        id,
+        name: party.name,
+        initials: initialsFromName(party.name),
+        status: "Active",
+        companyKind: "Client",
+        accountManager: manager,
+        accountManagers: [manager],
+        openProjects: 0,
+        openTickets: 0,
+        lastActivity: formatDisplayDate(todayIso()),
+        industry: "QuickBooks",
+        billingTerms: "Net 30",
+        portalContacts: 0,
+        email: party.email || "",
+        tags: ["QuickBooks"],
+        notes: "",
+        createdAt: todayIso(),
+        quickbooksId: party.quickbooksId,
+      });
+    }
+    const createdInvoices: Invoice[] = plan.create.map((row) => {
+      const companyId = row.companyId || (row.ensureCompany ? companyIds.get(row.ensureCompany.quickbooksId) : "") || "";
+      const lineItems = row.lines.map((line) => emptyInvoiceLine("service", { description: line.description, amount: line.amount }));
+      return {
+        id: uid("inv"),
+        number: row.number,
+        companyId,
+        companyName: row.companyName,
+        amount: row.total,
+        terms: "Imported",
+        due: row.dueDate,
+        status: row.status,
+        lineItems,
+        title: row.title,
+        owner: manager,
+        billToName: row.billToName,
+        billToContactId: row.billToContactId,
+        currency: "USD",
+        raised: row.txnDate,
+        description: row.title,
+        payments: row.payments.map((payment) => ({ ...payment, id: uid("pay") })),
+        quickbooksId: row.quickbooksId,
+        quickbooksDocNumber: row.number,
+        quickbooksHref: row.href,
+        quickbooksSyncedAt: syncedAt,
+      };
+    });
+    set((s) => ({
+      companies: [...freshCompanies, ...s.companies],
+      invoices: [
+        ...createdInvoices,
+        ...s.invoices.map((invoice) => {
+          const hit = plan.update.find((row) => row.id === invoice.id);
+          if (!hit) return invoice;
+          const companyId = hit.patch.companyId || (hit.ensureCompany ? companyIds.get(hit.ensureCompany.quickbooksId) : invoice.companyId);
+          return { ...invoice, ...hit.patch, companyId: companyId || invoice.companyId };
+        }),
+      ],
+    }));
+    const created = plan.create.length;
+    const updated = plan.update.length;
+    get().pushToast(
+      created || updated ? `Imported ${created} invoices and updated ${updated} from QuickBooks` : "QuickBooks had no invoices to import",
+      created || updated ? "success" : "info",
+    );
     return { created, updated };
   },
   updateTaxCode: (id, patch) => {
