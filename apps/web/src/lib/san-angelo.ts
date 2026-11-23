@@ -159,6 +159,19 @@ export function withSanAngeloExample(input: Collections): Collections | null {
     if (idx >= 0) companies[idx] = company;
     changed = true;
   }
+  const managers = (company.accountManagers ?? []).map((name) => name.trim()).filter(Boolean);
+  const accountManager = company.accountManager?.trim() || DMC_MANAGER_NAME;
+  if (!managers.length) {
+    company = { ...company, accountManager, accountManagers: [accountManager] };
+    const idx = companies.findIndex((row) => row.id === company.id);
+    if (idx >= 0) companies[idx] = company;
+    changed = true;
+  } else if (!company.accountManager?.trim()) {
+    company = { ...company, accountManager: managers[0] };
+    const idx = companies.findIndex((row) => row.id === company.id);
+    if (idx >= 0) companies[idx] = company;
+    changed = true;
+  }
 
   if (
     !contacts.some(

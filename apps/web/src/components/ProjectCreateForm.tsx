@@ -10,6 +10,7 @@ import {
   projectTemplateById,
   templatesForProjectType,
 } from "@/lib/ppm";
+import { directoryPeople } from "@/lib/people-picker";
 import { useAppStore } from "@/lib/store";
 import { addDays, todayIso } from "@/lib/timesheet";
 
@@ -76,7 +77,8 @@ export function ProjectCreateForm({
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [newContactName, setNewContactName] = useState("");
   const [newContactEmail, setNewContactEmail] = useState("");
-  const owner = team.find((member) => member.id === ownerId) ?? preferred;
+  const owners = directoryPeople(team, contacts);
+  const owner = owners.find((person) => person.id === ownerId) ?? owners.find((person) => person.id === preferred?.id) ?? owners[0];
   const companyOptions = storeCompanies.length ? storeCompanies : companies;
   const companyContacts = useMemo(
     () => contacts.filter((row) => row.companyId === companyId),
@@ -297,9 +299,9 @@ export function ProjectCreateForm({
       <Field label="Project manager" required>
         <TextSelect value={ownerId} onChange={(e) => setOwnerId(e.target.value)} required>
           <option value="">Select manager</option>
-          {team.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.name} ({member.email})
+          {owners.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.name}{person.email ? ` (${person.email})` : ""}
             </option>
           ))}
         </TextSelect>

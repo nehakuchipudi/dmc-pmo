@@ -33,6 +33,7 @@ import { COMPANY_KINDS, companyKindOf } from "@/lib/company-kinds";
 import { industryChoices } from "@/lib/industries";
 import { formatPhoneDisplay } from "@/lib/contacts";
 import { formatDisplayDate, initialsFromName, money } from "@/lib/seed";
+import { directoryPeople, listedPeople, peopleNotNamed } from "@/lib/people-picker";
 import { invoiceViewHref } from "@/lib/project-tabs";
 import { useAppStore } from "@/lib/store";
 import { exportCsv } from "@/lib/pdf";
@@ -48,6 +49,40 @@ const TABS = [
   "Assets",
   "Billing",
 ];
+
+function AddPersonSelect({
+  label,
+  people,
+  resetKey,
+  onAdd,
+}: {
+  label: string;
+  people: { id: string; name: string }[];
+  resetKey: string;
+  onAdd: (name: string) => void;
+}) {
+  if (!people.length) return null;
+  return (
+    <select
+      key={resetKey}
+      className="field-input"
+      aria-label={label}
+      defaultValue=""
+      onChange={(e) => {
+        const name = e.target.value;
+        if (!name) return;
+        onAdd(name);
+      }}
+    >
+      <option value="">{label}</option>
+      {people.map((person) => (
+        <option key={person.id} value={person.name}>
+          {person.name}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function activityDate(when: string) {
   if (/today|yesterday/i.test(when)) return "2026-08-05";
@@ -168,8 +203,8 @@ export function CompanyDetail({ id }: { id: string }) {
     [companyFiles, projectFiles, company?.name],
   );
   const primary = companyContacts.find((c) => c.id === company?.primaryContactId) ?? companyContacts[0];
-  const managers = company?.accountManagers?.length ? company.accountManagers : company ? [company.accountManager] : [];
-  const companyTeam = company?.teamMembers ?? [];
+  const managers = listedPeople(company?.accountManagers, company?.accountManager);
+  const companyTeam = listedPeople(company?.teamMembers);
   const paidRevenue = companyInvoices.filter((i) => i.status === "Paid").reduce((sum, i) => sum + i.amount, 0);
   const overdueAmount = companyInvoices.filter((i) => i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
   const outstanding = companyInvoices.filter((i) => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
@@ -208,18 +243,21 @@ export function CompanyDetail({ id }: { id: string }) {
   }
 
   const tags = company.tags ?? [company.industry];
-  const availableManagers = team.filter((m) => m.active && !managers.includes(m.name));
-  const availableTeam = team.filter((m) => m.active && !companyTeam.includes(m.name));
+  const companyId = company.id;
+  const directory = directoryPeople(team, contacts);
+  const availableManagers = peopleNotNamed(directory, managers);
+  const availableTeam = peopleNotNamed(directory, companyTeam);
 
   function setManagers(next: string[]) {
-    updateCompany(company!.id, {
-      accountManagers: next,
-      accountManager: next[0] ?? company!.accountManager,
+    const names = listedPeople(next);
+    updateCompany(companyId, {
+      accountManagers: names,
+      accountManager: names[0] ?? "",
     });
   }
 
   function setCompanyTeam(next: string[]) {
-    updateCompany(company!.id, { teamMembers: next });
+    updateCompany(companyId, { teamMembers: listedPeople(next) });
   }
 
   return (
@@ -329,29 +367,19 @@ export function CompanyDetail({ id }: { id: string }) {
                         ) : null}
                       </div>
                     ))}
-                    {availableManagers.length ? (
-                      <select
-                        className="field-input"
-                        value=""
-                        onChange={(e) => {
-                          if (!e.target.value) return;
-                          setManagers([...managers, e.target.value]);
-                        }}
-                      >
-                        <option value="">Add manager</option>
-                        {availableManagers.map((m) => (
-                          <option key={m.id} value={m.name}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
+                    {!managers.length ? <div className="text-sm text-[var(--color-muted)]">None assigned.</div> : null}
+                    <AddPersonSelect
+                      label="Add manager"
+                      people={availableManagers}
+                      resetKey={`manager-${managers.join("|")}`}
+                      onAdd={(name) => setManagers([...managers, name])}
+                    />
                   </div>
                 </RecordFact>
                 <RecordFact label="Team">
                   <div className="space-y-1.5">
                     {companyTeam.map((name) => {
-                      const member = team.find((row) => row.name === name);
+                      const member = team.find((row) => row.name === name) ?? contacts.find((row) => row.name === name);
                       return (
                         <div key={name} className="flex items-center justify-between gap-2 text-sm">
                           <span className="flex min-w-0 items-center gap-2">
@@ -369,26 +397,15 @@ export function CompanyDetail({ id }: { id: string }) {
                         </div>
                       );
                     })}
-                    {availableTeam.length ? (
-                      <select
-                        className="field-input"
-                        value=""
-                        onChange={(e) => {
-                          if (!e.target.value) return;
-                          setCompanyTeam([...companyTeam, e.target.value]);
-                        }}
-                      >
-                        <option value="">Add team</option>
-                        {availableTeam.map((m) => (
-                          <option key={m.id} value={m.name}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-                    {!companyTeam.length && !availableTeam.length ? (
+                    {!companyTeam.length ? (
                       <div className="text-sm text-[var(--color-muted)]">No team assigned.</div>
                     ) : null}
+                    <AddPersonSelect
+                      label="Add team"
+                      people={availableTeam}
+                      resetKey={`team-${companyTeam.join("|")}`}
+                      onAdd={(name) => setCompanyTeam([...companyTeam, name])}
+                    />
                   </div>
                 </RecordFact>
                 <RecordFact label="Portal">{company.portalContacts} enabled contacts</RecordFact>
@@ -1261,7 +1278,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </Field>
           <Field label="Owner">
             <TextSelect name="owner" defaultValue={managers[0] ?? team[0]?.name}>
-              {[...managers, ...team.map((m) => m.name)].filter((v, i, arr) => arr.indexOf(v) === i).map((name) => (
+              {listedPeople(managers, team.map((m) => m.name), contacts.map((row) => row.name)).map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>
