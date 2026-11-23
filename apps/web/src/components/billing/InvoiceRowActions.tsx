@@ -9,15 +9,18 @@ import { RowMenu } from "@/components/RowMenu";
 import { ConfirmModal, Field, Modal, TextTextarea } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { invoiceSubject } from "@/lib/invoice";
+import { invoiceViewHref } from "@/lib/project-tabs";
 import { useAppStore } from "@/lib/store";
 import type { Invoice } from "@/lib/types";
 
 export function InvoiceRowActions({
   invoice,
   onEdit,
+  returnTo,
 }: {
   invoice: Invoice;
   onEdit: (invoice: Invoice) => void;
+  returnTo?: string;
 }) {
   const router = useRouter();
   const { user, can } = useAuth();
@@ -51,7 +54,7 @@ export function InvoiceRowActions({
           role="menuitem"
           onClick={() => {
             setAnchor(null);
-            router.push(`/app/billing/view/?id=${invoice.id}`);
+            router.push(invoiceViewHref(invoice.id, returnTo));
           }}
         >
           View

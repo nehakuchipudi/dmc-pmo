@@ -200,6 +200,10 @@ assert.match(projectBilling, /New invoice/);
 assert.match(projectBilling, /InvoiceCreateForm/);
 assert.match(projectBilling, /InvoiceRowActions/);
 assert.match(projectBilling, /InvoiceEditorModal/);
+assert.match(projectBilling, /projectTabHref/);
+assert.match(projectBilling, /router\.push\(href, \{ scroll: false \}\)/);
+assert.match(projectBilling, /invoiceViewHref/);
+assert.match(projectBilling, /returnTo=\{projectTabHref\(project\.id, "Billing"\)\}/);
 
 const store = readFileSync(join(root, "store.ts"), "utf8");
 assert.match(store, /deleteInvoice: \(id\) =>/);
@@ -207,7 +211,14 @@ assert.match(store, /skipMail/);
 assert.match(store, /deliverableDocs: opts\?\.deliverableDocs/);
 assert.match(store, /invoices: s\.invoices\.filter\(\(row\) => row\.id !== id\)/);
 
+const invoiceDetail = readFileSync(join(root, "../app/app/billing/[id]/invoice-detail.tsx"), "utf8");
+assert.match(invoiceDetail, /returnTo/);
+assert.match(invoiceDetail, /safeAppHref/);
+assert.match(invoiceDetail, /billingHref/);
+
 const rowActions = readFileSync(join(root, "../components/billing/InvoiceRowActions.tsx"), "utf8");
+assert.match(rowActions, /invoiceViewHref/);
+assert.match(rowActions, /returnTo/);
 assert.match(rowActions, /\bView\b/);
 assert.match(rowActions, /\bEdit\b/);
 assert.match(rowActions, /Add activity/);

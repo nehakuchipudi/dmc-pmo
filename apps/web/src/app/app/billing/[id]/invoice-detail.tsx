@@ -13,10 +13,12 @@ import type { MailAttachment } from "@/lib/deliver-mail";
 import { formatShortDate, moneyExact } from "@/lib/seed";
 import { exportInvoicePdf, mailAttachmentsForInvoice } from "@/lib/pdf";
 import { createQuickBooksInvoice, quickbooksInvoicePatch, quickbooksSettingsHref } from "@/lib/quickbooks";
+import { safeAppHref } from "@/lib/project-tabs";
 import { useAppStore } from "@/lib/store";
 
-export function InvoiceDetail({ id }: { id: string }) {
+export function InvoiceDetail({ id, returnTo }: { id: string; returnTo?: string | null }) {
   const router = useRouter();
+  const billingHref = safeAppHref(returnTo) ?? "/app/billing";
   const invoices = useAppStore((s) => s.invoices);
   const companies = useAppStore((s) => s.companies);
   const contacts = useAppStore((s) => s.contacts);
@@ -62,7 +64,7 @@ export function InvoiceDetail({ id }: { id: string }) {
     return (
       <div className="fade-in panel p-6">
         <p className="font-semibold text-[var(--color-navy)]">Invoice not found</p>
-        <Link href="/app/billing" className="btn btn-primary mt-4">
+        <Link href={billingHref} className="btn btn-primary mt-4">
           Back to billing
         </Link>
       </div>
@@ -94,7 +96,7 @@ export function InvoiceDetail({ id }: { id: string }) {
   return (
     <div className="fade-in invoice-view">
       <div className="invoice-view-crumb">
-        <Link href="/app/billing">Billing</Link> / {invoice.number}
+        <Link href={billingHref}>Billing</Link> / {invoice.number}
       </div>
       <aside className="invoice-view-rail">
         {project ? (
@@ -216,7 +218,7 @@ export function InvoiceDetail({ id }: { id: string }) {
         danger
         onConfirm={() => {
           deleteInvoice(invoice.id);
-          router.push("/app/billing");
+          router.push(billingHref);
         }}
         onClose={() => setDeleteOpen(false)}
       />

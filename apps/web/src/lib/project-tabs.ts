@@ -32,3 +32,22 @@ export function projectWorkspaceHref(id: string, tab?: string) {
   if (!tab) return `/app/projects/view/?id=${id}`;
   return `/app/projects/view/?id=${id}&tab=${encodeURIComponent(tab)}`;
 }
+
+export function projectTabHref(id: string, tab?: string | null) {
+  const resolved = resolveProjectTab(tab);
+  return projectWorkspaceHref(id, resolved === "Overview" ? undefined : resolved);
+}
+
+export function invoiceViewHref(id: string, returnTo?: string) {
+  const params = new URLSearchParams({ id });
+  const safeReturn = safeAppHref(returnTo);
+  if (safeReturn) params.set("returnTo", safeReturn);
+  return `/app/billing/view/?${params.toString()}`;
+}
+
+export function safeAppHref(value?: string | null) {
+  if (!value) return undefined;
+  if (!value.startsWith("/app/")) return undefined;
+  if (value.startsWith("//") || value.includes("://") || value.includes("\\")) return undefined;
+  return value;
+}

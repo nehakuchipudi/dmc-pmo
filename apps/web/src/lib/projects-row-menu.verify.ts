@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PROJECT_WORKSPACE_TABS, projectWorkspaceHref, resolveProjectTab } from "./project-tabs";
+import {
+  PROJECT_WORKSPACE_TABS,
+  invoiceViewHref,
+  projectTabHref,
+  projectWorkspaceHref,
+  resolveProjectTab,
+  safeAppHref,
+} from "./project-tabs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -10,6 +17,14 @@ assert.equal(resolveProjectTab("Schedule"), "Schedule");
 assert.equal(resolveProjectTab("team"), "Team");
 assert.equal(resolveProjectTab("missing"), "Overview");
 assert.equal(projectWorkspaceHref("p1", "Schedule"), "/app/projects/view/?id=p1&tab=Schedule");
+assert.equal(projectTabHref("p1", "Billing"), "/app/projects/view/?id=p1&tab=Billing");
+assert.equal(projectTabHref("p1", "Overview"), "/app/projects/view/?id=p1");
+assert.equal(projectTabHref("p1"), "/app/projects/view/?id=p1");
+assert.equal(safeAppHref("/app/projects/view/?id=p1&tab=Billing"), "/app/projects/view/?id=p1&tab=Billing");
+assert.equal(safeAppHref("https://example.com"), undefined);
+assert.equal(safeAppHref("//example.com"), undefined);
+assert.match(invoiceViewHref("inv-1", "/app/projects/view/?id=p1&tab=Billing"), /returnTo=/);
+assert.doesNotMatch(invoiceViewHref("inv-1", "https://example.com"), /returnTo=/);
 assert.ok(PROJECT_WORKSPACE_TABS.includes("Schedule"));
 assert.ok(PROJECT_WORKSPACE_TABS.includes("Team"));
 
