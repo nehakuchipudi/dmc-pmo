@@ -1067,6 +1067,30 @@ button, input, select, textarea { font: inherit; }
 .metric-grid-fit {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
+.metric-grid-line {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.metric-grid-line .metric-card {
+  min-height: 0;
+  padding: 8px 10px 7px;
+  border-radius: 10px;
+}
+.metric-grid-line .metric-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+}
+.metric-grid-line .metric-value {
+  margin-top: 2px;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+.metric-grid-line .metric-hint {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
 .metric-card {
   padding: 16px 16px 14px;
   border: 1px solid var(--color-border);
@@ -1595,10 +1619,12 @@ button, input, select, textarea { font: inherit; }
 }
 @media (max-width: 1200px) {
   .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric-grid-line { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .split-2, .split-3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-grid-line { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .page-header {
