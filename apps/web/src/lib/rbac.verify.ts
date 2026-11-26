@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applyTeamRole, can, canAccessHref, canCreateKind, canSeeFinancials } from "./rbac";
+import { applyTeamRole, bindRoleGrants, can, canAccessHref, canCreateKind, canSeeFinancials, defaultRoleGrants, permissionCatalogCaps, roleCapabilities } from "./rbac";
 
 assert.equal(can("admin", "manage_users"), true);
 assert.equal(can("admin", "pay_invoice"), true);
@@ -60,5 +60,18 @@ assert.equal(
   )?.role,
   "pm",
 );
+
+const catalog = permissionCatalogCaps();
+assert.equal(new Set(catalog).size, catalog.length);
+assert.deepEqual([...catalog].sort(), [...roleCapabilities("admin")].sort());
+const grants = defaultRoleGrants();
+grants.staff = [...grants.staff, "view_billing"];
+bindRoleGrants(() => grants);
+assert.equal(can("staff", "view_billing"), true);
+assert.equal(canAccessHref("staff", "/app/billing"), true);
+assert.equal(can("admin", "manage_users"), true);
+bindRoleGrants(() => null);
+assert.equal(can("staff", "view_billing"), false);
+assert.equal(canAccessHref("staff", "/app/billing"), false);
 
 console.log("rbac matrix ok");
