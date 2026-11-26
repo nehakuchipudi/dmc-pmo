@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Globe, Layers, MoreVertical, Receipt, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
+import { Database, Globe, Layers, MoreVertical, Receipt, Settings as SettingsIcon, Users, Workflow, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { RowMenu } from "@/components/RowMenu";
 import { Avatar, Modal, StatusPill } from "@/components/ui";
 import { IfCan } from "@/components/auth/IfCan";
 import { EmailDomainRecords } from "@/components/settings/EmailDomainRecords";
 import { OutlookMailCard } from "@/components/settings/OutlookMailCard";
+import { SettingsAccelo } from "@/components/settings/SettingsAccelo";
 import { SettingsInvoicePricing } from "@/components/settings/SettingsInvoicePricing";
 import { readTeamMemberForm, TeamMemberForm, USER_ROLES } from "@/components/settings/TeamMemberForm";
 import { roleLabel, useAuth } from "@/lib/auth";
@@ -20,9 +21,9 @@ import { ROLE_SUMMARIES } from "@/lib/rbac";
 import { useAppStore } from "@/lib/store";
 import { inviteLandingHref } from "@/lib/user-invite";
 
-type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "billing" | "prefs";
+type SettingsSection = "capabilities" | "users" | "lifecycle" | "email" | "billing" | "accelo" | "prefs";
 
-const SECTIONS: SettingsSection[] = ["capabilities", "users", "lifecycle", "email", "billing", "prefs"];
+const SECTIONS: SettingsSection[] = ["capabilities", "users", "lifecycle", "email", "billing", "accelo", "prefs"];
 
 function isSettingsSection(value: string | null): value is SettingsSection {
   return !!value && SECTIONS.includes(value as SettingsSection);
@@ -34,6 +35,7 @@ const RAIL: { id: SettingsSection; label: string; icon: typeof Users; needUsers?
   { id: "lifecycle", label: "Lifecycle", icon: Workflow, needUsers: true },
   { id: "email", label: "Email domain", icon: Globe, needUsers: true },
   { id: "billing", label: "Invoice & Pricing", icon: Receipt, needBilling: true },
+  { id: "accelo", label: "Accelo import", icon: Database, needBilling: true },
   { id: "prefs", label: "Preferences", icon: SettingsIcon },
 ];
 
@@ -436,6 +438,7 @@ export function SettingsWorkspace() {
         ) : null}
 
         {section === "billing" ? <SettingsInvoicePricing panel={panel} /> : null}
+        {section === "accelo" ? <SettingsAccelo /> : null}
 
         {section === "email" ? (
           <>
