@@ -1057,6 +1057,50 @@ button, input, select, textarea { font: inherit; }
   border-radius: 8px;
   background: #fff;
 }
+.perm-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.perm-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.perm-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+.perm-nav button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.perm-nav button.is-active {
+  background: var(--color-navy);
+  color: #fff;
+}
+.perm-sheet { padding: 18px 20px; }
+.perm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+}
+.perm-label { display: block; font-weight: 650; }
+.perm-detail { display: block; margin-top: 2px; color: var(--color-muted); font-size: 0.85rem; }
+@media (max-width: 900px) {
+  .perm-layout { grid-template-columns: 1fr; }
+}
 
 .metric-grid {
   display: grid;

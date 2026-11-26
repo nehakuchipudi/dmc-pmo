@@ -201,6 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const workOrders = useAppStore((s) => s.workOrders);
   const enabledPacks = useAppStore((s) => s.enabledPacks);
   const rolePacks = useAppStore((s) => s.rolePacks);
+  const roleGrants = useAppStore((s) => s.roleGrants);
 
   const recordId = searchParams.get("id");
   const focusCompany = companies.find((c) => c.id === focusCompanyId) ?? null;
@@ -287,7 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
       ...workOrders.filter((row) => row.title.toLowerCase().includes(q)).map((row) => ({ href: "/app/work-orders", label: row.title, type: "Work order" })),
     ].filter((hit) => canAccessHref(user?.role, hit.href) && canUsePack(packForHref(hit.href), enabledPacks, user?.role, rolePacks)).slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, workOrders, enabledPacks, rolePacks, user]);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, workOrders, enabledPacks, rolePacks, roleGrants, user]);
 
   const recentHits = useMemo(
     () =>

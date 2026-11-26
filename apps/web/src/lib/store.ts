@@ -29,7 +29,7 @@ import {
   users,
 } from "./seed";
 import { allAccounts, findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
-import { applyTeamRole, can, isAssignedName, type Capability } from "./rbac";
+import { applyTeamRole, bindRoleGrants, can, defaultRoleGrants, isAssignedName, withRoleGrant, type Capability, type EditableRole, type RoleGrants } from "./rbac";
 import { makeActivity } from "./activity";
 import {
   DEFAULT_PROJECT_WORKFLOW,
@@ -361,6 +361,7 @@ type AppState = {
   projectWorkflow: ProjectWorkflow;
   enabledPacks: PackId[];
   rolePacks: RolePacks;
+  roleGrants: RoleGrants | null;
   workOrders: WorkOrder[];
   recurringServices: RecurringService[];
   serviceDocuments: ServiceDocument[];
@@ -632,6 +633,8 @@ type AppState = {
   createDependency: (input: { predecessorProjectId: string; successorProjectId: string; type: CrossDependency["type"]; note: string }) => string;
   setEnabledPacks: (packs: PackId[]) => void;
   setRolePacks: (role: Role, packs: PackId[]) => void;
+  setRoleCapability: (role: EditableRole, cap: Capability, enabled: boolean) => void;
+  resetRoleGrants: (role: EditableRole) => void;
   createWorkOrder: (input: {
     title: string;
     companyId: string;
@@ -1012,6 +1015,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   focusCompanyId: null,
   projectWorkflow: loadProjectWorkflow(),
   ...loadCapabilityPacks(),
+  roleGrants: null,
   ...loadServiceRecords(),
 
   pushToast: (message, tone = "success") => {
@@ -4305,6 +4309,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Role access updated");
   },
 
+  setRoleCapability: (role, cap, enabled) => {
+    if (!requireCap(get, "manage_users")) return;
+    set({ roleGrants: withRoleGrant(get().roleGrants, role, cap, enabled) });
+  },
+
+  resetRoleGrants: (role) => {
+    if (!requireCap(get, "manage_users")) return;
+    const base = get().roleGrants ?? defaultRoleGrants();
+    const fresh = defaultRoleGrants();
+    set({ roleGrants: { ...base, [role]: fresh[role] } });
+    get().pushToast("Role permissions restored");
+  },
+
   createWorkOrder: (input) => {
     if (!requireCap(get, "view_service_ops")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
@@ -4475,6 +4492,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Service operations trial started");
   },
 }));
+
+bindRoleGrants(() => useAppStore.getState().roleGrants);
 
 function formatDisplayDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);
