@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   const page = Math.max(0, Number(queryValue(req, "page") || 0) || 0);
   if (!RESOURCES.has(resource)) return json(res, 400, { error: "Unknown Accelo record type." });
   try {
-    const result = await countPage(session, resource, page);
+    const result = await countPage(session, resource, page, queryValue(req, "pass"));
     return json(res, 200, { resource, page, count: result.matched, done: result.done });
   } catch (err) {
     return json(res, 502, { error: err instanceof Error ? err.message : "Accelo could not be counted." });

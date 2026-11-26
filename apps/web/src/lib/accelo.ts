@@ -352,15 +352,21 @@ export async function connectAccelo(secret: string) {
   return { ok: true as const };
 }
 
-export async function countAcceloPage(resource: AcceloResource, page: number) {
-  const res = await fetch(`/api/accelo/count?resource=${resource}&page=${page}`, { credentials: "include" });
+export function acceloImportEnabled(connected: boolean, busy: "count" | "import" | null) {
+  return connected && busy !== "import";
+}
+
+export async function countAcceloPage(resource: AcceloResource, page: number, pass = "") {
+  const extra = pass ? `&pass=${encodeURIComponent(pass)}` : "";
+  const res = await fetch(`/api/accelo/count?resource=${resource}&page=${page}${extra}`, { credentials: "include" });
   const data = (await res.json().catch(() => ({}))) as { count?: number; done?: boolean; error?: string };
   if (!res.ok) return { ok: false as const, error: data.error || "Accelo could not be counted." };
   return { ok: true as const, count: data.count || 0, done: Boolean(data.done) };
 }
 
-export async function pullAcceloPage(resource: AcceloResource, page: number) {
-  const res = await fetch(`/api/accelo/pull?resource=${resource}&page=${page}`, { credentials: "include" });
+export async function pullAcceloPage(resource: AcceloResource, page: number, pass = "") {
+  const extra = pass ? `&pass=${encodeURIComponent(pass)}` : "";
+  const res = await fetch(`/api/accelo/pull?resource=${resource}&page=${page}${extra}`, { credentials: "include" });
   const data = (await res.json().catch(() => ({}))) as { rows?: AcceloBatch[keyof AcceloBatch]; done?: boolean; error?: string };
   if (!res.ok) return { ok: false as const, error: data.error || "Accelo could not be read." };
   return { ok: true as const, rows: data.rows || [], done: Boolean(data.done) };

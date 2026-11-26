@@ -1,4 +1,4 @@
-const { RESOURCES, acceloGet, json, mapPage, queryValue, readSession } = require("./_lib");
+const { RESOURCES, json, pullPage, queryValue, readSession } = require("./_lib");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -9,8 +9,8 @@ module.exports = async function handler(req, res) {
   const page = Math.max(0, Number(queryValue(req, "page") || 0) || 0);
   if (!RESOURCES.has(resource)) return json(res, 400, { error: "Unknown Accelo record type." });
   try {
-    const rows = await acceloGet(session, resource, page);
-    return json(res, 200, { resource, page, done: rows.length < 100, rows: mapPage(resource, rows) });
+    const result = await pullPage(session, resource, page, queryValue(req, "pass"));
+    return json(res, 200, { resource, page, done: result.done, rows: result.rows });
   } catch (err) {
     return json(res, 502, { error: err instanceof Error ? err.message : "Accelo could not be read." });
   }

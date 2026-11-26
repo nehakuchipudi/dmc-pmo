@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyAcceloBatch, type AcceloCompanyRow, type AcceloJobRow, type AcceloWorkspace } from "./accelo";
+import { acceloImportEnabled, applyAcceloBatch, type AcceloCompanyRow, type AcceloJobRow, type AcceloWorkspace } from "./accelo";
 
 const require = createRequire(import.meta.url);
 const lib = require("../../../../api/accelo/_lib.js") as {
@@ -14,6 +14,7 @@ const lib = require("../../../../api/accelo/_lib.js") as {
   mapInvoice: (row: unknown) => { status: string; amount: number; outstanding: number; number: string };
   mapActivity: (row: unknown) => { hours: number; billable: boolean; projectId: string } | null;
   RESOURCES: { has: (value: string) => boolean };
+  activityScanDone: (rows: Array<{ billable?: number; nonbillable?: number }>, field: string) => boolean;
 };
 
 assert.equal(lib.acceloDate(1700000000), "2023-11-14");
@@ -56,6 +57,17 @@ const ui = readFileSync(join(root, "../components/settings/SettingsAccelo.tsx"),
 assert.match(ui, /ACCELO_DEPLOYMENT/);
 assert.match(ui, /Count Accelo/);
 assert.match(ui, /Import into DMC PMO/);
+assert.equal(acceloImportEnabled(true, "count"), true);
+assert.equal(acceloImportEnabled(true, null), true);
+assert.equal(acceloImportEnabled(true, "import"), false);
+assert.equal(acceloImportEnabled(false, null), false);
+const timed = Array.from({ length: 100 }, (_, index) => ({ billable: 1000 - index, nonbillable: 0 }));
+const emails = Array.from({ length: 100 }, () => ({ billable: 0, nonbillable: 0 }));
+const unsorted = Array.from({ length: 100 }, (_, index) => ({ billable: index, nonbillable: 0 }));
+assert.equal(lib.activityScanDone(timed, "billable"), false);
+assert.equal(lib.activityScanDone(emails, "billable"), true);
+assert.equal(lib.activityScanDone(unsorted, "billable"), false);
+assert.equal(lib.activityScanDone([{ billable: 30, nonbillable: 0 }], "billable"), true);
 assert.doesNotMatch(ui, /[\u2013\u2014]/);
 
 console.log("accelo.verify ok");
