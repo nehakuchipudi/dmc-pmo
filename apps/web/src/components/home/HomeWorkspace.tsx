@@ -466,7 +466,7 @@ function CompanyHome({ companyId }: { companyId: string }) {
         <span className="text-[var(--color-muted)]">{company.billingTerms}</span>
         {company.address ? <span className="text-[var(--color-muted)]">{company.address}</span> : null}
       </div>
-      <MetricGrid>
+      <MetricGrid className="metric-grid-line">
         {showDelivery ? <MetricCard label="Open projects" value={companyProjects.length} hint={`${company.openProjects} marked open on the record`} /> : null}
         <MetricCard
           label="Open tickets"
