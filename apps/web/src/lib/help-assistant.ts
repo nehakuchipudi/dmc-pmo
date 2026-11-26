@@ -65,10 +65,10 @@ function tokens(value: string) {
     .filter((word) => word.length > 1 && !STOP.has(word));
 }
 
-function visibleArticles(audience: HelpAudience, role?: Role | null) {
+function visibleArticles(audience: HelpAudience, role?: Role | null, userId?: string | null) {
   return HELP_ARTICLES.filter((article) => {
     if (article.audience !== audience && article.audience !== "both") return false;
-    if (role && article.viewCap && !can(role, article.viewCap)) return false;
+    if (role && article.viewCap && !can(role, article.viewCap, userId)) return false;
     return true;
   });
 }
@@ -91,18 +91,18 @@ function hrefsFor(article: HelpArticle): { href: string; label: string }[] {
   return [{ href: article.href, label: `Open ${article.title}` }];
 }
 
-function articleAnswer(article: HelpArticle, role?: Role | null): HelpAnswer {
+function articleAnswer(article: HelpArticle, role?: Role | null, userId?: string | null): HelpAnswer {
   const lines = [
     `${article.title}: ${article.summary}`,
     article.steps.length ? `How to use it:\n${article.steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}` : "",
     article.tips[0] ? article.tips[0] : "",
   ].filter(Boolean);
-  if (role && article.viewCap && !can(role, article.viewCap)) {
+  if (role && article.viewCap && !can(role, article.viewCap, userId)) {
     lines.push(`Your ${roleLabel(role)} role cannot open this module. Ask an Admin if you need access.`);
   }
   return {
     text: lines.join("\n\n"),
-    hrefs: role && article.viewCap && !can(role, article.viewCap) ? [] : hrefsFor(article),
+    hrefs: role && article.viewCap && !can(role, article.viewCap, userId) ? [] : hrefsFor(article),
     articleId: article.id,
     starters: followUps(article),
   };
@@ -165,10 +165,11 @@ function greeting(role?: Role | null): HelpAnswer {
 export function answerHelpQuestion(
   rawQuestion: string,
   history: HelpChatMessage[],
-  options: { role?: Role | null; audience?: HelpAudience },
+  options: { role?: Role | null; audience?: HelpAudience; userId?: string | null },
 ): HelpAnswer {
   const audience = options.audience ?? "internal";
   const role = options.role;
+  const userId = options.userId;
   const raw = rawQuestion.trim().toLowerCase();
   if (!raw) return greeting(role);
   if (/^(hi|hello|hey|help|thanks|thank you)\b/.test(raw) && raw.split(/\s+/).length < 4) return greeting(role);
@@ -188,7 +189,7 @@ export function answerHelpQuestion(
     }))
     .sort((a, b) => b.score - a.score);
 
-  const knowledge = audience === "portal" ? null : answerProductKnowledge(rawQuestion, { role });
+  const knowledge = audience === "portal" ? null : answerProductKnowledge(rawQuestion, { role, userId });
   if (knowledge?.topicId === "ppm-chain" && /connect|relation|between|flow|align|chain/.test(raw)) {
     return { text: knowledge.text, hrefs: knowledge.hrefs, articleId: "strategy", starters: knowledge.starters };
   }
@@ -214,11 +215,11 @@ export function answerHelpQuestion(
     .filter((row) => row.score >= 6 && row.article.id !== best.article.id)
     .map((row) => row.article);
 
-  const primary = articleAnswer(best.article, role);
+  const primary = articleAnswer(best.article, role, userId);
   if (extras.length) {
     primary.text += `\n\nRelated: ${extras.map((article) => article.title).join(", ")}.`;
     extras.forEach((article) => {
-      if (article.href && (!role || !article.viewCap || can(role, article.viewCap))) {
+      if (article.href && (!role || !article.viewCap || can(role, article.viewCap, userId))) {
         primary.hrefs.push({ href: article.href, label: `Open ${article.title}` });
       }
     });
@@ -238,9 +239,9 @@ export function helpStarters(role?: Role | null): string[] {
   return ["How do I add a user?", "How do I create an invoice?", "Explain the project workspace", "What can each role do?"];
 }
 
-export function canSeeHelpHref(role: Role | undefined | null, href: string) {
+export function canSeeHelpHref(role: Role | undefined | null, href: string, userId?: string | null) {
   const article = HELP_ARTICLES.find((item) => item.href === href);
   if (!article?.viewCap) return true;
   if (!role) return true;
-  return can(role, article.viewCap as Capability);
+  return can(role, article.viewCap as Capability, userId);
 }

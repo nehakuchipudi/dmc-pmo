@@ -98,7 +98,7 @@ export function CreateForms({
   }, [kind]);
 
   if (!kind) return null;
-  if (!canCreateKind(user?.role, kind)) {
+  if (!canCreateKind(user?.role, kind, user?.id)) {
     return (
       <Modal open title="Restricted" onClose={onClose}>
         <p className="text-sm text-[var(--color-muted)]">Your role cannot create this record.</p>

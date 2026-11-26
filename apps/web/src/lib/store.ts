@@ -29,7 +29,7 @@ import {
   users,
 } from "./seed";
 import { allAccounts, findAccount, findAccountByEmail, readAccountExtras, upsertDirectoryUser, writeAccountExtras } from "./directory";
-import { applyTeamRole, bindRoleGrants, can, defaultRoleGrants, isAssignedName, withRoleGrant, type Capability, type EditableRole, type RoleGrants } from "./rbac";
+import { applyTeamRole, bindRoleGrants, bindUserGrants, can, defaultRoleGrants, isAssignedName, roleGrantList, withRoleGrant, withUserGrant, withoutUserGrants, type Capability, type EditableRole, type RoleGrants, type UserGrants } from "./rbac";
 import { makeActivity } from "./activity";
 import {
   DEFAULT_PROJECT_WORKFLOW,
@@ -362,6 +362,7 @@ type AppState = {
   enabledPacks: PackId[];
   rolePacks: RolePacks;
   roleGrants: RoleGrants | null;
+  userGrants: UserGrants | null;
   workOrders: WorkOrder[];
   recurringServices: RecurringService[];
   serviceDocuments: ServiceDocument[];
@@ -635,6 +636,8 @@ type AppState = {
   setRolePacks: (role: Role, packs: PackId[]) => void;
   setRoleCapability: (role: EditableRole, cap: Capability, enabled: boolean) => void;
   resetRoleGrants: (role: EditableRole) => void;
+  setUserCapability: (userId: string, role: EditableRole, cap: Capability, enabled: boolean) => void;
+  clearUserGrants: (userId: string) => void;
   createWorkOrder: (input: {
     title: string;
     companyId: string;
@@ -922,22 +925,23 @@ function currentUser() {
 }
 
 function requireCap(get: () => Pick<AppState, "pushToast">, cap: Capability): boolean {
-  if (can(currentUser()?.role, cap)) return true;
+  const user = currentUser();
+  if (can(user?.role, cap, user?.id)) return true;
   get().pushToast("Your role cannot do that.", "danger");
   return false;
 }
 
 function requireAny(get: () => Pick<AppState, "pushToast">, ...caps: Capability[]): boolean {
-  const role = currentUser()?.role;
-  if (caps.some((cap) => can(role, cap))) return true;
+  const user = currentUser();
+  if (caps.some((cap) => can(user?.role, cap, user?.id))) return true;
   get().pushToast("Your role cannot do that.", "danger");
   return false;
 }
 
 function canMutateTask(task: { assignee: string; assigneeInitials?: string }): boolean {
   const user = currentUser();
-  if (can(user?.role, "manage_plan")) return true;
-  return can(user?.role, "edit_assigned_task") && isAssignedName(user, task.assignee, task.assigneeInitials);
+  if (can(user?.role, "manage_plan", user?.id)) return true;
+  return can(user?.role, "edit_assigned_task", user?.id) && isAssignedName(user, task.assignee, task.assigneeInitials);
 }
 
 function currentActor() {
@@ -1016,6 +1020,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   projectWorkflow: loadProjectWorkflow(),
   ...loadCapabilityPacks(),
   roleGrants: null,
+  userGrants: null,
   ...loadServiceRecords(),
 
   pushToast: (message, tone = "success") => {
@@ -2568,7 +2573,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().pushToast("Staff can only edit their own time.", "danger");
       return;
     }
-    if (prev.status === "Approved" && !can(actor?.role, "approve_time")) {
+    if (prev.status === "Approved" && !can(actor?.role, "approve_time", actor?.id)) {
       get().pushToast("Approved time needs an approver to change.", "danger");
       return;
     }
@@ -2612,7 +2617,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().pushToast("Staff can only delete their own time.", "danger");
       return;
     }
-    if (prev.status === "Approved" && !can(actor?.role, "approve_time")) {
+    if (prev.status === "Approved" && !can(actor?.role, "approve_time", actor?.id)) {
       get().pushToast("Approved time needs an approver to delete.", "danger");
       return;
     }
@@ -4322,6 +4327,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().pushToast("Role permissions restored");
   },
 
+  setUserCapability: (userId, role, cap, enabled) => {
+    if (!requireCap(get, "manage_users")) return;
+    const base = roleGrantList(get().roleGrants, role);
+    set({ userGrants: withUserGrant(get().userGrants, userId, base, cap, enabled) });
+  },
+
+  clearUserGrants: (userId) => {
+    if (!requireCap(get, "manage_users")) return;
+    set({ userGrants: withoutUserGrants(get().userGrants, userId) });
+    get().pushToast("This person now follows the role");
+  },
+
   createWorkOrder: (input) => {
     if (!requireCap(get, "view_service_ops")) return "";
     const company = get().companies.find((c) => c.id === input.companyId);
@@ -4494,6 +4511,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 }));
 
 bindRoleGrants(() => useAppStore.getState().roleGrants);
+bindUserGrants(() => useAppStore.getState().userGrants);
 
 function formatDisplayDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);

@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const team = useAppStore((s) => s.team);
   const roleGrants = useAppStore((s) => s.roleGrants);
+  const userGrants = useAppStore((s) => s.userGrants);
   const resolved = useMemo(() => applyTeamRole(user, team), [user, team]);
 
   useEffect(() => {
@@ -79,10 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       isInternal: !!resolved && resolved.role !== "client",
       isClient: !!resolved && resolved.role === "client",
-      can: (cap: Capability) => roleCan(resolved?.role, cap),
+      can: (cap: Capability) => roleCan(resolved?.role, cap, resolved?.id),
       canSeeFinancials: roleSeesMoney(resolved, team),
     }),
-    [resolved, team, roleGrants],
+    [resolved, team, roleGrants, userGrants],
   );
 
   if (!ready) {

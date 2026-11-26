@@ -377,13 +377,19 @@ const CREATE_KIND_CAP: Record<CreateRecordKind, Capability> = {
 
 export type EditableRole = Exclude<Role, "admin">;
 export type RoleGrants = Record<EditableRole, Capability[]>;
+export type UserGrants = Record<string, Capability[]>;
 
 const EDITABLE_ROLES: EditableRole[] = ["leadership", "pm", "finance", "staff", "client"];
 
 let readRoleGrants: () => RoleGrants | null = () => null;
+let readUserGrants: () => UserGrants | null = () => null;
 
 export function bindRoleGrants(read: () => RoleGrants | null) {
   readRoleGrants = read;
+}
+
+export function bindUserGrants(read: () => UserGrants | null) {
+  readUserGrants = read;
 }
 
 export function defaultRoleGrants(): RoleGrants {
@@ -396,22 +402,49 @@ export function defaultRoleGrants(): RoleGrants {
   };
 }
 
-function grantsFor(role: Role): readonly Capability[] {
+function grantsFor(role: Role, userId?: string | null): readonly Capability[] {
   if (role === "admin") return ALL_CAPS;
+  if (userId) {
+    const personal = readUserGrants()?.[userId];
+    if (personal) return personal;
+  }
   const custom = readRoleGrants();
   const list = custom?.[role] ?? defaultRoleGrants()[role];
   return list ?? [];
 }
 
-export function can(role: Role | undefined | null, cap: Capability): boolean {
+export function can(role: Role | undefined | null, cap: Capability, userId?: string | null): boolean {
   if (!role) return false;
   if (role === "admin") return true;
-  return grantsFor(role).includes(cap);
+  return grantsFor(role, userId).includes(cap);
+}
+
+export function roleGrantList(grants: RoleGrants | null | undefined, role: EditableRole): Capability[] {
+  return [...(grants?.[role] ?? defaultRoleGrants()[role])];
 }
 
 export function roleHasGrant(grants: RoleGrants | null | undefined, role: EditableRole, cap: Capability): boolean {
-  const list = grants?.[role] ?? defaultRoleGrants()[role];
-  return list.includes(cap);
+  return roleGrantList(grants, role).includes(cap);
+}
+
+export function withUserGrant(
+  grants: UserGrants | null | undefined,
+  userId: string,
+  base: readonly Capability[],
+  cap: Capability,
+  enabled: boolean,
+): UserGrants {
+  const current = grants?.[userId] ?? base;
+  const list = new Set(current);
+  if (enabled) list.add(cap);
+  else list.delete(cap);
+  return { ...(grants ?? {}), [userId]: [...list] };
+}
+
+export function withoutUserGrants(grants: UserGrants | null | undefined, userId: string): UserGrants {
+  const next = { ...(grants ?? {}) };
+  delete next[userId];
+  return next;
 }
 
 export function withRoleGrant(grants: RoleGrants | null | undefined, role: EditableRole, cap: Capability, enabled: boolean): RoleGrants {
@@ -448,16 +481,19 @@ export function teamFinancialVisibility(user: User | null, team: TeamMember[]): 
 
 export function canSeeFinancials(user: User | null, team: TeamMember[] = []): boolean {
   if (!user) return false;
+  if (user.role === "admin") return true;
+  const personal = readUserGrants()?.[user.id];
+  if (personal) return personal.includes("see_financials");
   if (can(user.role, "see_financials")) return true;
   return teamFinancialVisibility(user, team) === "rates_and_budgets";
 }
 
-export function canAccessHref(role: Role | undefined | null, href: string): boolean {
+export function canAccessHref(role: Role | undefined | null, href: string, userId?: string | null): boolean {
   const match = Object.keys(NAV_CAPABILITY)
     .sort((a, b) => b.length - a.length)
     .find((prefix) => href === prefix || href.startsWith(`${prefix}/`) || href.startsWith(`${prefix}?`));
-  if (!match) return can(role, "view_home");
-  return can(role, NAV_CAPABILITY[match]);
+  if (!match) return can(role, "view_home", userId);
+  return can(role, NAV_CAPABILITY[match], userId);
 }
 
 export function createKindCapability(kind: CreateRecordKind | null): Capability | null {
@@ -465,9 +501,9 @@ export function createKindCapability(kind: CreateRecordKind | null): Capability 
   return CREATE_KIND_CAP[kind];
 }
 
-export function canCreateKind(role: Role | undefined | null, kind: CreateRecordKind | null): boolean {
+export function canCreateKind(role: Role | undefined | null, kind: CreateRecordKind | null, userId?: string | null): boolean {
   const cap = createKindCapability(kind);
-  return !!cap && can(role, cap);
+  return !!cap && can(role, cap, userId);
 }
 
 export function isAssignedName(user: User | null | undefined, assignee: string, initials?: string): boolean {
