@@ -168,6 +168,7 @@ import {
   invoiceTotals,
   nextInvoiceNumber,
 } from "./invoice";
+import { applyAcceloBatch as mergeAcceloBatch, type AcceloBatch } from "./accelo";
 import {
   defaultQuickBooksPrefs,
   mergeImportedCatalog,
@@ -571,6 +572,7 @@ type AppState = {
   importQuickBooksCatalog: (rows: QuickBooksCatalogItem[]) => { created: number; updated: number };
   importQuickBooksCompanies: (rows: QuickBooksParty[]) => { created: number; updated: number };
   importQuickBooksInvoices: (rows: QuickBooksInvoiceImport[], prefs: QuickBooksPrefs) => { created: number; updated: number };
+  applyAcceloBatch: (batch: AcceloBatch) => void;
   createPaymentMethod: (input: Omit<PaymentMethod, "id">) => string;
   updatePaymentMethod: (id: string, patch: Partial<PaymentMethod>) => void;
   setPaymentMethodActive: (id: string, active: boolean) => void;
@@ -3282,6 +3284,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       created || updated ? "success" : "info",
     );
     return { created, updated };
+  },
+  applyAcceloBatch: (batch) => {
+    if (!requireCap(get, "manage_invoice")) return;
+    set(mergeAcceloBatch({
+      companies: get().companies,
+      contacts: get().contacts,
+      projects: get().projects,
+      invoices: get().invoices,
+      tickets: get().tickets,
+      timeEntries: get().timeEntries,
+      team: get().team,
+    }, batch));
   },
   updateTaxCode: (id, patch) => {
     if (!requireCap(get, "manage_invoice")) return;
