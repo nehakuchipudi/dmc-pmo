@@ -1704,6 +1704,12 @@ button, input, select, textarea { font: inherit; }
   transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, border-color 140ms ease;
 }
 .btn:hover { transform: translateY(-1px); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 .btn-primary {
   background: var(--color-navy);
   color: #fff;

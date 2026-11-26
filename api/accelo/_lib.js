@@ -342,8 +342,24 @@ async function fetchToken(secret) {
   return payload;
 }
 
-async function acceloGet(session, resource, page) {
-  const url = `${apiBase()}/${resource}?_limit=${PAGE_SIZE}&_page=${page}`;
+function activityScanDone(rows, field) {
+  if (!Array.isArray(rows) || rows.length < PAGE_SIZE) return true;
+  let previous = Infinity;
+  for (const row of rows) {
+    const value = Number(row?.[field]) || 0;
+    if (value > previous) return false;
+    previous = value;
+  }
+  return !rows.some((row) => (Number(row?.[field]) || 0) > 0);
+}
+
+async function acceloGet(session, resource, page, filter) {
+  const params = new URLSearchParams({ _limit: String(PAGE_SIZE), _page: String(page) });
+  if (filter) params.set("_filters", filter);
+  if (resource === "activities") {
+    params.set("_fields", "staff(),billable,nonbillable,subject,against_type,against_id,date_started,date_logged,date_created");
+  }
+  const url = `${apiBase()}/${resource}?${params.toString()}`;
   const sent = await fetch(url, { headers: { Authorization: `Bearer ${session.accessToken}`, Accept: "application/json" } });
   const payload = await sent.json().catch(() => ({}));
   if (sent.status === 401) throw new Error("Accelo session expired. Enter the client secret again.");
@@ -351,10 +367,34 @@ async function acceloGet(session, resource, page) {
   return rowsOf(payload, resource);
 }
 
-async function countPage(session, resource, page) {
+function activityOrder(pass) {
+  return pass === "nonbillable" ? "order_by_desc(nonbillable)" : "order_by_desc(billable)";
+}
+
+async function countPage(session, resource, page, pass) {
+  if (resource === "activities") {
+    const field = pass === "nonbillable" ? "nonbillable" : "billable";
+    const rows = await acceloGet(session, resource, page, activityOrder(pass));
+    const matched = rows.filter((row) => {
+      const hours = hoursFromActivity(row);
+      if (hours <= 0) return false;
+      if (field === "nonbillable" && (Number(row?.billable) || 0) > 0) return false;
+      return true;
+    }).length;
+    return { matched, done: activityScanDone(rows, field), pageSize: rows.length };
+  }
   const rows = await acceloGet(session, resource, page);
-  const matched = resource === "activities" ? rows.filter((row) => hoursFromActivity(row) > 0).length : rows.length;
-  return { matched, done: rows.length < PAGE_SIZE, pageSize: rows.length };
+  return { matched: rows.length, done: rows.length < PAGE_SIZE, pageSize: rows.length };
+}
+
+async function pullPage(session, resource, page, pass) {
+  if (resource === "activities") {
+    const field = pass === "nonbillable" ? "nonbillable" : "billable";
+    const rows = await acceloGet(session, resource, page, activityOrder(pass));
+    return { rows: mapPage(resource, rows), done: activityScanDone(rows, field) };
+  }
+  const rows = await acceloGet(session, resource, page);
+  return { rows: mapPage(resource, rows), done: rows.length < PAGE_SIZE };
 }
 
 function mapPage(resource, rows) {
@@ -373,6 +413,8 @@ module.exports = {
   readSession,
   fetchToken,
   countPage,
+  pullPage,
+  activityScanDone,
   mapPage,
   acceloGet,
   acceloDate,

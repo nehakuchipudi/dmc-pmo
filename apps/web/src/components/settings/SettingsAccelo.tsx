@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PricingSheet, PricingTitle } from "@/components/settings/SettingsPricingChrome";
 import { useAuth } from "@/lib/auth";
 import {
   ACCELO_CLIENT_ID,
   ACCELO_DEPLOYMENT,
   ACCELO_RESOURCES,
+  acceloImportEnabled,
   connectAccelo,
   countAcceloPage,
   pullAcceloPage,
@@ -47,37 +48,50 @@ export function SettingsAccelo() {
   const [counts, setCounts] = useState<Partial<Record<AcceloResource, number>>>({});
   const [status, setStatus] = useState("Enter the client secret, then count Accelo before anything is written here.");
   const [busy, setBusy] = useState<"count" | "import" | null>(null);
+  const run = useRef(0);
 
-  async function walk(resource: AcceloResource, mode: "count" | "import") {
-    let page = 0;
+  async function walk(resource: AcceloResource, mode: "count" | "import", runId: number) {
     let total = 0;
-    for (let guard = 0; guard < 500; guard += 1) {
-      if (mode === "count") {
-        const result = await countAcceloPage(resource, page);
-        if (!result.ok) throw new Error(result.error);
-        total += result.count;
-        setCounts((current) => ({ ...current, [resource]: total }));
-        if (result.done) return total;
-      } else {
-        const result = await pullAcceloPage(resource, page);
-        if (!result.ok) throw new Error(result.error);
-        const key = BATCH_KEY[resource];
-        applyAcceloBatch({ [key]: result.rows } as AcceloBatch);
-        total += result.rows.length;
-        setCounts((current) => ({ ...current, [resource]: total }));
-        if (result.done) return total;
+    const passes = resource === "activities" ? ["billable", "nonbillable"] : [""];
+    for (const pass of passes) {
+      for (let page = 0; page < 500; page += 1) {
+        if (run.current !== runId) return total;
+        if (resource === "activities") {
+          setStatus(
+            mode === "count"
+              ? `Counting time entries, page ${page + 1}. Import into DMC PMO can run now.`
+              : `Importing time entries, page ${page + 1}.`,
+          );
+        }
+        if (mode === "count") {
+          const result = await countAcceloPage(resource, page, pass);
+          if (!result.ok) throw new Error(result.error);
+          total += result.count;
+          setCounts((current) => ({ ...current, [resource]: total }));
+          if (result.done) break;
+        } else {
+          const result = await pullAcceloPage(resource, page, pass);
+          if (!result.ok) throw new Error(result.error);
+          const key = BATCH_KEY[resource];
+          if (result.rows.length) applyAcceloBatch({ [key]: result.rows } as AcceloBatch);
+          total += result.rows.length;
+          setCounts((current) => ({ ...current, [resource]: total }));
+          if (result.done) break;
+        }
       }
-      page += 1;
     }
     return total;
   }
 
   async function onCount() {
     if (!canEdit || busy) return;
+    const runId = run.current + 1;
+    run.current = runId;
     setBusy("count");
     setCounts({});
     try {
       const session = await connectAccelo(secret);
+      if (run.current !== runId) return;
       if (!session.ok) {
         pushToast(session.error, "danger");
         setStatus(session.error);
@@ -86,36 +100,52 @@ export function SettingsAccelo() {
       setConnected(true);
       setSecret("");
       for (const resource of ACCELO_RESOURCES) {
-        setStatus(`Counting ${LABELS[resource]} in Accelo.`);
-        await walk(resource, "count");
+        if (run.current !== runId) return;
+        setStatus(
+          resource === "activities"
+            ? "Counting time entries. Import into DMC PMO can run now."
+            : `Counting ${LABELS[resource]} in Accelo.`,
+        );
+        await walk(resource, "count", runId);
       }
+      if (run.current !== runId) return;
       setStatus("Count finished. Nothing has been written into DMC PMO yet.");
       pushToast("Accelo count finished.", "success");
     } catch (err) {
+      if (run.current !== runId) return;
       const message = err instanceof Error ? err.message : "Accelo could not be counted.";
       setStatus(message);
       pushToast(message, "danger");
     } finally {
-      setBusy(null);
+      if (run.current === runId) setBusy(null);
     }
   }
 
   async function onImport() {
-    if (!canEdit || busy || !connected) return;
+    if (!canEdit || !connected || busy === "import") return;
+    const runId = run.current + 1;
+    run.current = runId;
     setBusy("import");
     try {
+      const written: Partial<Record<AcceloResource, number>> = {};
       for (const resource of ACCELO_RESOURCES) {
-        setStatus(`Importing ${LABELS[resource]} from Accelo.`);
-        await walk(resource, "import");
+        if (run.current !== runId) return;
+        setStatus(`Importing ${LABELS[resource]} into DMC PMO.`);
+        written[resource] = await walk(resource, "import", runId);
       }
-      setStatus("Accelo records are in this workspace. Run the count again before a second import if Accelo changed.");
-      pushToast("Accelo import finished.", "success");
+      if (run.current !== runId) return;
+      setCounts(written);
+      setStatus(
+        `Import finished. ${written.companies ?? 0} companies, ${written.jobs ?? 0} projects, ${written.invoices ?? 0} invoices, and ${written.activities ?? 0} time entries are in this workspace.`,
+      );
+      pushToast("Accelo import finished. Open Companies or Projects to see the records.", "success");
     } catch (err) {
+      if (run.current !== runId) return;
       const message = err instanceof Error ? err.message : "Accelo import stopped.";
       setStatus(message);
       pushToast(message, "danger");
     } finally {
-      setBusy(null);
+      if (run.current === runId) setBusy(null);
     }
   }
 
@@ -168,7 +198,7 @@ export function SettingsAccelo() {
       </div>
       <div className="qb-import-row">
         <span>Import writes companies, people, projects, tickets, invoices, and approved time into this workspace.</span>
-        <button type="button" className="btn btn-primary" disabled={!canEdit || busy !== null || !connected} onClick={() => void onImport()}>
+        <button type="button" className="btn btn-primary" disabled={!canEdit || !acceloImportEnabled(connected, busy)} onClick={() => void onImport()}>
           {busy === "import" ? "Importing" : "Import into DMC PMO"}
         </button>
       </div>
