@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applyTeamRole, bindRoleGrants, can, canAccessHref, canCreateKind, canSeeFinancials, defaultRoleGrants, permissionCatalogCaps, roleCapabilities } from "./rbac";
+import { applyTeamRole, bindRoleGrants, bindUserGrants, can, canAccessHref, canCreateKind, canSeeFinancials, defaultRoleGrants, permissionCatalogCaps, roleCapabilities } from "./rbac";
 
 assert.equal(can("admin", "manage_users"), true);
 assert.equal(can("admin", "pay_invoice"), true);
@@ -73,5 +73,26 @@ assert.equal(can("admin", "manage_users"), true);
 bindRoleGrants(() => null);
 assert.equal(can("staff", "view_billing"), false);
 assert.equal(canAccessHref("staff", "/app/billing"), false);
+
+const staffCaps = [...defaultRoleGrants().staff, "view_billing" as const];
+bindUserGrants(() => ({ "u-staff": staffCaps }));
+assert.equal(can("staff", "view_billing", "u-staff"), true);
+assert.equal(can("staff", "view_billing"), false);
+assert.equal(canAccessHref("staff", "/app/billing", "u-staff"), true);
+assert.equal(canAccessHref("staff", "/app/billing", "u-other"), false);
+assert.equal(can("admin", "manage_users", "u-admin"), true);
+bindUserGrants(() => ({ "u-admin": [] }));
+assert.equal(can("admin", "pay_invoice", "u-admin"), true);
+const pmWithoutMoney = defaultRoleGrants().pm.filter((cap) => cap !== "see_financials");
+bindUserGrants(() => ({ "u-pm": pmWithoutMoney }));
+assert.equal(
+  canSeeFinancials({ id: "u-pm", name: "A. Patel", initials: "AP", role: "pm", email: "patel@dillonmorgan.com" }, []),
+  false,
+);
+bindUserGrants(() => null);
+assert.equal(
+  canSeeFinancials({ id: "u-pm", name: "A. Patel", initials: "AP", role: "pm", email: "patel@dillonmorgan.com" }, []),
+  true,
+);
 
 console.log("rbac matrix ok");

@@ -58,7 +58,7 @@ export function HelpSupport({
     if (!open) return;
     setMessages((prev) => {
       if (prev.length) return prev;
-      const welcome = answerHelpQuestion("hello", [], { role: user?.role, audience });
+      const welcome = answerHelpQuestion("hello", [], { role: user?.role, audience, userId: user?.id });
       const starters = audience === "internal" ? workspaceStarters(user?.role) : welcome.starters;
       return [{ id: uid(), role: "assistant", text: welcome.text, hrefs: welcome.hrefs, starters }];
     });
@@ -149,7 +149,7 @@ export function HelpSupport({
           })),
         };
         if (!looksLikeWorkspaceRequest(question, pending, lookupCtx)) {
-          const answer = answerHelpQuestion(question, next, { role: user?.role, audience });
+          const answer = answerHelpQuestion(question, next, { role: user?.role, audience, userId: user?.id });
           setMessages([
             ...next,
             {
@@ -174,6 +174,7 @@ export function HelpSupport({
           question,
           {
             role: user?.role,
+            userId: user?.id,
             actorName: user?.name ?? "Staff",
             actorEmail: user?.email,
             projects,
@@ -313,7 +314,7 @@ export function HelpSupport({
           return;
         }
       }
-      const answer = answerHelpQuestion(question, next, { role: user?.role, audience });
+      const answer = answerHelpQuestion(question, next, { role: user?.role, audience, userId: user?.id });
       setMessages([
         ...next,
         {

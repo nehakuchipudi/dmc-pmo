@@ -1057,6 +1057,22 @@ button, input, select, textarea { font: inherit; }
   border-radius: 8px;
   background: #fff;
 }
+.perm-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.perm-user span { font-weight: 650; }
+.perm-user select {
+  min-width: 280px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--color-ink);
+}
 .perm-roles {
   display: flex;
   flex-wrap: wrap;

@@ -14,7 +14,7 @@ export function AccessDenied({ moduleName, reason }: { moduleName?: string; reas
           {packDenied
             ? `${moduleName ?? "This capability"} is not enabled for this workspace`
             : moduleName
-              ? `${moduleName} is not available for your role`
+              ? `${moduleName} is not available for you`
               : "You do not have access"}
         </h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">

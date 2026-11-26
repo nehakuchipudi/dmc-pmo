@@ -148,6 +148,7 @@ export interface AgentAnswer {
 
 export interface AgentContext {
   role?: Role | null;
+  userId?: string | null;
   actorName: string;
   actorEmail?: string;
   projects: AgentProject[];
@@ -1436,7 +1437,7 @@ export function runWorkspaceAgent(raw: string, rawCtx: AgentContext, runner: Wor
   const blocked = intents.find((intent) => {
     if (intent.type === "set_status") return !canChangeProjectStatus(ctx.role ?? undefined, ctx.workflow);
     const cap = capFor(intent.type);
-    return cap ? !can(ctx.role, cap) : false;
+    return cap ? !can(ctx.role, cap, ctx.userId) : false;
   });
   if (blocked) {
     return {

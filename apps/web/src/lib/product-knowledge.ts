@@ -443,7 +443,7 @@ export function scoreProductTopic(topic: ProductTopic, raw: string) {
 
 export function answerProductKnowledge(
   rawQuestion: string,
-  options: { role?: Role | null },
+  options: { role?: Role | null; userId?: string | null },
 ): { text: string; hrefs: { href: string; label: string }[]; starters: string[]; topicId?: string } | null {
   const raw = rawQuestion.trim().toLowerCase();
   if (!raw) return null;
@@ -455,7 +455,7 @@ export function answerProductKnowledge(
   if (!best || best.score < 6) return null;
 
   const topic = best.topic;
-  const locked = Boolean(options.role && topic.viewCap && !can(options.role, topic.viewCap));
+  const locked = Boolean(options.role && topic.viewCap && !can(options.role, topic.viewCap, options.userId));
   const lines = [
     `${topic.title}: ${topic.summary}`,
     topic.howTo.length ? `How to use it:\n${topic.howTo.map((step, i) => `${i + 1}. ${step}`).join("\n")}` : "",

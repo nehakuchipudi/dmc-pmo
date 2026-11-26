@@ -59,6 +59,7 @@ export const WORKSPACE_KEYS = [
   "enabledPacks",
   "rolePacks",
   "roleGrants",
+  "userGrants",
   "workOrders",
   "recurringServices",
   "serviceDocuments",

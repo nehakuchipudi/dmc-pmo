@@ -202,6 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const enabledPacks = useAppStore((s) => s.enabledPacks);
   const rolePacks = useAppStore((s) => s.rolePacks);
   const roleGrants = useAppStore((s) => s.roleGrants);
+  const userGrants = useAppStore((s) => s.userGrants);
 
   const recordId = searchParams.get("id");
   const focusCompany = companies.find((c) => c.id === focusCompanyId) ?? null;
@@ -287,8 +288,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...tickets.filter((t) => t.subject.toLowerCase().includes(q) || String(t.number).includes(q)).map((t) => ({ href: `/app/tickets/view/?id=${t.id}`, label: `#${t.number} ${t.subject}`, type: "Ticket" })),
       ...contacts.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ href: `/app/contacts/view/?id=${c.id}`, label: c.name, type: "Contact" })),
       ...workOrders.filter((row) => row.title.toLowerCase().includes(q)).map((row) => ({ href: "/app/work-orders", label: row.title, type: "Work order" })),
-    ].filter((hit) => canAccessHref(user?.role, hit.href) && canUsePack(packForHref(hit.href), enabledPacks, user?.role, rolePacks)).slice(0, 8);
-  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, workOrders, enabledPacks, rolePacks, roleGrants, user]);
+    ].filter((hit) => canAccessHref(user?.role, hit.href, user?.id) && canUsePack(packForHref(hit.href), enabledPacks, user?.role, rolePacks)).slice(0, 8);
+  }, [search, companies, projects, tickets, contacts, portfolios, ideas, objectives, workOrders, enabledPacks, rolePacks, roleGrants, userGrants, user]);
 
   const recentHits = useMemo(
     () =>
@@ -340,7 +341,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user || !isInternal) return null;
 
-  const showHome = canAccessHref(user.role, "/app/home");
+  const showHome = canAccessHref(user.role, "/app/home", user.id);
   const navGroups = NAV_GROUP_ORDER.map((group) => {
     const meta = NAV_GROUPS.find((item) => item.id === group);
     return {
@@ -350,7 +351,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       items: NAV_MODULES.filter(
         (item) =>
           item.group === group &&
-          canAccessHref(user.role, item.href) &&
+          canAccessHref(user.role, item.href, user.id) &&
           canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
       ),
     };
@@ -363,13 +364,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     items: NAV_MODULES.filter(
       (item) =>
         item.group === "settings" &&
-        canAccessHref(user.role, item.href) &&
+        canAccessHref(user.role, item.href, user.id) &&
         canUsePack(item.pack ?? null, enabledPacks, user.role, rolePacks),
     ),
   };
   const routePack = packForHref(pathname);
   const workspaceHasPack = !routePack || hasPack(enabledPacks, routePack);
-  const routeAllowed = canAccessHref(user.role, pathname) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
+  const routeAllowed = canAccessHref(user.role, pathname, user.id) && canUsePack(routePack, enabledPacks, user.role, rolePacks);
   const deniedReason = routeAllowed ? undefined : workspaceHasPack ? "role" : "pack";
   const createItems = (
     [
@@ -381,7 +382,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ["idea", "Idea"],
       ["expense", "Expense"],
     ] as const
-  ).filter(([kind]) => canCreateKind(user.role, kind));
+  ).filter(([kind]) => canCreateKind(user.role, kind, user.id));
   const canCreateAnything = createItems.length > 0;
 
   const unread = notifications.filter((n) => !n.read).length;
